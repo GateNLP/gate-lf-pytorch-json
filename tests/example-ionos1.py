@@ -64,8 +64,9 @@ model = MyModel()
 loss_fn = nn.BCELoss()
 optimizer = torch.optim.SGD(model.parameters(), lr=0.01)
 
+
 for epoch in range(10):
-    for b in ds.batches_converted(convertedFile=ds.converted4meta(TESTFILE1),as_numpy=True,batch_size=5):
+    for b in ds.batches_converted(convertedFile=ds.converted4meta(TESTFILE1), as_numpy=True, batch_size=5):
         # logger.info("BATCH: %r" % (b,))
         (indep,dep) = b
         pred=model(indep)
@@ -79,4 +80,4 @@ for epoch in range(10):
         optimizer.step()
         v1 = model.get_invar()
         # logger.info("GRAD: %s" % v1.grad)
-    
+

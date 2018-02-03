@@ -64,6 +64,7 @@ model = MyModel()
 loss_fn = nn.BCELoss()
 optimizer = torch.optim.SGD(model.parameters(), lr=0.01)
 
+# TODO: load validation set and use below for the estimate
 
 for epoch in range(10):
     for b in ds.batches_converted(convertedFile=ds.converted4meta(TESTFILE1), as_numpy=True, batch_size=5):

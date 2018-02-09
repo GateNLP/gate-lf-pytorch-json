@@ -11,8 +11,7 @@
 class ModelBuilder(object):
 
     # This requires an initialized dataset instance
-    def __init__(self,dataset):
-
+    def __init__(self, dataset):
         pass
 
     # the implementation should figure out best values if parameter

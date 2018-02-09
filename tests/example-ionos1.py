@@ -37,6 +37,24 @@ class MyModel(nn.Module):
 
     def __init__(self):
         super(MyModel, self).__init__()
+        # first figure out how many inputs we need and also configure the mapper objects for them
+        # 1) if there is at least one numeric or binary input we create a linear+nonlin layer for all of them
+        #    The mapper object concatenates those features and converts to FloatTensor variables
+        #    The output is a bunch of hidden units (same number as inputs?)
+        # 2) for each nominal non-sequence input, we check what kind of training is requested:
+        #    * if onehot we create a linear layer
+        #    * otherwise we check the embeddings id: if we already have seen that id, the existing layer is
+        #      reused. Otherwise: if we train the embeddings but do not have a embeddings file, create
+        #      a layer and initialize with random vectors. If we do not train and use an embeddings file, create
+        #      a constant lookup layer. If we train and use an embeddings file, create our own embeddings mapping layer
+        #    Mapper object selects the corresponding feature and converts to LongTensor variables
+        #    Output is a hidden layer with either the embeddings or mapped embeddings
+        # 3) For a NGRAM, we have a sequence of embedding indices. This creates or re-uses embedding layers as for 2)
+        #    For each batch we should have padded sequences, so the shape would be batch,maxseqlen
+        #    The embeddings have to specify the padding index!!
+        #    Mapper object selects the feature and converts to LongTensor matrix variable
+        #    Output is a tensor batchsize,maxseqlen,embsize
+
         self.lin1 = nn.Linear(nFeatures,hidden)
         self.lin2 = nn.Linear(hidden,nClasses)
         self.final = nn.Softmax()

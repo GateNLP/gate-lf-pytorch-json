@@ -12,7 +12,10 @@ class ModelWrapper(object):
 
     # This requires an initialized dataset instance
     def __init__(self, dataset):
+<<<<<<< HEAD:gatelfpytorch/modelwrapper.py
 
+=======
+>>>>>>> 099486cd59e4b143ee8a1591a032e291970c4c99:gatelfpytorch/modelbuilder.py
         pass
 
     # the implementation should figure out best values if parameter

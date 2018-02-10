@@ -1,1 +1,2 @@
-# from .module import Class
+from .modelwrappersimple import ModelWrapperSimple
+

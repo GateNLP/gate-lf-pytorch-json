@@ -1,17 +1,17 @@
 
 # Basic usage:
 # ds = Dataset(metafile)
-# model = MyModelBuilder(ds)
-# model.train()
+# wrapper = ModelWrapperSimple(ds) # or some other subclass
+# wrapper.train()
 # # get some data for application some where
 # instances = get_them()
-# preditions = model.apply(instances)
+# preditions = wrapper.apply(instances)
 # NOTE: maybe use the same naming conventions as scikit learn here!!
 
-class ModelBuilder(object):
+class ModelWrapper(object):
 
     # This requires an initialized dataset instance
-    def __init__(self,dataset):
+    def __init__(self, dataset):
 
         pass
 

@@ -30,5 +30,7 @@ class Test1(unittest.TestCase):
     def test1_1(self):
         ds = Dataset(TESTFILE1)
         wrapper = ModelWrapperSimple(ds)
+        m = wrapper.get_module()
+        print("\nDEBUG: module:", m, file=sys.stderr)
         wrapper.train()
         pass

@@ -27,9 +27,13 @@ class ClassificationModelSimple(torch.nn.Module):
         self.ngr_idxs = featureconfig["ngr_idxs"]
         # register all the layers with the module so PyTorch knows
         # about parameters etc.
-        for layer, config in inputlayersinfo
-            self.add_module(config.get("name"),layer)
-
+        for layer, config in inputlayersinfo:
+            self.add_module(config.get("name"), layer)
+        for layer, config in hiddenlayersinfo:
+            self.add_module(config.get("name"), layer)
+        outlayer = outputlayerinfo[0]
+        outconfig = outputlayerinfo[1]
+        self.add_module(outconfig.get("name"), outlayer)
 
     def forward(self, batch):
         i_nom = 0

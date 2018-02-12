@@ -5,8 +5,10 @@ import os
 import sys
 import logging
 
-logger = logging.getLogger("gatelfpytorch")
+logger = logging.getLogger("gatelfdata")
 logger.setLevel(logging.ERROR)
+logger = logging.getLogger("gatelfpytorch")
+logger.setLevel(logging.INFO)
 streamhandler = logging.StreamHandler()
 formatter = logging.Formatter(
         '%(asctime)s %(name)-12s %(levelname)-8s %(message)s')
@@ -30,7 +32,8 @@ class Test1(unittest.TestCase):
     def test1_1(self):
         ds = Dataset(TESTFILE1)
         wrapper = ModelWrapperSimple(ds)
+        print("\nDEBUG: dataset=", wrapper.dataset, file=sys.stderr)
         m = wrapper.get_module()
         print("\nDEBUG: module:", m, file=sys.stderr)
-        wrapper.train()
+        wrapper.train(batch_size=20)
         pass

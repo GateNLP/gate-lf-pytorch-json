@@ -49,14 +49,14 @@ class ClassificationModelSimple(torch.nn.Module):
             elif inputtype == "nominal":
                 nom_idx = self.nom_idxs[i_nom]
                 i_nom += 1
-                vals4pt = V(torch.LongTensor(batch[nom_idx]), requires_grad=False)
-                out = inputlayer(vals4pt)
+                # the EmbeddingsModule takes the original converted batch values, not a Tensor or Variable
+                # vals4pt = V(torch.LongTensor(batch[nom_idx]), requires_grad=False)
+                out = inputlayer(batch[nom_idx])
                 input_layer_outputs.append(out)
             elif inputtype == "ngram":
                 ngr_idx = self.ngr_idxs[i_ngr]
                 i_ngr += 1
-                vals4pt = self.convert_ngram(batch[ngr_idx])
-                out = inputlayer(vals4pt)
+                out = inputlayer(batch[ngr_idx])
                 input_layer_outputs.append(out)
             else:
                 raise Exception("Odd input type: %s" % inputtype)

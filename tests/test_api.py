@@ -39,11 +39,20 @@ class Test1(unittest.TestCase):
         # wrapper.train(batch_size=20)
 
     def test1_2(self):
-        ds = Dataset(TESTFILE3)
+        ds = Dataset(TESTFILE2)
         wrapper = ModelWrapperSimple(ds)
         print("\nDEBUG: dataset=", wrapper.dataset, file=sys.stderr)
         m = wrapper.get_module()
         print("\nDEBUG: module:", m, file=sys.stderr)
         wrapper.validate_every_batches = 10
         wrapper.train(batch_size=33, early_stopping=lambda x: ModelWrapper.early_stopping_checker(x, max_variance=0.0000001))
+
+    def test1_3(self):
+        ds = Dataset(TESTFILE3)
+        wrapper = ModelWrapperSimple(ds)
+        print("\nDEBUG: dataset=", wrapper.dataset, file=sys.stderr)
+        m = wrapper.get_module()
+        print("\nDEBUG: module:", m, file=sys.stderr)
+        # wrapper.validate_every_batches = 10
+        # wrapper.train(batch_size=33, early_stopping=lambda x: ModelWrapper.early_stopping_checker(x, max_variance=0.0000001))
 

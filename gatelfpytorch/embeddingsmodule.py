@@ -1,4 +1,5 @@
 import torch
+from torch.autograd import Variable as V
 
 
 class EmbeddingsModule(torch.nn.Module):
@@ -21,4 +22,5 @@ class EmbeddingsModule(torch.nn.Module):
         self.module = torch.nn.Embedding(self.emb_size, embedding_dim=self.emb_dim, padding_idx=0)
 
     def forward(self, batch):
-        return self.module(batch)
+        batch_var = V(torch.LongTensor(batch), requires_grad=False)
+        return self.module(batch_var)

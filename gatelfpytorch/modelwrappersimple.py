@@ -1,5 +1,6 @@
 from . modelwrapper import ModelWrapper
 from . embeddingsmodule import EmbeddingsModule
+from . ngrammodule import NgramModule
 import torch
 import torch.nn
 import torch.optim
@@ -89,10 +90,17 @@ class ModelWrapperSimple(ModelWrapper):
         for i in range(len(self.ngr_feats)):
             ngr_feat = self.ngr_feats[i]
             nom_idx = self.ngr_idxs[i]
-            # depending on the training defined we use an LSTM subnetwork
-            # based on one of the nominal layers we have.
-            raise Exception("Support for ngram inputs not yet implemented")
-
+            vocab = ngr_feat.vocab
+            emb_id = vocab.emb_id
+            if emb_id in nom_layers:
+                emblayer = nom_layers.get(emb_id)
+            else:
+                emblayer = EmbeddingsModule(vocab)
+                nom_layers[emb_id] = emblayer
+            lname = "input_ngram_%s_%s" % (i, emb_id)
+            ngramlayer = NgramModule(emblayer)
+            inputlayers.append((ngramlayer, {"type": "ngram", "name": lname}))
+            inlayers_outdims += ngramlayer.out_dim
         # Now create the hidden layers
         hiddenlayers = []
         # for now, one hidden layer for compression and another

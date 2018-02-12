@@ -1,4 +1,5 @@
 from . modelwrapper import ModelWrapper
+from . embeddingsmodule import EmbeddingsModule
 import torch
 import torch.nn
 import torch.optim
@@ -23,7 +24,9 @@ class ModelWrapperSimple(ModelWrapper):
 
 
     # This requires an initialized dataset instance
-    def __init__(self, dataset):
+    def __init__(self, dataset, config=None):
+        """This requires a gatelfdata Dataset instance and can optionally take a dictionary with
+        configuration/initialization options (NOT SUPPORTED YET)"""
         super().__init__(dataset)
         self.dataset = dataset
         self.num_idxs = dataset.get_numeric_feature_idxs()
@@ -36,6 +39,7 @@ class ModelWrapperSimple(ModelWrapper):
                             "nom_idxs": self.nom_idxs,
                             "ngr_idxs": self.ngr_idxs}
         self.info = dataset.get_info()
+        self.module = None # the init_<TASK> method actually sets this
         if self.info["isSequence"]:
             raise Exception("Sequence tagging not yet implemented")
         else:
@@ -43,7 +47,10 @@ class ModelWrapperSimple(ModelWrapper):
                 self.init_classification(dataset)
             else:
                 raise Exception("Target type not yet implemented: %s" % self.info["targetType"])
-        self.optimizer = torch.optim.SGD(self.module.parameters(), lr=0.0001, momentum=0.9)
+        self.optimizer = torch.optim.SGD(self.module.parameters(), lr=0.001, momentum=0.9)
+        # various configuration settings
+        self.validate_every_batches = 100
+        self.validate_every_epochs = None
 
     def init_classification(self, dataset):
         n_classes = self.info["nClasses"]
@@ -69,11 +76,16 @@ class ModelWrapperSimple(ModelWrapper):
         for i in range(len(self.nom_feats)):
             nom_feat = self.nom_feats[i]
             nom_idx = self.nom_idxs[i]
-            # depending on what kind of training is defined and
-            # what the embedding id / vocabulary for that feature is,
-            # we create or re-use one of several possible kinds of layers
-
-            raise Exception("Support for nomunal inputs not yet implemented")
+            vocab = nom_feat.vocab
+            emb_id = vocab.emb_id
+            if emb_id in nom_layers:
+                emblayer = nom_layers.get(emb_id)
+            else:
+                emblayer = EmbeddingsModule(vocab)
+                nom_layers[emb_id] = emblayer
+            lname = "input_emb_%s_%s" % (i, emb_id)
+            inputlayers.append((emblayer, {"type": "nominal", "name": lname}))
+            inlayers_outdims += emblayer.emb_dim
         for i in range(len(self.ngr_feats)):
             ngr_feat = self.ngr_feats[i]
             nom_idx = self.ngr_idxs[i]
@@ -147,12 +159,15 @@ class ModelWrapperSimple(ModelWrapper):
                 raise Exception("Parameter validationsize must be a float or int")
         self.dataset.split(convert=True, validation_part=valpart, validation_size=valsize)
         valset = self.dataset.validation_set_converted(as_batch=True)
+        val_indeps = valset[0]
+        val_targets = V(torch.LongTensor(valset[1]), requires_grad=False)
         stop_it_already = False
         validation_losses = []
         print("DEBUG: before running training...", file=sys.stderr)
-        for epoch in range(max_epochs):
+        for epoch in range(1, max_epochs+1):
             batch_nr = 0
             for batch in self.dataset.batches_converted(train=True, batch_size=batch_size):
+                batch_nr += 1
                 self.module.zero_grad()
                 # train on a whole batch
                 # step 1: run the data through
@@ -162,27 +177,28 @@ class ModelWrapperSimple(ModelWrapper):
                 # print("DEBUG: targets = ", list(targets), "out=", list(output), file=sys.stderr)
                 loss = self.loss(output, targets)
                 # calculate the accuracy as well
-                _, out_idxs = torch.max(output.data, 1)
-                n_correct = int(out_idxs.eq(targets.data).sum())
-                acc = n_correct / float(targets.size()[0])
+                acc = ModelWrapper.accuracy(output, targets)
                 logger.debug("Batch loss/acc for epoch=%s, batch=%s: %s / %s" % (epoch, batch_nr, float(loss), acc))
-                print("Batch loss/acc for epoch=%s, batch=%s: %s / %s" % (epoch, batch_nr, float(loss), acc), file=sys.stderr)
+                # print("Batch loss/acc for epoch=%s, batch=%s: %s / %s" % (epoch, batch_nr, float(loss), acc), file=sys.stderr)
                 loss.backward()
                 self.optimizer.step()
-                if False: # TODO: does not work YET!!!
+                if (self.validate_every_batches and ((batch_nr % self.validate_every_batches) == 0)) or\
+                        (self.validate_every_epochs and ((epoch % self.validate_every_epochs) == 0)):
+                    batch_nr += 1
                     # evaluate on validation set
                     self.module.eval()
-                    out_val = self.module(valset)
-                    loss_val = self.loss(out_val)
-                    logger.info("Evaluation for epoch=%s, batch=%s, train/validation: %s / %s" %
-                                (epoch, batch_nr, float(loss), float(loss_val)))
-                    validation_losses.append(loss_val)
-                    print("DEBUG: losses=", validation_losses, file=sys.stderr)
+                    out_val = self.module(val_indeps)
+                    loss_val = self.loss(out_val, val_targets)
+                    acc_val = ModelWrapper.accuracy(out_val, val_targets)
+                    validation_losses.append(float(loss_val))
                     # if we have early stopping, check if we should stop
+                    var = None
                     if early_stopping:
-                        stop_it_already = early_stopping_function(validation_losses)
-                        logger.info("Early stopping criterion reached, stopping training ...")
-                batch_nr += 1
+                        (stop_it_already, var) = early_stopping_function(validation_losses)
+                        if stop_it_already:
+                            logger.info("Early stopping criterion reached, stopping training, var=%s" % var)
+                    logger.info("Evaluation epoch=%s,batch=%s,train-loss/val-loss/val-variance/train-acc/val-acc: %s / %s / %s / %s / %s" %
+                                (epoch, batch_nr, float(loss), float(loss_val), var, acc, acc_val))
                 if stop_it_already:
                     break
             if stop_it_already:

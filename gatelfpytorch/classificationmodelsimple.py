@@ -1,7 +1,7 @@
 import torch.nn
 from torch.autograd import Variable as V
 import torch.nn.functional as F
-
+import sys
 
 class ClassificationModelSimple(torch.nn.Module):
 
@@ -49,7 +49,7 @@ class ClassificationModelSimple(torch.nn.Module):
             elif inputtype == "nominal":
                 nom_idx = self.nom_idxs[i_nom]
                 i_nom += 1
-                vals4pt = self.convert_nominal(batch[nom_idx])
+                vals4pt = V(torch.LongTensor(batch[nom_idx]), requires_grad=False)
                 out = inputlayer(vals4pt)
                 input_layer_outputs.append(out)
             elif inputtype == "ngram":
@@ -60,10 +60,10 @@ class ClassificationModelSimple(torch.nn.Module):
                 input_layer_outputs.append(out)
             else:
                 raise Exception("Odd input type: %s" % inputtype)
-            # concatenate the outputs
-            hidden_vals = torch.cat(input_layer_outputs)
-            for hiddenlayer, config in self.hiddenlayersinfo:
-                hidden_vals = hiddenlayer(hidden_vals)
-            outputlayer, outputlayerconfig = self.outputlayerinfo
-            out = outputlayer(hidden_vals)
-            return out
+        # concatenate the outputs
+        hidden_vals = torch.cat(input_layer_outputs, 1)
+        for hiddenlayer, config in self.hiddenlayersinfo:
+            hidden_vals = hiddenlayer(hidden_vals)
+        outputlayer, outputlayerconfig = self.outputlayerinfo
+        out = outputlayer(hidden_vals)
+        return out

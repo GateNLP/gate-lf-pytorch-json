@@ -10,8 +10,11 @@ class EmbeddingsModule(torch.nn.Module):
         If train is no, then no training will be done and the pretrained embeddings will be used only.
         If train is mapping then a mapping is learned from pretrained embeddings to our own embeddings.
         NOTE: this should all happen automatically by inspecting and using the vocab instance.
-        TODO: currently only newly trained embeddings supported because we do not have support from Vocab yet!!
         """
+        # TODO: if we have embeddings, load them
+        # TODO: if we do not have embeddings, update vocab OOV from Embeddings or vice versa
+        # TODO: mapping vocab support not fully implemented yet (need to add embeddings words)
+
         super().__init__()
         self.emb_id = vocab.emb_id
         self.emb_train = vocab.emb_train

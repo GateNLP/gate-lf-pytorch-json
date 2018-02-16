@@ -86,7 +86,7 @@ class ModelWrapperSimple(ModelWrapper):
                 nom_layers[emb_id] = emblayer
             lname = "input_emb_%s_%s" % (i, emb_id)
             inputlayers.append((emblayer, {"type": "nominal", "name": lname}))
-            inlayers_outdims += emblayer.emb_dim
+            inlayers_outdims += emblayer.emb_dims
         for i in range(len(self.ngr_feats)):
             ngr_feat = self.ngr_feats[i]
             nom_idx = self.ngr_idxs[i]

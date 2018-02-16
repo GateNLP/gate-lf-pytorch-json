@@ -24,8 +24,8 @@ class NgramModule(torch.nn.Module):
         # bidirectional
         num_layers = 1
         bidirectional = True
-        hidden_size = self.embeddingsmodule.emb_dim
-        self.lstm = torch.nn.LSTM(input_size=self.embeddingsmodule.emb_dim,
+        hidden_size = self.embeddingsmodule.emb_dims
+        self.lstm = torch.nn.LSTM(input_size=self.embeddingsmodule.emb_dims,
                                   hidden_size=hidden_size,
                                   num_layers=num_layers,
                                   dropout=0.1,

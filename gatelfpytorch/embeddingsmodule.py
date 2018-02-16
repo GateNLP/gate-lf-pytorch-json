@@ -18,11 +18,11 @@ class EmbeddingsModule(torch.nn.Module):
         super().__init__()
         self.emb_id = vocab.emb_id
         self.emb_train = vocab.emb_train
-        self.emb_dim = vocab.emb_dim
-        if not self.emb_dim:
-            self.emb_dim = 100
+        self.emb_dims = vocab.emb_dims
+        if not self.emb_dims:
+            self.emb_dims = 100
         self.emb_size = vocab.n
-        self.module = torch.nn.Embedding(self.emb_size, embedding_dim=self.emb_dim, padding_idx=0)
+        self.module = torch.nn.Embedding(self.emb_size, embedding_dim=self.emb_dims, padding_idx=0)
 
     def forward(self, batch):
         batch_var = V(torch.LongTensor(batch), requires_grad=False)

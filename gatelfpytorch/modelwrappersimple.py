@@ -30,15 +30,15 @@ class ModelWrapperSimple(ModelWrapper):
         configuration/initialization options (NOT SUPPORTED YET)"""
         super().__init__(dataset)
         self.dataset = dataset
-        self.num_idxs = dataset.get_numeric_feature_idxs()
-        self.nom_idxs = dataset.get_nominal_feature_idxs()
-        self.ngr_idxs = dataset.get_ngram_feature_idxs()
-        self.num_feats = dataset.get_numeric_features()
-        self.nom_feats = dataset.get_nominal_features()
-        self.ngr_feats = dataset.get_ngram_features()
-        self.featureinfo = {"num_idxs": self.num_idxs,
-                            "nom_idxs": self.nom_idxs,
-                            "ngr_idxs": self.ngr_idxs}
+        self.float_idxs = dataset.get_float_feature_idxs()
+        self.index_idxs = dataset.get_index_feature_idxs()
+        self.indexlist_idxs = dataset.get_indexlist_feature_idxs()
+        self.float_feats = dataset.get_float_features()
+        self.index_feats = dataset.get_index_features()
+        self.indexlist_feats = dataset.get_indexlist_features()
+        self.featureinfo = {"num_idxs": self.float_idxs,
+                            "nom_idxs": self.index_idxs,
+                            "ngr_idxs": self.indexlist_idxs}
         self.info = dataset.get_info()
         self.module = None # the init_<TASK> method actually sets this
         if self.info["isSequence"]:
@@ -59,8 +59,8 @@ class ModelWrapperSimple(ModelWrapper):
         # keep track of the number of input layer output dimensions
         inlayers_outdims = 0
         # if we have numeric features, create the numeric input layer
-        if len(self.num_idxs) > 0:
-            n_in = len(self.num_idxs)
+        if len(self.float_idxs) > 0:
+            n_in = len(self.float_idxs)
             n_hidden = ModelWrapper.makeless(n_in, p1=0.5)
             lin = torch.nn.Linear(n_in, n_hidden)
             drp = torch.nn.Dropout(p=0.2)
@@ -74,9 +74,9 @@ class ModelWrapperSimple(ModelWrapper):
         # TODO: may need to handle onehot features differently!!
         # remember which layers we already have for an embedding id
         nom_layers = {}
-        for i in range(len(self.nom_feats)):
-            nom_feat = self.nom_feats[i]
-            nom_idx = self.nom_idxs[i]
+        for i in range(len(self.index_feats)):
+            nom_feat = self.index_feats[i]
+            nom_idx = self.index_idxs[i]
             vocab = nom_feat.vocab
             emb_id = vocab.emb_id
             if emb_id in nom_layers:
@@ -87,9 +87,9 @@ class ModelWrapperSimple(ModelWrapper):
             lname = "input_emb_%s_%s" % (i, emb_id)
             inputlayers.append((emblayer, {"type": "nominal", "name": lname}))
             inlayers_outdims += emblayer.emb_dims
-        for i in range(len(self.ngr_feats)):
-            ngr_feat = self.ngr_feats[i]
-            nom_idx = self.ngr_idxs[i]
+        for i in range(len(self.indexlist_feats)):
+            ngr_feat = self.indexlist_feats[i]
+            nom_idx = self.indexlist_idxs[i]
             vocab = ngr_feat.vocab
             emb_id = vocab.emb_id
             if emb_id in nom_layers:

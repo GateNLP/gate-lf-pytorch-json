@@ -23,7 +23,6 @@ import sys
 
 class ModelWrapperSimple(ModelWrapper):
 
-
     # This requires an initialized dataset instance
     def __init__(self, dataset, config=None):
         """This requires a gatelfdata Dataset instance and can optionally take a dictionary with
@@ -40,7 +39,14 @@ class ModelWrapperSimple(ModelWrapper):
                             "nom_idxs": self.index_idxs,
                             "ngr_idxs": self.indexlist_idxs}
         self.info = dataset.get_info()
-        self.module = None # the init_<TASK> method actually sets this
+        # various configuration settings which can be set before passing on control to the
+        # task-speicific initialization
+        self.validate_every_batches = 100
+        self.validate_every_epochs = None
+        self.is_data_prepared = False
+        self.valset = None   # Validation set created by prepare_data
+        self.lossfunction = None
+        self.module = None  # the init_<TASK> method actually sets this!!
         if self.info["isSequence"]:
             raise Exception("Sequence tagging not yet implemented")
         else:
@@ -49,9 +55,6 @@ class ModelWrapperSimple(ModelWrapper):
             else:
                 raise Exception("Target type not yet implemented: %s" % self.info["targetType"])
         self.optimizer = torch.optim.SGD(self.module.parameters(), lr=0.001, momentum=0.9)
-        # various configuration settings
-        self.validate_every_batches = 100
-        self.validate_every_epochs = None
 
     def init_classification(self, dataset):
         n_classes = self.info["nClasses"]
@@ -121,19 +124,74 @@ class ModelWrapperSimple(ModelWrapper):
                                                 hiddenlayers,
                                                 outputlayer,
                                                 self.featureinfo)
-        # Decide on the loss function here for training later!
-        self.loss = torch.nn.CrossEntropyLoss()
-
+        # Decide on the lossfunction function here for training later!
+        self.lossfunction = torch.nn.CrossEntropyLoss()
 
     def get_module(self):
         """Return the PyTorch module that has been built and is used by this wrapper."""
         return self.module
 
+    def prepare_data(self, validationsize=None):
+        # get the validation set
+        if self.is_data_prepared:
+            return
+        valsize = None
+        valpart = 0.1
+        if validationsize:
+            if isinstance(validationsize, int):
+                valsize = validationsize
+            elif isinstance(validationsize, float):
+                valpart = validationsize
+            else:
+                raise Exception("Parameter validationsize must be a float or int")
+        self.dataset.split(convert=True, validation_part=valpart, validation_size=valsize)
+        self.valset = self.dataset.validation_set_converted(as_batch=True)
+        self.is_data_prepared = True
+
+    def apply(self, indeps, is_batch=True, train_mode=False):
+        """Apply the model to the list of indeps and returns a list of predictions.
+        The independent are assumed to be in the shape for batches by default.
+        train_mode influences if the underlying model is used in training mode or not."""
+        if not self.is_data_prepared:
+            raise Exception("Must call train or prepare_data first")
+        curmodeistrain = self.module.training
+        if train_mode and not curmodeistrain:
+            self.module.train()
+            self.module.zero_grad()
+        elif not train_mode and curmodeistrain:
+            self.module.eval()
+        output = self.module(indeps)
+        if self.module.training == curmodeistrain:
+            self.module.train(curmodeistrain)
+        return output
+
+    def evaluate(self, validationinstances, train_mode=False, as_pytorch=True):
+        """Apply the model to the independent part of the validationset instances and use the dependent part
+        to evaluate the predictions. The validationinstances must be in batch format.
+        Returns a tuple of loss and accuracy. By default this returns the loss as a
+        pyTorch variable and accuracy as a pytorch tensor, if as_pytorch is set to False,
+        returns floats instead.
+        """
+        if not self.is_data_prepared:
+            raise Exception("Must call train or prepare_data first")
+        v_deps = V(torch.LongTensor(validationinstances[1]), requires_grad=False)
+        v_preds = self.apply(validationinstances[0], train_mode=train_mode)
+        # TODO: not sure if and when to zero the grads for the loss function if we use it
+        # in between training steps?
+        loss = self.lossfunction(v_preds, v_deps)
+        # calculate the accuracy as well, since we know we have a classification problem
+        acc = ModelWrapper.accuracy(v_preds, v_deps)
+        if not as_pytorch:
+            loss = float(loss)
+            acc = float(acc)
+        return tuple((loss, acc))
+
     # the implementation should figure out best values if parameter
     # is set to None
     # Also, by default, the method should decide which format
     # to use for reading the data (original or converted)
-    def train(self, max_epochs=None, batch_size=None, validationsize=None, early_stopping=True):
+    def train(self, max_epochs=None, batch_size=None, validationsize=None, early_stopping=True,
+              ):
         """Train the model on the dataset. max_epochs is the maximum number of
         epochs to train, but if early_stopping is enabled, it could be fewer.
         If early_stopping is True, a default early stopping strategy is used,
@@ -151,53 +209,47 @@ class ModelWrapperSimple(ModelWrapper):
             else:
                 early_stopping_function = early_stopping
         logger = logging.getLogger(__name__)
+        # get the validation set
+        self.prepare_data()
         # make sure we are in training mode
         self.module.train(mode=True)
         if not batch_size:
             batch_size = 10
-        # get the validation set
-        valsize = None
-        valpart = 0.1
-        if validationsize:
-            if isinstance(validationsize, int):
-                valsize = validationsize
-            elif isinstance(validationsize, float):
-                valpart = validationsize
-            else:
-                raise Exception("Parameter validationsize must be a float or int")
-        self.dataset.split(convert=True, validation_part=valpart, validation_size=valsize)
-        valset = self.dataset.validation_set_converted(as_batch=True)
-        val_indeps = valset[0]
-        val_targets = V(torch.LongTensor(valset[1]), requires_grad=False)
+        # val_indeps = self.valset[0]
+        # val_targets = V(torch.LongTensor(self.valset[1]), requires_grad=False)
         stop_it_already = False
         validation_losses = []
         print("DEBUG: before running training...", file=sys.stderr)
+        totalbatches = 0
         for epoch in range(1, max_epochs+1):
             batch_nr = 0
             for batch in self.dataset.batches_converted(train=True, batch_size=batch_size):
                 batch_nr += 1
+                totalbatches += 1
                 self.module.zero_grad()
                 # train on a whole batch
-                # step 1: run the data through
-                output = self.module(batch[0])
-                # step 2: calculate the loss
-                targets = V(torch.LongTensor(batch[1]), requires_grad=False)
-                # print("DEBUG: targets = ", list(targets), "out=", list(output), file=sys.stderr)
-                loss = self.loss(output, targets)
-                # calculate the accuracy as well
-                acc = ModelWrapper.accuracy(output, targets)
-                logger.debug("Batch loss/acc for epoch=%s, batch=%s: %s / %s" % (epoch, batch_nr, float(loss), acc))
-                # print("Batch loss/acc for epoch=%s, batch=%s: %s / %s" % (epoch, batch_nr, float(loss), acc), file=sys.stderr)
+                # output = self.module(batch[0])
+                # # step 2: calculate the lossfunction
+                # targets = V(torch.LongTensor(batch[1]), requires_grad=False)
+                # # print("DEBUG: targets = ", list(targets), "out=", list(output), file=sys.stderr)
+                # loss = self.lossfunction(output, targets)
+                # # calculate the accuracy as well
+                # acc = ModelWrapper.accuracy(output, targets)
+                (loss, acc) = self.evaluate(batch, train_mode=True)
+                # logger.debug("Batch lossfunction/acc for epoch=%s, batch=%s: %s / %s" %
+                #             (epoch, batch_nr, float(loss), acc))
+                # print("Batch lossfunction/acc for epoch=%s, batch=%s: %s / %s" % (epoch, batch_nr,
+                # float(lossfunction), acc), file=sys.stderr)
                 loss.backward()
                 self.optimizer.step()
-                if (self.validate_every_batches and ((batch_nr % self.validate_every_batches) == 0)) or\
+                if (self.validate_every_batches and ((totalbatches % self.validate_every_batches) == 0)) or\
                         (self.validate_every_epochs and ((epoch % self.validate_every_epochs) == 0)):
-                    batch_nr += 1
                     # evaluate on validation set
-                    self.module.eval()
-                    out_val = self.module(val_indeps)
-                    loss_val = self.loss(out_val, val_targets)
-                    acc_val = ModelWrapper.accuracy(out_val, val_targets)
+                    (loss_val, acc_val) = self.evaluate(self.valset, train_mode=False)
+                    # self.module.eval()
+                    # out_val = self.module(val_indeps)
+                    # loss_val = self.lossfunction(out_val, val_targets)
+                    # acc_val = ModelWrapper.accuracy(out_val, val_targets)
                     validation_losses.append(float(loss_val))
                     # if we have early stopping, check if we should stop
                     var = None
@@ -205,7 +257,8 @@ class ModelWrapperSimple(ModelWrapper):
                         (stop_it_already, var) = early_stopping_function(validation_losses)
                         if stop_it_already:
                             logger.info("Early stopping criterion reached, stopping training, var=%s" % var)
-                    logger.info("Evaluation epoch=%s,batch=%s,train-loss/val-loss/val-variance/train-acc/val-acc: %s / %s / %s / %s / %s" %
+                    logger.info("Evaluation epoch=%s,batch=%s,train-lossfunction/val-lossfunction/"
+                                "val-variance/train-acc/val-acc: %s / %s / %s / %s / %s" %
                                 (epoch, batch_nr, float(loss), float(loss_val), var, acc, acc_val))
                 if stop_it_already:
                     break

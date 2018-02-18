@@ -48,7 +48,7 @@ class ModelWrapperSimple(ModelWrapper):
         self.lossfunction = None
         self.module = None  # the init_<TASK> method actually sets this!!
         if self.info["isSequence"]:
-            raise Exception("Sequence tagging not yet implemented")
+            self.init_sequencetagging(dataset)
         else:
             if self.info["targetType"] == "nominal":
                 self.init_classification(dataset)
@@ -126,6 +126,101 @@ class ModelWrapperSimple(ModelWrapper):
                                                 self.featureinfo)
         # Decide on the lossfunction function here for training later!
         self.lossfunction = torch.nn.CrossEntropyLoss()
+
+    def init_sequencetagging(self, dataset):
+        """Build the module for sequence tagging."""
+        # NOTE: For sequence tagging, the shape of our input is slightly different:
+        # - the indep is a list of features, as before
+        # - but for each feature, there is a (padded) list of values
+        # - each dep is also a padded list of values
+        # In theory we could combine the features before going into the LSTM, or
+        # we have different LSTMs for each feature and combine afterwards.
+        # Here we combine before, so the output of e.g. a Linear layer is not just
+        # a vector, but a matrix where one dimension is the batch, one dimension is the sequence
+        # and one dimension is the value(vector). If we have batch size b, max sequence length s
+        # and value dimension d, we should get shape b,s,d if batch_first is True, otherwise s,b,d
+        n_classes = self.info["nClasses"]
+        inputlayers = []
+        # keep track of the number of input layer output dimensions
+        inlayers_outdims = 0
+        # if we have numeric features, create the numeric input layer
+        if len(self.float_idxs) > 0:
+            n_in = len(self.float_idxs)
+            n_hidden = ModelWrapper.makeless(n_in, p1=0.5)
+            lin = torch.nn.Linear(n_in, n_hidden)
+            drp = torch.nn.Dropout(p=0.2)
+            act = torch.nn.ELU()
+            layer = torch.nn.Sequential(lin, drp, act)
+            inlayers_outdims += n_hidden
+            lname = "input_numeric"
+            inputlayers.append((layer, {"type": "numeric", "name": lname}))
+            pass
+        # if we have nominal features, create all the layers for those
+        # TODO: may need to handle onehot features differently!!
+        # remember which layers we already have for an embedding id
+        nom_layers = {}
+        for i in range(len(self.index_feats)):
+            nom_feat = self.index_feats[i]
+            nom_idx = self.index_idxs[i]
+            vocab = nom_feat.vocab
+            emb_id = vocab.emb_id
+            if emb_id in nom_layers:
+                emblayer = nom_layers.get(emb_id)
+            else:
+                emblayer = EmbeddingsModule(vocab)
+                nom_layers[emb_id] = emblayer
+            lname = "input_emb_%s_%s" % (i, emb_id)
+            inputlayers.append((emblayer, {"type": "nominal", "name": lname}))
+            inlayers_outdims += emblayer.emb_dims
+        for i in range(len(self.indexlist_feats)):
+            ngr_feat = self.indexlist_feats[i]
+            nom_idx = self.indexlist_idxs[i]
+            vocab = ngr_feat.vocab
+            emb_id = vocab.emb_id
+            if emb_id in nom_layers:
+                emblayer = nom_layers.get(emb_id)
+            else:
+                emblayer = EmbeddingsModule(vocab)
+                nom_layers[emb_id] = emblayer
+            lname = "input_ngram_%s_%s" % (i, emb_id)
+            ngramlayer = NgramModule(emblayer)
+            inputlayers.append((ngramlayer, {"type": "ngram", "name": lname}))
+            inlayers_outdims += ngramlayer.out_dim
+        # Now create the hidden layers
+        hiddenlayers = []
+        # for now, one hidden layer for compression and another
+        # to map to the number of classes
+        n_hidden1lin_out = ModelWrapper.makeless(inlayers_outdims)
+        hidden1lin = torch.nn.Linear(inlayers_outdims, n_hidden1lin_out)
+        hidden1drp = torch.nn.Dropout(p=0.2)
+        hidden1act = torch.nn.ELU()
+
+        ## Now that we have combined the features, we create the lstm
+        hidden2 = torch.nn.LSTM(input_size=n_hidden1lin_out,
+                                  hidden_size=200,
+                                  num_layers=1,
+                                  dropout=0.1,
+                                  bidirectional=True,
+                                  batch_first=True)
+        # the outputs of the LSTM are of shape b, seq, hidden
+        # We want to get softmax outputs for each, so we need to get this to
+        # b, seq, nclasses
+        hidden3 = torch.nn.Linear(200, n_classes)
+        hidden = torch.nn.Sequential(hidden1lin, hidden1drp,
+                                     hidden1act, hidden2, hidden3)
+        hiddenlayers.append((hidden, {"name": "hidden"}))
+        # Create the output layer
+        out = torch.nn.Softmax(dim=1)
+        outputlayer = (out, {"name": "output"})
+        # create the module and store it
+        self.module = ClassificationModelSimple(inputlayers,
+                                                hiddenlayers,
+                                                outputlayer,
+                                                self.featureinfo)
+        # Decide on the lossfunction function here for training later!
+        self.lossfunction = torch.nn.CrossEntropyLoss()
+
+
 
     def get_module(self):
         """Return the PyTorch module that has been built and is used by this wrapper."""

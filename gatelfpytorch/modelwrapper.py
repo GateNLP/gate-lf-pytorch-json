@@ -53,7 +53,10 @@ class ModelWrapper(object):
         """Calculate accuracy for the predictions (one-hot vectors) based on the true class indices in batch_targets.
         Targets are assumed to be indices unless targets_onehot is True.
         Both parameters are assumed to be torch Variables."""
-        _, out_idxs = torch.max(batch_predictions.data, 1)
-        n_correct = int(out_idxs.eq(batch_targets.data).sum())
-        acc = n_correct / float(batch_targets.size()[0])
+        # NOTE: in case we have sequences we reshape to put everything that is not the last dimension
+        # into the first dimension for the predictions
+        dims = batch_predictions.size()[-1]
+        _, out_idxs = torch.max(batch_predictions.data.view(-1, dims), 1)
+        n_correct = int(out_idxs.eq(batch_targets.data.view(-1)).sum())
+        acc = n_correct / float(batch_targets.data.view(-1).size()[0])
         return acc

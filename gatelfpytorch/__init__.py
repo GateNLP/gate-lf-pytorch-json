@@ -11,5 +11,5 @@ except ImportError:
     # we silently ignore this and let the user run into problems later rather
     # than insist that setuptools must be installed
     pass
-from .modelwrappersimple import ModelWrapperSimple
 
+from .modelwrappersimple import ModelWrapperSimple

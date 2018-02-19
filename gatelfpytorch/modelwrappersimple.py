@@ -8,8 +8,10 @@ import math
 from torch.autograd import Variable as V
 import torch.nn.functional as F
 from .classificationmodelsimple import ClassificationModelSimple
+from .takefromtuple import TakeFromTuple
 import logging
 import sys
+import statistics
 
 # Basic usage:
 # ds = Dataset(metafile)
@@ -205,7 +207,15 @@ class ModelWrapperSimple(ModelWrapper):
         # the outputs of the LSTM are of shape b, seq, hidden
         # We want to get softmax outputs for each, so we need to get this to
         # b, seq, nclasses
-        hidden3 = torch.nn.Linear(200, n_classes)
+
+        # NOTE: we cannot use sequential here since the LSTM returns a tuple and
+        # Sequential does not properly deal with this. So instead of adding the LSTM directly
+        # we wrap it in a tiny custom wrapper that just returns the first element of the
+        # tuple in the forward step
+        hidden2 = TakeFromTuple(hidden2, which=0)
+
+        # NOTE: since the LSTM is bidirectional, we need 400 instead of 200 here
+        hidden3 = torch.nn.Linear(400, n_classes)
         hidden = torch.nn.Sequential(hidden1lin, hidden1drp,
                                      hidden1act, hidden2, hidden3)
         hiddenlayers.append((hidden, {"name": "hidden"}))
@@ -217,8 +227,8 @@ class ModelWrapperSimple(ModelWrapper):
                                                 hiddenlayers,
                                                 outputlayer,
                                                 self.featureinfo)
-        # Decide on the lossfunction function here for training later!
-        self.lossfunction = torch.nn.CrossEntropyLoss()
+        # For sequence tagging we cannot use CrossEntropyLoss
+        self.lossfunction = torch.nn.CrossEntropyLoss(ignore_index=0)
 
 
 
@@ -273,7 +283,10 @@ class ModelWrapperSimple(ModelWrapper):
         v_preds = self.apply(validationinstances[0], train_mode=train_mode)
         # TODO: not sure if and when to zero the grads for the loss function if we use it
         # in between training steps?
-        loss = self.lossfunction(v_preds, v_deps)
+        # NOTE: the v_preds may or may not be sequences, if sequences we get the wrong shape here
+        # so for now we simply put all the items (sequences and batch items) in the first dimension
+        valuedim = v_preds.size()[-1]
+        loss = self.lossfunction(v_preds.view(-1, valuedim), v_deps.view(-1))
         # calculate the accuracy as well, since we know we have a classification problem
         acc = ModelWrapper.accuracy(v_preds, v_deps)
         if not as_pytorch:
@@ -316,6 +329,8 @@ class ModelWrapperSimple(ModelWrapper):
         validation_losses = []
         print("DEBUG: before running training...", file=sys.stderr)
         totalbatches = 0
+        last_accs = []
+        last_losses = []
         for epoch in range(1, max_epochs+1):
             batch_nr = 0
             for batch in self.dataset.batches_converted(train=True, batch_size=batch_size):
@@ -337,6 +352,8 @@ class ModelWrapperSimple(ModelWrapper):
                 # float(lossfunction), acc), file=sys.stderr)
                 loss.backward()
                 self.optimizer.step()
+                last_accs.append(float(acc))
+                last_losses.append(float(loss))
                 if (self.validate_every_batches and ((totalbatches % self.validate_every_batches) == 0)) or\
                         (self.validate_every_epochs and ((epoch % self.validate_every_epochs) == 0)):
                     # evaluate on validation set
@@ -352,9 +369,16 @@ class ModelWrapperSimple(ModelWrapper):
                         (stop_it_already, var) = early_stopping_function(validation_losses)
                         if stop_it_already:
                             logger.info("Early stopping criterion reached, stopping training, var=%s" % var)
-                    logger.info("Evaluation epoch=%s,batch=%s,train-lossfunction/val-lossfunction/"
-                                "val-variance/train-acc/val-acc: %s / %s / %s / %s / %s" %
-                                (epoch, batch_nr, float(loss), float(loss_val), var, acc, acc_val))
+                    avg_tloss = statistics.mean(last_losses)
+                    avg_tacc = statistics.mean(last_accs)
+                    var_vloss = None
+                    if len(validation_losses) > 10:
+                        var_vloss = statistics.variance(validation_losses[-10:])
+                    last_losses = []
+                    last_accs = []
+                    logger.info("EVAL e=%s,b=%s,tloss/vloss/"
+                                "vloss-var/tacc/vacc: %s / %s / %s / %s / %s" %
+                                (epoch, batch_nr, avg_tloss, float(loss_val), var_vloss, avg_tacc, acc_val))
                 if stop_it_already:
                     break
             if stop_it_already:

@@ -60,9 +60,13 @@ class ClassificationModelSimple(torch.nn.Module):
                 input_layer_outputs.append(out)
             else:
                 raise Exception("Odd input type: %s" % inputtype)
-        # concatenate the outputs
-        hidden_vals = torch.cat(input_layer_outputs, 1)
+        # concatenate the outputs, i.e. the last dimension
+        hidden_vals = torch.cat(input_layer_outputs, len(input_layer_outputs[0].size())-1)
         for hiddenlayer, config in self.hiddenlayersinfo:
+            # print("DEBUG: Have shape: ", hidden_vals.size(),  file=sys.stderr)
+            # print("DEBUG: Trying to apply hidden layer: ", hiddenlayer,  file=sys.stderr)
+            # TODO: IMPORTANT: if we have an LSTM somewhere, the lstm returns a tuple, so passing
+            # it on to the next layer will not work!!
             hidden_vals = hiddenlayer(hidden_vals)
         outputlayer, outputlayerconfig = self.outputlayerinfo
         out = outputlayer(hidden_vals)

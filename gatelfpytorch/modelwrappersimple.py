@@ -12,6 +12,7 @@ from .takefromtuple import TakeFromTuple
 import logging
 import sys
 import statistics
+import pickle
 
 # Basic usage:
 # ds = Dataset(metafile)
@@ -383,3 +384,14 @@ class ModelWrapperSimple(ModelWrapper):
                     break
             if stop_it_already:
                 break
+
+    def save(self, filename):
+        with open(filename,"wb") as outf:
+            pickle.dump(self, outf)
+
+    @staticmethod
+    def load(filename):
+        with open(filename, "rb") as inf:
+            w = pickle.load(inf)
+            return w
+        

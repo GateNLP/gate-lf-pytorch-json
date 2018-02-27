@@ -3,6 +3,7 @@ from torch.autograd import Variable as V
 import torch.nn.functional as F
 import sys
 
+
 class ClassificationModelSimple(torch.nn.Module):
 
     def __init__(self, inputlayersinfo, hiddenlayersinfo, outputlayerinfo,
@@ -39,6 +40,9 @@ class ClassificationModelSimple(torch.nn.Module):
         i_nom = 0
         i_ngr = 0
         input_layer_outputs = []
+        # TODO: when we use the Concat layer instead of manually concatenating,
+        # we just create all the input variables her and append to the inputs list,
+        # then pass this on to the concat layer.
         for inputlayer, config in self.inputlayersinfo:
             inputtype = config["type"]
             if inputtype == "numeric":
@@ -66,7 +70,8 @@ class ClassificationModelSimple(torch.nn.Module):
             # print("DEBUG: Have shape: ", hidden_vals.size(),  file=sys.stderr)
             # print("DEBUG: Trying to apply hidden layer: ", hiddenlayer,  file=sys.stderr)
             # TODO: IMPORTANT: if we have an LSTM somewhere, the lstm returns a tuple, so passing
-            # it on to the next layer will not work!!
+            # it on to the next layer will not work!! Instead we need to wrap the LSTM into a
+            # takefromtuple layer.
             hidden_vals = hiddenlayer(hidden_vals)
         outputlayer, outputlayerconfig = self.outputlayerinfo
         out = outputlayer(hidden_vals)

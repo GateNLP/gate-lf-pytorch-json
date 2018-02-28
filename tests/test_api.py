@@ -35,84 +35,86 @@ if torch.cuda.device_count() > 0:
 else:
     SLOW_TESTS = False
 
+# In case we want to temporarily override
+SLOW_TESTS = True
 
 class Test1(unittest.TestCase):
 
-    # def test1_1(self):
-    #     ds = Dataset(TESTFILE1)
-    #     torch.manual_seed(1)  # make results based on random weights repeatable
-    #     wrapper = ModelWrapperSimple(ds)
-    #     print("\nDEBUG: dataset=", wrapper.dataset, file=sys.stderr)
-    #     m = wrapper.get_module()
-    #     wrapper.prepare_data()
-    #     print("\nDEBUG: module:", m, file=sys.stderr)
-    #     (loss, acc) = wrapper.evaluate(wrapper.valset, train_mode=False, as_pytorch=False)
-    #     assert acc < 0.7
-    #     print("\nDEBUG: test1_1 before training loss/acc=%s/%s" % (loss, acc), file=sys.stderr)
-    #     if SLOW_TESTS:
-    #         wrapper.train(batch_size=20, max_epochs=250, early_stopping=False)
-    #         (loss, acc) = wrapper.evaluate(wrapper.valset, train_mode=False, as_pytorch=False)
-    #         assert acc > 0.7
-    #         print("\nDEBUG: test1_1 after training loss/acc=%s/%s" % (loss, acc), file=sys.stderr)
-    #
-    # def test1_2(self):
-    #     ds = Dataset(TESTFILE2)
-    #     torch.manual_seed(1)  # make results based on random weights repeatable
-    #     wrapper = ModelWrapperSimple(ds)
-    #     print("\nDEBUG: dataset=", wrapper.dataset, file=sys.stderr)
-    #     wrapper.prepare_data()
-    #     m = wrapper.get_module()
-    #     print("\nDEBUG: module:", m, file=sys.stderr)
-    #     wrapper.validate_every_batches = 10
-    #     # wrapper.train(batch_size=33,
-    #     # early_stopping=lambda x: ModelWrapper.early_stopping_checker(x, max_variance=0.0000001))
-    #     (loss, acc) = wrapper.evaluate(wrapper.valset, train_mode=False, as_pytorch=False)
-    #     print("\nDEBUG: test1_2 before training loss/acc=%s/%s" % (loss, acc), file=sys.stderr)
-    #     assert acc < 0.55
-    #     wrapper.optimizer = torch.optim.SGD(m.parameters(), lr=0.01, momentum=0.0)
-    #     # NOTE: so far this is very slow and does not learn on the tiny set so we permanently deactivate,
-    #     # not just if we want to avoid slow tests
-    #     if SLOW_TESTS and False:
-    #         wrapper.train(batch_size=5, max_epochs=6, early_stopping=False)
-    #         (loss, acc) = wrapper.evaluate(wrapper.valset, train_mode=False)
-    #         assert acc > 0.6
-    #         print("\nDEBUG: test1_1 after training loss/acc=%s/%s" % (loss, acc), file=sys.stderr)
-    #
-    # def test1_3(self):
-    #     ds = Dataset(TESTFILE3)
-    #     torch.manual_seed(1)  # make results based on random weights repeatable
-    #     wrapper = ModelWrapperSimple(ds)
-    #     print("\nDEBUG: dataset=", wrapper.dataset, file=sys.stderr)
-    #     m = wrapper.get_module()
-    #     print("\nDEBUG: module:", m, file=sys.stderr)
-    #     wrapper.validate_every_batches = 10
-    #     wrapper.prepare_data()
-    #     (loss, acc) = wrapper.evaluate(wrapper.valset, train_mode=False, as_pytorch=False)
-    #     print("\nDEBUG: test1_3 before training loss/acc=%s/%s" % (loss, acc), file=sys.stderr)
-    #     assert acc < 0.05
-    #     if SLOW_TESTS:
-    #         wrapper.train(batch_size=20, max_epochs=30, early_stopping=False)
-    #         (loss, acc) = wrapper.evaluate(wrapper.valset, train_mode=False, as_pytorch=False)
-    #         print("\nDEBUG: test1_3 after training loss/acc=%s/%s" % (loss, acc), file=sys.stderr)
-    #         assert acc > 0.3
-    #
-    # def test1_4(self):
-    #     ds = Dataset(TESTFILE4)
-    #     torch.manual_seed(1)  # make results based on random weights repeatable
-    #     wrapper = ModelWrapperSimple(ds)
-    #     print("\nDEBUG: dataset=", wrapper.dataset, file=sys.stderr)
-    #     m = wrapper.get_module()
-    #     print("\nDEBUG: module:", m, file=sys.stderr)
-    #     wrapper.validate_every_batches = 10
-    #     wrapper.prepare_data()
-    #     (loss, acc) = wrapper.evaluate(wrapper.valset, train_mode=False, as_pytorch=False)
-    #     print("\nDEBUG: test1_4 before training loss/acc=%s/%s" % (loss, acc), file=sys.stderr)
-    #     assert acc < 0.2134
-    #     if SLOW_TESTS:
-    #         wrapper.train(batch_size=20, max_epochs=30, early_stopping=False)
-    #         (loss, acc) = wrapper.evaluate(wrapper.valset, train_mode=False, as_pytorch=False)
-    #         print("\nDEBUG: test1_4 after training loss/acc=%s/%s" % (loss, acc), file=sys.stderr)
-    #         assert acc > 0.215
+    def test1_1(self):
+        ds = Dataset(TESTFILE1)
+        torch.manual_seed(1)  # make results based on random weights repeatable
+        wrapper = ModelWrapperSimple(ds)
+        print("\nDEBUG: dataset=", wrapper.dataset, file=sys.stderr)
+        m = wrapper.get_module()
+        wrapper.prepare_data()
+        print("\nDEBUG: module:", m, file=sys.stderr)
+        (loss, acc) = wrapper.evaluate(wrapper.valset, train_mode=False, as_pytorch=False)
+        assert acc < 0.7
+        print("\nDEBUG: test1_1 before training loss/acc=%s/%s" % (loss, acc), file=sys.stderr)
+        if SLOW_TESTS:
+            wrapper.train(batch_size=20, max_epochs=250, early_stopping=False)
+            (loss, acc) = wrapper.evaluate(wrapper.valset, train_mode=False, as_pytorch=False)
+            assert acc > 0.7
+            print("\nDEBUG: test1_1 after training loss/acc=%s/%s" % (loss, acc), file=sys.stderr)
+
+    def test1_2(self):
+        ds = Dataset(TESTFILE2)
+        torch.manual_seed(1)  # make results based on random weights repeatable
+        wrapper = ModelWrapperSimple(ds)
+        print("\nDEBUG: dataset=", wrapper.dataset, file=sys.stderr)
+        wrapper.prepare_data()
+        m = wrapper.get_module()
+        print("\nDEBUG: module:", m, file=sys.stderr)
+        wrapper.validate_every_batches = 10
+        # wrapper.train(batch_size=33,
+        # early_stopping=lambda x: ModelWrapper.early_stopping_checker(x, max_variance=0.0000001))
+        (loss, acc) = wrapper.evaluate(wrapper.valset, train_mode=False, as_pytorch=False)
+        print("\nDEBUG: test1_2 before training loss/acc=%s/%s" % (loss, acc), file=sys.stderr)
+        assert acc < 0.55
+        wrapper.optimizer = torch.optim.SGD(m.parameters(), lr=0.01, momentum=0.0)
+        # NOTE: so far this is very slow and does not learn on the tiny set so we permanently deactivate,
+        # not just if we want to avoid slow tests
+        if SLOW_TESTS and False:
+            wrapper.train(batch_size=5, max_epochs=6, early_stopping=False)
+            (loss, acc) = wrapper.evaluate(wrapper.valset, train_mode=False)
+            assert acc > 0.6
+            print("\nDEBUG: test1_1 after training loss/acc=%s/%s" % (loss, acc), file=sys.stderr)
+
+    def test1_3(self):
+        ds = Dataset(TESTFILE3)
+        torch.manual_seed(1)  # make results based on random weights repeatable
+        wrapper = ModelWrapperSimple(ds)
+        print("\nDEBUG: dataset=", wrapper.dataset, file=sys.stderr)
+        m = wrapper.get_module()
+        print("\nDEBUG: module:", m, file=sys.stderr)
+        wrapper.validate_every_batches = 10
+        wrapper.prepare_data()
+        (loss, acc) = wrapper.evaluate(wrapper.valset, train_mode=False, as_pytorch=False)
+        print("\nDEBUG: test1_3 before training loss/acc=%s/%s" % (loss, acc), file=sys.stderr)
+        assert acc < 0.05
+        if SLOW_TESTS:
+            wrapper.train(batch_size=20, max_epochs=30, early_stopping=False)
+            (loss, acc) = wrapper.evaluate(wrapper.valset, train_mode=False, as_pytorch=False)
+            print("\nDEBUG: test1_3 after training loss/acc=%s/%s" % (loss, acc), file=sys.stderr)
+            assert acc > 0.3
+
+    def test1_4(self):
+        ds = Dataset(TESTFILE4)
+        torch.manual_seed(1)  # make results based on random weights repeatable
+        wrapper = ModelWrapperSimple(ds)
+        print("\nDEBUG: dataset=", wrapper.dataset, file=sys.stderr)
+        m = wrapper.get_module()
+        print("\nDEBUG: module:", m, file=sys.stderr)
+        wrapper.validate_every_batches = 10
+        wrapper.prepare_data()
+        (loss, acc) = wrapper.evaluate(wrapper.valset, train_mode=False, as_pytorch=False)
+        print("\nDEBUG: test1_4 before training loss/acc=%s/%s" % (loss, acc), file=sys.stderr)
+        assert acc < 0.2134
+        if SLOW_TESTS:
+            wrapper.train(batch_size=20, max_epochs=30, early_stopping=False)
+            (loss, acc) = wrapper.evaluate(wrapper.valset, train_mode=False, as_pytorch=False)
+            print("\nDEBUG: test1_4 after training loss/acc=%s/%s" % (loss, acc), file=sys.stderr)
+            assert acc > 0.215
 
     def test1_5(self):
         """Test saving and restoring a model"""

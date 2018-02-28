@@ -261,7 +261,7 @@ class ModelWrapperSimple(ModelWrapper):
 
     def apply(self, indeps, is_batch=True, train_mode=False):
         """Apply the model to the list of indeps and returns a list of predictions.
-        The independent are assumed to be in the shape for batches by default.
+        The independents are assumed to be in the shape for batches by default.
         train_mode influences if the underlying model is used in training mode or not."""
         if not self.is_data_prepared:
             raise Exception("Must call train or prepare_data first")

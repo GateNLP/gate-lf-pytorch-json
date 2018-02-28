@@ -142,4 +142,17 @@ class Test1(unittest.TestCase):
         ds2 = wrapper2.dataset
         (loss, acc) = wrapper2.evaluate(valset, train_mode=False, as_pytorch=False)
         print("\nDEBUG: test1_5 after restoring loss/acc=%s/%s" % (loss, acc), file=sys.stderr)
+        # test application: a list of instances in original format, optionally batch-reshaped, map to
+        # a list of predictions
+
+        # test 1: use batch shape which is the default
+        # vals_orig = ds.validation_set_orig()
+        # indeps_orig = vals_orig[0]
+        # TODO: convert the origs
+        # indeps_conv = ...(indeps_orig)
+        # indeps_batch = ds.reshape_batch(indeps_conv, indep_only=True)
+        # pred = wrapper2.apply(indeps_batch)
+        # TODO: convert from converted back to original
+        # pred_orig = ...(pred)
+        # TODO: convert back to format required by LF, if necessary
 

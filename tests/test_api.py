@@ -50,7 +50,7 @@ class Test1(unittest.TestCase):
     #     assert acc < 0.7
     #     print("\nDEBUG: test1_1 before training loss/acc=%s/%s" % (loss, acc), file=sys.stderr)
     #     if SLOW_TESTS:
-    #         wrapper.train(batch_size=20, max_epochs=100)
+    #         wrapper.train(batch_size=20, max_epochs=250, early_stopping=False)
     #         (loss, acc) = wrapper.evaluate(wrapper.valset, train_mode=False, as_pytorch=False)
     #         assert acc > 0.7
     #         print("\nDEBUG: test1_1 after training loss/acc=%s/%s" % (loss, acc), file=sys.stderr)
@@ -95,21 +95,51 @@ class Test1(unittest.TestCase):
     #         (loss, acc) = wrapper.evaluate(wrapper.valset, train_mode=False, as_pytorch=False)
     #         print("\nDEBUG: test1_3 after training loss/acc=%s/%s" % (loss, acc), file=sys.stderr)
     #         assert acc > 0.3
+    #
+    # def test1_4(self):
+    #     ds = Dataset(TESTFILE4)
+    #     torch.manual_seed(1)  # make results based on random weights repeatable
+    #     wrapper = ModelWrapperSimple(ds)
+    #     print("\nDEBUG: dataset=", wrapper.dataset, file=sys.stderr)
+    #     m = wrapper.get_module()
+    #     print("\nDEBUG: module:", m, file=sys.stderr)
+    #     wrapper.validate_every_batches = 10
+    #     wrapper.prepare_data()
+    #     (loss, acc) = wrapper.evaluate(wrapper.valset, train_mode=False, as_pytorch=False)
+    #     print("\nDEBUG: test1_4 before training loss/acc=%s/%s" % (loss, acc), file=sys.stderr)
+    #     assert acc < 0.2134
+    #     if SLOW_TESTS:
+    #         wrapper.train(batch_size=20, max_epochs=30, early_stopping=False)
+    #         (loss, acc) = wrapper.evaluate(wrapper.valset, train_mode=False, as_pytorch=False)
+    #         print("\nDEBUG: test1_4 after training loss/acc=%s/%s" % (loss, acc), file=sys.stderr)
+    #         assert acc > 0.215
 
-    def test1_4(self):
-        ds = Dataset(TESTFILE4)
+    def test1_5(self):
+        """Test saving and restoring a model"""
+        ds = Dataset(TESTFILE1)
         torch.manual_seed(1)  # make results based on random weights repeatable
         wrapper = ModelWrapperSimple(ds)
-        print("\nDEBUG: dataset=", wrapper.dataset, file=sys.stderr)
+        print("DEBUG: wrapper.dataset=", wrapper.dataset, file=sys.stderr)
+        print("DEBUG: wrapper.metafile=", wrapper.metafile, file=sys.stderr)
+        assert hasattr(wrapper, 'metafile')
         m = wrapper.get_module()
-        print("\nDEBUG: module:", m, file=sys.stderr)
-        wrapper.validate_every_batches = 10
         wrapper.prepare_data()
-        (loss, acc) = wrapper.evaluate(wrapper.valset, train_mode=False, as_pytorch=False)
-        print("\nDEBUG: test1_4 before training loss/acc=%s/%s" % (loss, acc), file=sys.stderr)
-        assert acc < 0.2134
-        if SLOW_TESTS or True:
-            wrapper.train(batch_size=20, max_epochs=30, early_stopping=False)
-            (loss, acc) = wrapper.evaluate(wrapper.valset, train_mode=False, as_pytorch=False)
-            print("\nDEBUG: test1_4 after training loss/acc=%s/%s" % (loss, acc), file=sys.stderr)
-            assert acc > 0.215
+        print("\nDEBUG: module:", m, file=sys.stderr)
+        valset = wrapper.valset
+        (loss, acc) = wrapper.evaluate(valset, train_mode=False, as_pytorch=False)
+        print("\nDEBUG: test1_5 before training loss/acc=%s/%s" % (loss, acc), file=sys.stderr)
+        assert acc < 0.7
+        wrapper.train(batch_size=20, max_epochs=150, early_stopping=False)
+        (loss, acc) = wrapper.evaluate(valset, train_mode=False, as_pytorch=False)
+        print("\nDEBUG: test1_5 after training loss/acc=%s/%s" % (loss, acc), file=sys.stderr)
+        assert acc > 0.7
+        # save the model
+        assert hasattr(wrapper, 'metafile')
+        wrapper.save("t1_5")
+        wrapper = None
+        m = None
+        wrapper2 = ModelWrapperSimple.load("t1_5")
+        ds2 = wrapper2.dataset
+        (loss, acc) = wrapper2.evaluate(valset, train_mode=False, as_pytorch=False)
+        print("\nDEBUG: test1_5 after restoring loss/acc=%s/%s" % (loss, acc), file=sys.stderr)
+

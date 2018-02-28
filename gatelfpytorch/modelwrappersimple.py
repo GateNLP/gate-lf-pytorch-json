@@ -13,6 +13,7 @@ import logging
 import sys
 import statistics
 import pickle
+from gatelfdata import Dataset
 
 # Basic usage:
 # ds = Dataset(metafile)
@@ -26,12 +27,10 @@ import pickle
 
 class ModelWrapperSimple(ModelWrapper):
 
-    # This requires an initialized dataset instance
-    def __init__(self, dataset, config=None):
-        """This requires a gatelfdata Dataset instance and can optionally take a dictionary with
-        configuration/initialization options (NOT SUPPORTED YET)"""
-        super().__init__(dataset)
-        self.dataset = dataset
+    def init_from_dataset(self):
+        """Set the convenience attributes which we get from the dataset instance"""
+        dataset = self.dataset
+        self.metafile = dataset.metafile
         self.float_idxs = dataset.get_float_feature_idxs()
         self.index_idxs = dataset.get_index_feature_idxs()
         self.indexlist_idxs = dataset.get_indexlist_feature_idxs()
@@ -42,6 +41,14 @@ class ModelWrapperSimple(ModelWrapper):
                             "nom_idxs": self.index_idxs,
                             "ngr_idxs": self.indexlist_idxs}
         self.info = dataset.get_info()
+
+    # This requires an initialized dataset instance
+    def __init__(self, dataset, config=None):
+        """This requires a gatelfdata Dataset instance and can optionally take a dictionary with
+        configuration/initialization options (NOT SUPPORTED YET)"""
+        super().__init__(dataset)
+        self.dataset = dataset
+        self.init_from_dataset()
         # various configuration settings which can be set before passing on control to the
         # task-speicific initialization
         self.validate_every_batches = 100
@@ -231,8 +238,6 @@ class ModelWrapperSimple(ModelWrapper):
         # For sequence tagging we cannot use CrossEntropyLoss
         self.lossfunction = torch.nn.CrossEntropyLoss(ignore_index=0)
 
-
-
     def get_module(self):
         """Return the PyTorch module that has been built and is used by this wrapper."""
         return self.module
@@ -385,13 +390,47 @@ class ModelWrapperSimple(ModelWrapper):
             if stop_it_already:
                 break
 
-    def save(self, filename):
-        with open(filename,"wb") as outf:
+    def save(self, filenameprefix):
+        # store everything using pickle, but we do not store the module or the dataset
+        # the dataset will simply get recreated when loading, but the module needs to get saved
+        # separately
+
+        # TODO: eventually, make every module know what is the best way to save and load itself,
+        # and delegate, but for now we just use the standard pytorch approach
+        # self.module.save(self.module, filenameprefix+"module.pytorch")
+        torch.save(self.module, filenameprefix+".module.pytorch")
+        assert hasattr(self, 'metafile')
+        with open(filenameprefix+".wrapper.pickle", "wb") as outf:
             pickle.dump(self, outf)
 
-    @staticmethod
-    def load(filename):
-        with open(filename, "rb") as inf:
+    @classmethod
+    def load(cls, filenameprefix):
+        with open(filenameprefix+".wrapper.pickle", "rb") as inf:
             w = pickle.load(inf)
-            return w
-        
+        print("DEBUG: restored instance keys=", w.__dict__.keys(), file=sys.stderr)
+        assert hasattr(w, 'metafile')
+        w.dataset = Dataset(w.metafile)
+        w.init_from_dataset()
+        w.module = torch.load(filenameprefix+".module.pytorch")
+        return w
+
+    def __getstate__(self):
+        """Currently we do not pickle the dataset instance but rather re-create it when loading,
+        and we do not pickle the actual pytorch module but rather use the pytorch-specific saving
+        and loading mechanism."""
+        print("DEBUG: self keys=", self.__dict__.keys(), file=sys.stderr)
+        assert hasattr(self, 'metafile')
+        state = self.__dict__.copy()  # this creates a shallow copy
+        print("DEBUG: copy keys=", state.keys(), file=sys.stderr)
+        assert 'metafile' in state
+        del state['dataset']
+        del state['module']
+        return state
+
+    def __setstate__(self, state):
+        """We simply restore everything that was pickled earlier plus manually rebuild the dataset
+        instance and manually restore the pytorch module."""
+        assert 'metafile' in state
+        self.__dict__.update(state)
+        assert hasattr(self, 'metafile')
+

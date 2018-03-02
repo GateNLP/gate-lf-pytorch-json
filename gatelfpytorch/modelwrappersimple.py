@@ -259,10 +259,51 @@ class ModelWrapperSimple(ModelWrapper):
         self.valset = self.dataset.validation_set_converted(as_batch=True)
         self.is_data_prepared = True
 
-    def apply(self, indeps, is_batch=True, train_mode=False):
-        """Apply the model to the list of indeps and returns a list of predictions.
-        The independents are assumed to be in the shape for batches by default.
-        train_mode influences if the underlying model is used in training mode or not."""
+    def apply(self, instancelist, converted=False, reshaped=False):
+        """Given a list of instances in original format (or converted if converted=True), applies
+        the model to them in evaluation mode and returns the predictions in the following format as a list
+        with the following elements:
+        First, a list of the predicted labels, label sequences or values, as many elements as there are instances.
+        Second, a list of additional values for each of the labels, whith a list of values corresponding
+        to each of the labels or values in the first list. For labels, this is the probablity distribution
+        over all labels (TODO: how to index this??)
+        for values this could be confidence intervals, variances etc. That second element is optional.
+        """
+        batchsize = len(instancelist)
+        if not converted:
+            # TODO: check if and when to do instance normalization here!
+            instancelist = [ self.dataset.convert_indep(x) for x in instancelist]
+            print("\nDEBUG: instances after conversion: ", instancelist, file=sys.stderr)
+        if not reshaped:
+            instancelist = self.dataset.reshape_batch(instancelist, indep_only=True)
+            print("\nDEBUG: instances after reshaping: ", instancelist, file=sys.stderr)
+        preds = self._apply_model(instancelist, train_mode=False)
+        # for now we only have classification (sequence/non-sequence) so
+        # for this, we first use the torch max to find the most likely label index,
+        # then convert back to the label itself. We also convert the torch probability vector
+        # into a simple list of values
+        ret = []
+        nrClasses = self.dataset.nClasses
+        if self.dataset.isSequence:
+            raise Exception("Apply not yet implemented for sequences")
+        else:
+            # preds should be a 2d tensor of size batchsize x numberClasses
+            assert len(preds.size()) == 2
+            assert preds.size()[0] == batchsize
+            assert preds.size()[1] == nrClasses
+            _, out_idxs = torch.max(preds.data, dim=1)
+            # out_idxs contains the class indices, need to convert back to labels
+            getlabel=self.dataset.target.idx2label
+            labels = [getlabel(x) for x in out_idxs]
+            probs = [list(x) for x in preds.data]
+            ret = [labels, probs]
+        return ret
+
+    def _apply_model(self, indeps, train_mode=False):
+        """Apply the model to the list of indeps in the correct format for our Pytorch module
+         and returns a list of predictions as Pytorch variables.
+        train_mode influences if the underlying model is used in training mode or not.
+        """
         if not self.is_data_prepared:
             raise Exception("Must call train or prepare_data first")
         curmodeistrain = self.module.training
@@ -286,7 +327,7 @@ class ModelWrapperSimple(ModelWrapper):
         if not self.is_data_prepared:
             raise Exception("Must call train or prepare_data first")
         v_deps = V(torch.LongTensor(validationinstances[1]), requires_grad=False)
-        v_preds = self.apply(validationinstances[0], train_mode=train_mode)
+        v_preds = self._apply_model(validationinstances[0], train_mode=train_mode)
         # TODO: not sure if and when to zero the grads for the loss function if we use it
         # in between training steps?
         # NOTE: the v_preds may or may not be sequences, if sequences we get the wrong shape here

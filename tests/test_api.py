@@ -119,7 +119,7 @@ class Test1(unittest.TestCase):
     def test1_5(self):
         """Test saving and restoring a model"""
         ds = Dataset(TESTFILE1)
-        ds.split()
+        ds.split(reuse_files=True)
         torch.manual_seed(1)  # make results based on random weights repeatable
         wrapper = ModelWrapperSimple(ds)
         print("DEBUG: wrapper.dataset=", wrapper.dataset, file=sys.stderr)

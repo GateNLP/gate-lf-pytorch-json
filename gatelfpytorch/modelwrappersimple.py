@@ -43,10 +43,20 @@ class ModelWrapperSimple(ModelWrapper):
         self.info = dataset.get_info()
 
     # This requires an initialized dataset instance
-    def __init__(self, dataset, config=None):
+    def __init__(self, dataset, config=None, cuda=None):
         """This requires a gatelfdata Dataset instance and can optionally take a dictionary with
-        configuration/initialization options (NOT SUPPORTED YET)"""
+        configuration/initialization options (NOT SUPPORTED YET).
+        If cuda is None, then if cuda is available it will be used. True and False
+        require and prohibit the use of cuda unconditionally.
+        """
         super().__init__(dataset)
+        self.cuda = cuda
+        cuda_is_available = torch.cuda.is_available()
+        if self.cuda is None:
+            enable_cuda = cuda_is_available
+        else:
+            enable_cuda = self.cuda
+        self._enable_cuda = enable_cuda  # this tells us if we should actually set cuda or not
         self.dataset = dataset
         self.init_from_dataset()
         # various configuration settings which can be set before passing on control to the
@@ -136,6 +146,9 @@ class ModelWrapperSimple(ModelWrapper):
                                                 self.featureinfo)
         # Decide on the lossfunction function here for training later!
         self.lossfunction = torch.nn.CrossEntropyLoss()
+        if self._enable_cuda:
+            self.module.cuda()
+            self.lossfunction.cuda()
 
     def init_sequencetagging(self, dataset):
         """Build the module for sequence tagging."""
@@ -237,6 +250,11 @@ class ModelWrapperSimple(ModelWrapper):
                                                 self.featureinfo)
         # For sequence tagging we cannot use CrossEntropyLoss
         self.lossfunction = torch.nn.CrossEntropyLoss(ignore_index=0)
+        if self._enable_cuda:
+            self.module.cuda()
+            self.lossfunction.cuda()
+
+
 
     def get_module(self):
         """Return the PyTorch module that has been built and is used by this wrapper."""

@@ -23,7 +23,21 @@ class EmbeddingsModule(torch.nn.Module):
             self.emb_dims = 100
         self.emb_size = vocab.n
         self.module = torch.nn.Embedding(self.emb_size, embedding_dim=self.emb_dims, padding_idx=0)
+        self._on_cuda = None
+
+    def on_cuda(self):
+        """Returns true or false depending on if the module is on cuda or not. Unfortunately
+        there is no API method in PyTorch for this so we get this from the first parameter of the
+        model and cache it."""
+        if self._on_cuda is None:
+            self._on_cuda = next(self.parameters())
+        return self._on_cuda
 
     def forward(self, batch):
+        # for space reasons, for now we run the embedding layer on the cpu, then pass the rest on to the GPU
+        # if cuda should be enbaled
         batch_var = V(torch.LongTensor(batch), requires_grad=False)
-        return self.module(batch_var)
+        out = self.module(batch_var)
+        if self.on_cuda():
+            out = out.cuda()
+        return out

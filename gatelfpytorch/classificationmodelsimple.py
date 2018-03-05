@@ -35,6 +35,15 @@ class ClassificationModelSimple(torch.nn.Module):
         outlayer = outputlayerinfo[0]
         outconfig = outputlayerinfo[1]
         self.add_module(outconfig.get("name"), outlayer)
+        self._on_cuda = None
+
+    def on_cuda(self):
+        """Returns true or false depending on if the module is on cuda or not. Unfortunately
+        there is no API method in PyTorch for this so we get this from the first parameter of the
+        model and cache it."""
+        if self._on_cuda is None:
+            self._on_cuda = next(self.parameters()).is_cuda
+        return self._on_cuda
 
     def forward(self, batch):
         i_nom = 0
@@ -48,6 +57,8 @@ class ClassificationModelSimple(torch.nn.Module):
             if inputtype == "numeric":
                 vals = [batch[i] for i in self.num_idxs]
                 vals4pt = V(torch.FloatTensor(vals).t(), requires_grad=True)
+                if self.on_cuda():
+                    vals4pt = vals4pt.cuda()
                 out = inputlayer(vals4pt)
                 input_layer_outputs.append(out)
             elif inputtype == "nominal":

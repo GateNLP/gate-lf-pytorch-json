@@ -30,14 +30,18 @@ class EmbeddingsModule(torch.nn.Module):
         there is no API method in PyTorch for this so we get this from the first parameter of the
         model and cache it."""
         if self._on_cuda is None:
-            self._on_cuda = next(self.parameters())
+            self._on_cuda = next(self.parameters()).is_cuda
         return self._on_cuda
 
     def forward(self, batch):
-        # for space reasons, for now we run the embedding layer on the cpu, then pass the rest on to the GPU
-        # if cuda should be enbaled
+        # TODO: eventually, we should decide if an embeddings layer should be on the GPU or not.
+        # Then we also need to place the tensor on the GPU or not before runninng the embeddings layer.
+        # This should depend on several factos, embeddings matrix size, if we learn etc.
+        # To make it work properly, we also need to make sure that the top-level .cuda() invocation does
+        # not enable cuda for the module in here unless we really want it so we need to override the method.
+        # NOTE: for now we run on the cuda, if enabled
         batch_var = V(torch.LongTensor(batch), requires_grad=False)
-        out = self.module(batch_var)
         if self.on_cuda():
-            out = out.cuda()
+            batch_var = batch_var.cuda()
+        out = self.module(batch_var)
         return out

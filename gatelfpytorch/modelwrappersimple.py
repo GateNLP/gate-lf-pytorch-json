@@ -311,7 +311,7 @@ class ModelWrapperSimple(ModelWrapper):
             assert preds.size()[1] == nrClasses
             _, out_idxs = torch.max(preds.data, dim=1)
             # out_idxs contains the class indices, need to convert back to labels
-            getlabel=self.dataset.target.idx2label
+            getlabel = self.dataset.target.idx2label
             labels = [getlabel(x) for x in out_idxs]
             probs = [list(x) for x in preds.data]
             ret = [labels, probs]
@@ -330,7 +330,9 @@ class ModelWrapperSimple(ModelWrapper):
             self.module.zero_grad()
         elif not train_mode and curmodeistrain:
             self.module.eval()
+
         output = self.module(indeps)
+
         if self.module.training == curmodeistrain:
             self.module.train(curmodeistrain)
         return output
@@ -341,10 +343,14 @@ class ModelWrapperSimple(ModelWrapper):
         Returns a tuple of loss and accuracy. By default this returns the loss as a
         pyTorch variable and accuracy as a pytorch tensor, if as_pytorch is set to False,
         returns floats instead.
+        If prepared=True then validationinstances already contains everything as properly prepared PyTorch
+        Variables.
         """
         if not self.is_data_prepared:
             raise Exception("Must call train or prepare_data first")
         v_deps = V(torch.LongTensor(validationinstances[1]), requires_grad=False)
+        if self._enable_cuda:
+            v_deps = v_deps.cuda()
         v_preds = self._apply_model(validationinstances[0], train_mode=train_mode)
         # TODO: not sure if and when to zero the grads for the loss function if we use it
         # in between training steps?
@@ -402,14 +408,6 @@ class ModelWrapperSimple(ModelWrapper):
                 batch_nr += 1
                 totalbatches += 1
                 self.module.zero_grad()
-                # train on a whole batch
-                # output = self.module(batch[0])
-                # # step 2: calculate the lossfunction
-                # targets = V(torch.LongTensor(batch[1]), requires_grad=False)
-                # # print("DEBUG: targets = ", list(targets), "out=", list(output), file=sys.stderr)
-                # loss = self.lossfunction(output, targets)
-                # # calculate the accuracy as well
-                # acc = ModelWrapper.accuracy(output, targets)
                 (loss, acc) = self.evaluate(batch, train_mode=True)
                 # logger.debug("Batch lossfunction/acc for epoch=%s, batch=%s: %s / %s" %
                 #             (epoch, batch_nr, float(loss), acc))

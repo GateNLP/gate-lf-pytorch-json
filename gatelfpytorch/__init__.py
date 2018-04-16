@@ -13,3 +13,4 @@ except ImportError:
     pass
 
 from .modelwrappersimple import ModelWrapperSimple
+from .modelwrapper import ModelWrapper

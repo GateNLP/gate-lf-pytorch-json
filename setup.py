@@ -11,7 +11,7 @@ def read(fname):
 readme = read('README.md')
 
 setup(
-    name="gatelfpytorch",
+    name="gatelfpytorchjson",
     version="0.1",
     description="Library to build and use pytorch NN models for GATE Learning Framework",
     author="Johann Petrak",
@@ -19,9 +19,9 @@ setup(
     # url="http://packages.python.org/an_example_pypi_project",
     license="Apache 2.0",
     # keywords="",
-    packages=['gatelfpytorch'],
+    packages=['gatelfpytorchjson'],
     long_description=readme,
-    py_modules=['gatelfpytorch', 'torch', 'pkg_resources'],
+    py_modules=['gatelfpytorchjson', 'torch', 'pkg_resources'],
     # scripts=['some.py'],
     # entry_points = {'console_scripts': ['some=some:main']},
     tests_require=['nose'],

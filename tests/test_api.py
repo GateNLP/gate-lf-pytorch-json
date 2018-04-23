@@ -1,5 +1,5 @@
-from gatelfpytorch.modelwrappersimple import ModelWrapperSimple
-# from gatelfpytorch.modelwrapper import ModelWrapper
+from gatelfpytorchjson.modelwrappersimple import ModelWrapperSimple
+# from gatelfpytorchjson.modelwrapper import ModelWrapper
 from gatelfdata import Dataset
 import unittest
 import os
@@ -10,7 +10,7 @@ import torch
 
 logger = logging.getLogger("gatelfdata")
 logger.setLevel(logging.ERROR)
-logger = logging.getLogger("gatelfpytorch")
+logger = logging.getLogger("gatelfpytorchjson")
 logger.setLevel(logging.DEBUG)
 streamhandler = logging.StreamHandler()
 formatter = logging.Formatter(

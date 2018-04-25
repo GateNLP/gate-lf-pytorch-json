@@ -211,12 +211,19 @@ class ModelWrapperSimple(ModelWrapper):
             inlayers_outdims += ngramlayer.out_dim
         # Now create the hidden layers
         hiddenlayers = []
-        # for now, one hidden layer for compression and another
-        # to map to the number of classes
-        n_hidden1lin_out = ModelWrapper.makeless(inlayers_outdims)
-        hidden1lin = torch.nn.Linear(inlayers_outdims, n_hidden1lin_out)
-        hidden1drp = torch.nn.Dropout(p=0.2)
-        hidden1act = torch.nn.ELU()
+
+
+        # TODO: originally we always had this layer between the inputs and the LSTM, but
+        # it may be better to just use a NOOP instead and just use the concatenated inputs.
+        if False:
+            n_hidden1lin_out = ModelWrapper.makeless(inlayers_outdims)
+            hidden1lin = torch.nn.Linear(inlayers_outdims, n_hidden1lin_out)
+            hidden1drp = torch.nn.Dropout(p=0.2)
+            hidden1act = torch.nn.ELU()
+            hidden1layer = torch.nn.Sequential(hidden1lin, hidden1drp, hidden1act)
+        else:
+            n_hidden1lin_out = inlayers_outdims
+            hidden1layer = None
 
         ## Now that we have combined the features, we create the lstm
         hidden2 = torch.nn.LSTM(input_size=n_hidden1lin_out,
@@ -237,8 +244,10 @@ class ModelWrapperSimple(ModelWrapper):
 
         # NOTE: since the LSTM is bidirectional, we need 400 instead of 200 here
         hidden3 = torch.nn.Linear(400, n_classes)
-        hidden = torch.nn.Sequential(hidden1lin, hidden1drp,
-                                     hidden1act, hidden2, hidden3)
+        if not hidden1layer:
+            hidden = torch.nn.Sequential(hidden2, hidden3)
+        else:
+            hidden = torch.nn.Sequential(hidden1layer, hidden2, hidden3)
         hiddenlayers.append((hidden, {"name": "hidden"}))
         # Create the output layer
         out = torch.nn.Softmax(dim=1)

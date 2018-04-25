@@ -36,7 +36,7 @@ else:
     SLOW_TESTS = False
 
 # In case we want to temporarily override
-# SLOW_TESTS = True
+SLOW_TESTS = True
 
 class Test1(unittest.TestCase):
 

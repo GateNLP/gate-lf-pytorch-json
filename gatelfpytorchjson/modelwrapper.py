@@ -55,6 +55,8 @@ class ModelWrapper(object):
         Both parameters are assumed to be torch Variables."""
         # NOTE: in case we have sequences we reshape to put everything that is not the last dimension
         # into the first dimension for the predictions
+        # TODO: this does not work properly for sequences!!!! We need to ignore all padding elements
+        # when calculating accuracy here!
         dims = batch_predictions.size()[-1]
         _, out_idxs = torch.max(batch_predictions.data.view(-1, dims), 1)
         n_correct = int(out_idxs.eq(batch_targets.data.view(-1)).sum())

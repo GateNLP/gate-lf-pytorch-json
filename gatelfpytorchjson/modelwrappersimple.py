@@ -271,7 +271,7 @@ class ModelWrapperSimple(ModelWrapper):
             hidden = torch.nn.Sequential(hidden1layer, hidden2, hidden3)
         hiddenlayers.append((hidden, {"name": "hidden"}))
         # Create the output layer
-        out = torch.nn.Softmax(dim=1)
+        out = torch.nn.LogSoftmax(dim=1)
         outputlayer = (out, {"name": "output"})
         # create the module and store it
         self.module = ClassificationModelSimple(inputlayers,
@@ -279,7 +279,7 @@ class ModelWrapperSimple(ModelWrapper):
                                                 outputlayer,
                                                 self.featureinfo)
         # For sequence tagging we cannot use CrossEntropyLoss
-        self.lossfunction = torch.nn.CrossEntropyLoss(ignore_index=0)
+        self.lossfunction = torch.nn.NLLLoss(ignore_index=0)
         if self._enable_cuda:
             self.module.cuda()
             self.lossfunction.cuda()
@@ -296,6 +296,7 @@ class ModelWrapperSimple(ModelWrapper):
             return
         valsize = None
         valpart = 0.1
+        # TODO: allow not using a validation set at all!
         if validationsize:
             if isinstance(validationsize, int):
                 valsize = validationsize
@@ -306,6 +307,11 @@ class ModelWrapperSimple(ModelWrapper):
         self.dataset.split(convert=True, validation_part=valpart, validation_size=valsize)
         self.valset = self.dataset.validation_set_converted(as_batch=True)
         self.is_data_prepared = True
+        # if we have a validation set, calculate the class distribution here 
+        # this should be shown before training starts so the validation accuracy makes more sense
+        # this can also be used to use a loss function that re-weights classes in case of class imbalance!
+        deps = self.valset[1]
+        # TODO: calculate the class distribution but if sequences, ONLY for the non-padded parts of the sequences!!!!
 
     def apply(self, instancelist, converted=False, reshaped=False):
         """Given a list of instances in original format (or converted if converted=True), applies

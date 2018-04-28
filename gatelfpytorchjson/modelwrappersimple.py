@@ -159,7 +159,7 @@ class ModelWrapperSimple(ModelWrapper):
                                      hidden1act, hidden2)
         hiddenlayers.append((hidden, {"name": "hidden"}))
         # Create the output layer
-        out = torch.nn.Softmax(dim=1)
+        out = torch.nn.LogSoftmax(dim=1)
         outputlayer = (out, {"name": "output"})
         # create the module and store it
         self.module = ClassificationModelSimple(inputlayers,
@@ -167,7 +167,7 @@ class ModelWrapperSimple(ModelWrapper):
                                                 outputlayer,
                                                 self.featureinfo)
         # Decide on the lossfunction function here for training later!
-        self.lossfunction = torch.nn.CrossEntropyLoss()
+        self.lossfunction = torch.nn.NLLLoss()
         if self._enable_cuda:
             self.module.cuda()
             self.lossfunction.cuda()

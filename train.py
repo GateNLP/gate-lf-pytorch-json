@@ -50,6 +50,7 @@ logger3.addHandler(streamhandler)
 # dict to pass to the constructors of Dataset and the wrapper so each can pick the 
 # parameters relevant to them!
 
+logger3.debug("Running train.py, config is %r" % config)
 logger3.debug("Loading metafile...")
 ds = Dataset(metafile, config=config)
 logger3.debug("Metafile loaded.")
@@ -63,7 +64,7 @@ logger3.debug("Model is %r" % wrapper)
 # TODO: this may need to be done differently if we have our own validation file!
 # TODO: the default to use for validation set size should be settable through config in the constructor!
 logger3.debug("Preparing the data...")
-valsize=config.get("valsize")
+valsize = config.get("valsize")
 if valsize:
     wrapper.prepare_data(validationsize=valsize)
 else:

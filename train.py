@@ -5,20 +5,23 @@ from gatelfdata import Dataset
 from gatelfpytorchjson import ModelWrapperSimple
 from gatelfpytorchjson import ModelWrapper
 import argparse
+from pathlib import Path
 
-metafile=sys.argv[1]
-modelname=sys.argv[2]
+metafile = sys.argv[1]
+modelname = sys.argv[2]
+datadir = Path(metafile).parent
 
-parms=sys.argv[3:]
+parms = sys.argv[3:]
 
 parser = argparse.ArgumentParser()
 parser.add_argument("--embs", type=str, help="Override embedding settings, specify as embid:embdims:embtrain:embminfreq,embid:embdims ..")
 parser.add_argument("--valsize", type=float, help="Set the validation set size (>1) or proportion (<1)")
-parser.add_argument("--valevery", type=int, default=10, help="Validate and log every that many batches")
+parser.add_argument("--valevery", type=int, default=10, help="Evaluate on validation set and log every that many batches")
 parser.add_argument("--batchsize", type=int, default=32, help="Batch size")
 parser.add_argument("--maxepochs", type=int, default=50, help="Maximum number of epochs")
 parser.add_argument("--stopfile", type=str, help="If that file exists, training is stopped")
 parser.add_argument("--learningrate", type=float, help="Override default learning rate for the optimizer")
+parser.add_argument("--cuda", type=bool, help="True/False to use CUDA or not, omit to determine automatically")
 args = parser.parse_args(parms)
 config = vars(args)
 
@@ -33,7 +36,8 @@ streamhandler = logging.StreamHandler(stream=sys.stderr)
 formatter = logging.Formatter(
                 '%(asctime)s %(name)-12s %(levelname)-8s %(message)s')
 streamhandler.setFormatter(formatter)
-filehandler = logging.FileHandler("training.log")
+filehandler = logging.FileHandler(os.path.join(datadir, "pytorch-json.train.log"))
+filehandler.setFormatter(formatter)
 logger1.addHandler(filehandler)
 logger1.addHandler(streamhandler)
 logger2.addHandler(filehandler)
@@ -52,7 +56,7 @@ logger3.debug("Metafile loaded.")
 
 # TODO: test passing on parameters
 logger3.debug("Creating ModelWrapperSimple")
-wrapper = ModelWrapperSimple(ds, cuda=False, config=config)
+wrapper = ModelWrapperSimple(ds, config=config)
 logger3.debug("Modelwrapper created")
 logger3.debug("Model is %r" % wrapper)
 
@@ -61,7 +65,7 @@ logger3.debug("Model is %r" % wrapper)
 logger3.debug("Preparing the data...")
 valsize=config.get("valsize")
 if valsize:
-    wrapper.prepare_data(validationsize=200)
+    wrapper.prepare_data(validationsize=valsize)
 else:
     wrapper.prepare_data()
 logger3.debug("Data prepared")

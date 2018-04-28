@@ -1,19 +1,56 @@
 #!/bin/bash
 
-echo '!!!!!!!!!!!!!!!!!!!!!! RUNNING train.sh'
-echo 'args:' "$@"
+# run training on file exported by GATE
 
-# This script should get invoked with the following parameters:
-# * absolute path to the meta file
-# * absolute path (prefix) to the model file. 
-# * any additional parameters set by the user to pass on to the training step
-# In addition the script will make use of the following environment variables if set:
-# GATE_LF_PYTHONCMD - if set will get used to invoke python instead of "python"
+metafile="$1"
+shift
+modelname="$1"
+shift
 
-pythoncmd=python
-if [[ "x${GATE_LF_PYTHONCMD}" != "x" ]]
+if [[ "x$modelname" == "x" ]]
 then
-  pythoncmd="${GATE_LF_PYTHONCMD}"
+  echo 'Two parameters required: metafile and modelname'
+  exit 1
 fi
 
-"${pythoncmd}" 
+versionpython="UNKNOWN"
+wherepython=`which python`
+if [[ "x$wherepython" != "x" ]]
+then
+  versionpython=`python -V |& cut -f 2 -d " " | cut -f 1 -d'.'`
+fi
+if [[ "$versionpython" == "3" ]]
+then
+  pythoncmd=$wherepython
+else
+  wherepython=`which python3`
+  if [[ "x$wherepython" == "x" ]]
+  then
+    echo 'ERROR: could not find a python 3 interpreter, exiting'
+    exit 1
+  fi
+fi
+PRG="$0"
+CURDIR="`pwd`"
+# need this for relative symlinks
+while [ -h "$PRG" ] ; do
+  ls=`ls -ld "$PRG"`
+  link=`expr "$ls" : '.*-> \(.*\)$'`
+  if expr "$link" : '/.*' > /dev/null; then
+    PRG="$link"
+  else
+    PRG=`dirname "$PRG"`"/$link"
+  fi
+done
+SCRIPTDIR=`dirname "$PRG"`
+SCRIPTDIR=`cd "$SCRIPTDIR"; pwd -P`
+GATELFDATA=`cd "$SCRIPTDIR"/../gate-lf-python-data; pwd -P`
+export PYTHONPATH="$GATELFDATA"
+echo DEBUG PYTHON ${wherepython}
+echo DEBUG PYTHONPATH $PYTHONPATH
+echo DEBUG SCRIPTDIR $SCRIPTDIR
+echo DEBUG RUNNING ${wherepython} "${SCRIPTDIR}"/train.py "$metafile" "$modelname" "$@"
+${wherepython} "${SCRIPTDIR}"/train.py "$metafile" "$modelname" "$@" 
+
+
+

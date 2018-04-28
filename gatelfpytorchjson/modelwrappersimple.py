@@ -418,8 +418,8 @@ class ModelWrapperSimple(ModelWrapper):
                 totalbatches += 1
                 self.module.zero_grad()
                 (loss, acc) = self.evaluate(batch, train_mode=True)
-                # logger.debug("Batch lossfunction/acc for epoch=%s, batch=%s: %s / %s" %
-                #             (epoch, batch_nr, float(loss), acc))
+                logger.debug("Batch loss/acc for epoch=%s, batch=%s: %s / %s" %
+                             (epoch, batch_nr, float(loss), acc))
                 # print("Batch lossfunction/acc for epoch=%s, batch=%s: %s / %s" % (epoch, batch_nr,
                 # float(lossfunction), acc), file=sys.stderr)
                 loss.backward()

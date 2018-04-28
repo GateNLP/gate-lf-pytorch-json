@@ -91,7 +91,7 @@ class Test1(unittest.TestCase):
         wrapper.prepare_data()
         (loss, acc) = wrapper.evaluate(wrapper.valset, train_mode=False, as_pytorch=False)
         print("\nDEBUG: test1_3 before training loss/acc=%s/%s" % (loss, acc), file=sys.stderr)
-        assert acc < 0.05
+        assert acc < 0.06
         if SLOW_TESTS:
             wrapper.train(batch_size=20, max_epochs=30, early_stopping=False)
             (loss, acc) = wrapper.evaluate(wrapper.valset, train_mode=False, as_pytorch=False)

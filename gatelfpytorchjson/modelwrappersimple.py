@@ -1,12 +1,11 @@
 from . modelwrapper import ModelWrapper
 from . embeddingsmodule import EmbeddingsModule
 from . ngrammodule import NgramModule
+import os
 import torch
 import torch.nn
 import torch.optim
-import math
 from torch.autograd import Variable as V
-import torch.nn.functional as F
 from .classificationmodelsimple import ClassificationModelSimple
 from .takefromtuple import TakeFromTuple
 import logging
@@ -43,14 +42,22 @@ class ModelWrapperSimple(ModelWrapper):
         self.info = dataset.get_info()
 
     # This requires an initialized dataset instance
-    def __init__(self, dataset, config=None, cuda=None):
+    def __init__(self, dataset, config={}, cuda=None):
         """This requires a gatelfdata Dataset instance and can optionally take a dictionary with
         configuration/initialization options (NOT SUPPORTED YET).
         If cuda is None, then if cuda is available it will be used. True and False
         require and prohibit the use of cuda unconditionally.
+        Config settings: stopfile: a file path, if found training is stopped
         """
-        super().__init__(dataset)
+        self.config = config
         self.cuda = cuda
+        self.stopfile = None
+        if "stopfile" in config:
+            self.stopfile = config["stopfile"]
+        self.override_learningrate=None
+        if "learningrate" in config and config["learningrate"]:
+            self.override_learningrate = config["learningrate"]
+        super().__init__(dataset)
         cuda_is_available = torch.cuda.is_available()
         if self.cuda is None:
             enable_cuda = cuda_is_available
@@ -74,10 +81,11 @@ class ModelWrapperSimple(ModelWrapper):
                 self.init_classification(dataset)
             else:
                 raise Exception("Target type not yet implemented: %s" % self.info["targetType"])
+        params = self.module.parameters()
         # self.optimizer = torch.optim.SGD(self.module.parameters(), lr=0.001, momentum=0.9)
         # self.optimizer = torch.optim.Adadelta(params, lr=1.0, rho=0.9, eps=1e-06, weight_decay=0)
         # self.optimizer = torch.optim.Adagrad(params, lr=0.01, lr_decay=0, weight_decay=0, initial_accumulator_value=0)
-        self.optimizer = torch.optim.Adam(params, lr=0.001, betas=(0.9, 0.999), eps=1e-08, weight_decay=0 )
+        self.optimizer = torch.optim.Adam(params, lr=(self.override_learningrate or 0.001), betas=(0.9, 0.999), eps=1e-08, weight_decay=0 )
         # self.optimizer = torch.optim.Adamax(params, lr=0.002, betas=(0.9, 0.999), eps=1e-08, weight_decay=0)
         # self.optimizer = torch.optim.ASGD(params, lr=0.01, lambd=0.0001, alpha=0.75, t0=1000000.0, weight_decay=0)
         # self.optimizer = torch.optim.RMSprop(params, lr=0.01, alpha=0.99, eps=1e-08, weight_decay=0, momentum=0, centered=False)
@@ -241,7 +249,7 @@ class ModelWrapperSimple(ModelWrapper):
 
         # for now, the size of the hidden layer is identical to the input size, up to 
         # a maximum of 200
-        lstm_hidden_size = min(200,n_hidden1lin_out)
+        lstm_hidden_size = min(200, n_hidden1lin_out)
         lstm_bidirectional = False
         ## Now that we have combined the features, we create the lstm
         hidden2 = torch.nn.LSTM(input_size=n_hidden1lin_out,
@@ -291,19 +299,20 @@ class ModelWrapperSimple(ModelWrapper):
         return self.module
 
     def prepare_data(self, validationsize=None):
+        """If validationsize is > 1, it is the absolute size, if < 1 it is the portion e.g. 0.01 to use."""
         # get the validation set
+        if validationsize is not None:
+            validationsize = float(validationsize)
         if self.is_data_prepared:
             return
         valsize = None
         valpart = 0.1
         # TODO: allow not using a validation set at all!
         if validationsize:
-            if isinstance(validationsize, int):
+            if validationsize > 1:
                 valsize = validationsize
-            elif isinstance(validationsize, float):
-                valpart = validationsize
             else:
-                raise Exception("Parameter validationsize must be a float or int")
+                valpart = validationsize
         self.dataset.split(convert=True, validation_part=valpart, validation_size=valsize)
         self.valset = self.dataset.validation_set_converted(as_batch=True)
         self.is_data_prepared = True
@@ -478,6 +487,11 @@ class ModelWrapperSimple(ModelWrapper):
                     logger.info("EVAL e=%s,b=%s,tloss/vloss/"
                                 "vloss-var/tacc/vacc: %s / %s / %s / %s / %s" %
                                 (epoch, batch_nr, avg_tloss, float(loss_val), var_vloss, avg_tacc, acc_val))
+                    # if there is a stopfile config and we find the file,
+                    if self.stopfile and os.path.exists(self.stopfile):
+                        print("Stop file found, removing and terminating training...", file=sys.stderr)
+                        os.remove(self.stopfile)
+                        stop_it_already = True
                 if stop_it_already:
                     break
             if stop_it_already:
@@ -527,3 +541,7 @@ class ModelWrapperSimple(ModelWrapper):
         self.__dict__.update(state)
         assert hasattr(self, 'metafile')
 
+    def __repr__(self):
+        repr = "ModelWrapperSimple(config=%r, cuda=%s):\nmodule=%s\noptimizer=%s\nlossfun=%s" % \
+             (self.config, self.cuda, self.module, self.optimizer, self.lossfunction)
+        return repr

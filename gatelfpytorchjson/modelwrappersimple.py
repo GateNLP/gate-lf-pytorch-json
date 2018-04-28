@@ -74,7 +74,21 @@ class ModelWrapperSimple(ModelWrapper):
                 self.init_classification(dataset)
             else:
                 raise Exception("Target type not yet implemented: %s" % self.info["targetType"])
-        self.optimizer = torch.optim.SGD(self.module.parameters(), lr=0.001, momentum=0.9)
+        # self.optimizer = torch.optim.SGD(self.module.parameters(), lr=0.001, momentum=0.9)
+        # self.optimizer = torch.optim.Adadelta(params, lr=1.0, rho=0.9, eps=1e-06, weight_decay=0)
+        # self.optimizer = torch.optim.Adagrad(params, lr=0.01, lr_decay=0, weight_decay=0, initial_accumulator_value=0)
+        self.optimizer = torch.optim.Adam(params, lr=0.001, betas=(0.9, 0.999), eps=1e-08, weight_decay=0 )
+        # self.optimizer = torch.optim.Adamax(params, lr=0.002, betas=(0.9, 0.999), eps=1e-08, weight_decay=0)
+        # self.optimizer = torch.optim.ASGD(params, lr=0.01, lambd=0.0001, alpha=0.75, t0=1000000.0, weight_decay=0)
+        # self.optimizer = torch.optim.RMSprop(params, lr=0.01, alpha=0.99, eps=1e-08, weight_decay=0, momentum=0, centered=False)
+        # self.optimizer = torch.optim.Rprop(params, lr=0.01, etas=(0.5, 1.2), step_sizes=(1e-06, 50))
+        # self.optimizer = torch.optim.SGD(params, lr=0.1, momentum=0, dampening=0, weight_decay=0, nesterov=False)
+        # NOTE/TODO: check out how to implement a learning rate scheduler that makes the LR depend e.g. on epoch, see
+        # http://pytorch.org/docs/master/optim.html
+        # e.g. every 10 epochs, make lr half of what it was:
+        # self.scheduler = torch.optim.lr_scheduler.StepLR(self.optimizer, step_size=10, gamma=0.5)
+        # self.optimizer = torch.optim.SGD(params, lr=0.1, momentum=0.0)
+
 
     def init_classification(self, dataset):
         n_classes = self.info["nClasses"]
@@ -225,12 +239,16 @@ class ModelWrapperSimple(ModelWrapper):
             n_hidden1lin_out = inlayers_outdims
             hidden1layer = None
 
+        # for now, the size of the hidden layer is identical to the input size, up to 
+        # a maximum of 200
+        lstm_hidden_size = min(200,n_hidden1lin_out)
+        lstm_bidirectional = False
         ## Now that we have combined the features, we create the lstm
         hidden2 = torch.nn.LSTM(input_size=n_hidden1lin_out,
-                                  hidden_size=200,
+                                  hidden_size=lstm_hidden_size,
                                   num_layers=1,
                                   dropout=0.1,
-                                  bidirectional=True,
+                                  bidirectional=lstm_bidirectional,
                                   batch_first=True)
         # the outputs of the LSTM are of shape b, seq, hidden
         # We want to get softmax outputs for each, so we need to get this to
@@ -242,15 +260,18 @@ class ModelWrapperSimple(ModelWrapper):
         # tuple in the forward step
         hidden2 = TakeFromTuple(hidden2, which=0)
 
-        # NOTE: since the LSTM is bidirectional, we need 400 instead of 200 here
-        hidden3 = torch.nn.Linear(400, n_classes)
+        # NOTE: if the LSTM is bidirectional, we need to double the size
+        hidden3_size = lstm_hidden_size
+        if lstm_bidirectional:
+            hidden3_size *= 2
+        hidden3 = torch.nn.Linear(hidden3_size, n_classes)
         if not hidden1layer:
             hidden = torch.nn.Sequential(hidden2, hidden3)
         else:
             hidden = torch.nn.Sequential(hidden1layer, hidden2, hidden3)
         hiddenlayers.append((hidden, {"name": "hidden"}))
         # Create the output layer
-        out = torch.nn.Softmax(dim=1)
+        out = torch.nn.LogSoftmax(dim=1)
         outputlayer = (out, {"name": "output"})
         # create the module and store it
         self.module = ClassificationModelSimple(inputlayers,
@@ -258,7 +279,7 @@ class ModelWrapperSimple(ModelWrapper):
                                                 outputlayer,
                                                 self.featureinfo)
         # For sequence tagging we cannot use CrossEntropyLoss
-        self.lossfunction = torch.nn.CrossEntropyLoss(ignore_index=0)
+        self.lossfunction = torch.nn.NLLLoss(ignore_index=0)
         if self._enable_cuda:
             self.module.cuda()
             self.lossfunction.cuda()
@@ -275,6 +296,7 @@ class ModelWrapperSimple(ModelWrapper):
             return
         valsize = None
         valpart = 0.1
+        # TODO: allow not using a validation set at all!
         if validationsize:
             if isinstance(validationsize, int):
                 valsize = validationsize
@@ -285,6 +307,11 @@ class ModelWrapperSimple(ModelWrapper):
         self.dataset.split(convert=True, validation_part=valpart, validation_size=valsize)
         self.valset = self.dataset.validation_set_converted(as_batch=True)
         self.is_data_prepared = True
+        # if we have a validation set, calculate the class distribution here 
+        # this should be shown before training starts so the validation accuracy makes more sense
+        # this can also be used to use a loss function that re-weights classes in case of class imbalance!
+        deps = self.valset[1]
+        # TODO: calculate the class distribution but if sequences, ONLY for the non-padded parts of the sequences!!!!
 
     def apply(self, instancelist, converted=False, reshaped=False):
         """Given a list of instances in original format (or converted if converted=True), applies

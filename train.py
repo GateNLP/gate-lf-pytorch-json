@@ -14,6 +14,7 @@ datadir = Path(metafile).parent
 parms = sys.argv[3:]
 
 parser = argparse.ArgumentParser()
+# Parameter for checkpointing the module
 parser.add_argument("--embs", type=str, help="Override embedding settings, specify as embid:embdims:embtrain:embminfreq,embid:embdims ..")
 parser.add_argument("--valsize", type=float, help="Set the validation set size (>1) or proportion (<1)")
 parser.add_argument("--valevery", type=int, default=10, help="Evaluate on validation set and log every that many batches")
@@ -22,6 +23,11 @@ parser.add_argument("--maxepochs", type=int, default=50, help="Maximum number of
 parser.add_argument("--stopfile", type=str, help="If that file exists, training is stopped")
 parser.add_argument("--learningrate", type=float, help="Override default learning rate for the optimizer")
 parser.add_argument("--cuda", type=bool, help="True/False to use CUDA or not, omit to determine automatically")
+# NOTE: resume currently does not make sure that the original metafile info is used (but maybe new data):
+# This should work once the metadata is actually stored as part of the model!
+parser.add_argument("--resume", action='store_true', help="Resume training from the specified model")
+parser.add_argument("--notrain", action='store_true', help="Do not actually run training (for use with LF)")
+
 args = parser.parse_args(parms)
 config = vars(args)
 
@@ -51,15 +57,25 @@ logger3.addHandler(streamhandler)
 # parameters relevant to them!
 
 logger3.debug("Running train.py, config is %r" % config)
+if config.get("notrain"):
+    logger3.info("--notrain specified, exiting")
+    sys.exit(0)
+
 logger3.debug("Loading metafile...")
 ds = Dataset(metafile, config=config)
 logger3.debug("Metafile loaded.")
 
 # TODO: test passing on parameters
-logger3.debug("Creating ModelWrapperSimple")
-wrapper = ModelWrapperSimple(ds, config=config)
-logger3.debug("Modelwrapper created")
-logger3.debug("Model is %r" % wrapper)
+if config.get("resume"):
+    logger3.info("--resume specified, loading and continuing on existing model")
+    wrapper = ModelWrapperSimple.load(modelname)
+    logger3.debug("Modelwrapper loaded")
+    logger3.debug("Model is %r" % wrapper)
+else:
+    logger3.debug("Creating ModelWrapperSimple")
+    wrapper = ModelWrapperSimple(ds, config=config)
+    logger3.debug("Modelwrapper created")
+    logger3.debug("Model is %r" % wrapper)
 
 # TODO: this may need to be done differently if we have our own validation file!
 # TODO: the default to use for validation set size should be settable through config in the constructor!

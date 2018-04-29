@@ -51,10 +51,13 @@ class ModelWrapperSimple(ModelWrapper):
         """
         self.config = config
         self.cuda = cuda
-        self.stopfile = None
+        self.checkpointnr = 0
+        self.stopfile = os.path.join(os.path.dirname(dataset.metafile), "STOP")
         if "stopfile" in config:
             self.stopfile = config["stopfile"]
-        self.override_learningrate=None
+        self.stopfile = os.path.abspath(self.stopfile)
+        logging.getLogger(__name__).debug("Set the stop file to %s" % self.stopfile)
+        self.override_learningrate = None
         if "learningrate" in config and config["learningrate"]:
             self.override_learningrate = config["learningrate"]
         super().__init__(dataset)
@@ -443,7 +446,6 @@ class ModelWrapperSimple(ModelWrapper):
         # val_targets = V(torch.LongTensor(self.valset[1]), requires_grad=False)
         stop_it_already = False
         validation_losses = []
-        print("DEBUG: before running training...", file=sys.stderr)
         totalbatches = 0
         last_accs = []
         last_losses = []
@@ -487,6 +489,11 @@ class ModelWrapperSimple(ModelWrapper):
                     logger.info("EVAL e=%s,b=%s,tloss/vloss/"
                                 "vloss-var/tacc/vacc: %s / %s / %s / %s / %s" %
                                 (epoch, batch_nr, avg_tloss, float(loss_val), var_vloss, avg_tacc, acc_val))
+                    # TODO: if we have set a checkpointing parameter (checkpointevery, telling every how many
+                    # test set validations we want to checkpoint), checkpoint here
+                    # TODO: for this we already should have implemented a way to set the model or checkpoint file
+                    # prefix beforehand (maybe even at construction time, but changable let through a setter?)
+                    # self.checkpoint()
                     # if there is a stopfile config and we find the file,
                     if self.stopfile and os.path.exists(self.stopfile):
                         print("Stop file found, removing and terminating training...", file=sys.stderr)
@@ -496,6 +503,15 @@ class ModelWrapperSimple(ModelWrapper):
                     break
             if stop_it_already:
                 break
+
+    def checkpoint(self, filenameprefix, checkpointnr=None):
+        """Save the module, adding a checkpoint number in the name."""
+        # TODO: eventually this should get moved into the module?
+        cp = checkpointnr
+        if cp is None:
+            cp = self.checkpointnr
+            self.checkpointnr += 1
+        torch.save(self.module, filenameprefix + ".module.pytorch")
 
     def save(self, filenameprefix):
         # store everything using pickle, but we do not store the module or the dataset
@@ -525,20 +541,24 @@ class ModelWrapperSimple(ModelWrapper):
         """Currently we do not pickle the dataset instance but rather re-create it when loading,
         and we do not pickle the actual pytorch module but rather use the pytorch-specific saving
         and loading mechanism."""
-        print("DEBUG: self keys=", self.__dict__.keys(), file=sys.stderr)
+        # print("DEBUG: self keys=", self.__dict__.keys(), file=sys.stderr)
         assert hasattr(self, 'metafile')
         state = self.__dict__.copy()  # this creates a shallow copy
-        print("DEBUG: copy keys=", state.keys(), file=sys.stderr)
+        # print("DEBUG: copy keys=", state.keys(), file=sys.stderr)
         assert 'metafile' in state
         del state['dataset']
         del state['module']
+        # do not save these transient variables:
+        del state['is_data_prepared']
         return state
 
     def __setstate__(self, state):
         """We simply restore everything that was pickled earlier plus manually rebuild the dataset
-        instance and manually restore the pytorch module."""
+        instance and manually restore the pytorch module (in the load method)"""
         assert 'metafile' in state
         self.__dict__.update(state)
+        # Set the transient variables to the default values we want after loading
+        self.is_data_prepared = False
         assert hasattr(self, 'metafile')
 
     def __repr__(self):

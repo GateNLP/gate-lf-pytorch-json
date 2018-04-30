@@ -13,6 +13,7 @@ import sys
 import statistics
 import pickle
 from gatelfdata import Dataset
+import numpy as np
 
 # Basic usage:
 # ds = Dataset(metafile)
@@ -86,6 +87,7 @@ class ModelWrapperSimple(ModelWrapper):
                 raise Exception("Target type not yet implemented: %s" % self.info["targetType"])
         params = self.module.parameters()
         # self.optimizer = torch.optim.SGD(self.module.parameters(), lr=0.001, momentum=0.9)
+        # self.optimizer = torch.optim.SGD(self.module.parameters(), lr=(self.override_learningrate or 0.001))
         # self.optimizer = torch.optim.Adadelta(params, lr=1.0, rho=0.9, eps=1e-06, weight_decay=0)
         # self.optimizer = torch.optim.Adagrad(params, lr=0.01, lr_decay=0, weight_decay=0, initial_accumulator_value=0)
         self.optimizer = torch.optim.Adam(params, lr=(self.override_learningrate or 0.001), betas=(0.9, 0.999), eps=1e-08, weight_decay=0 )
@@ -170,7 +172,7 @@ class ModelWrapperSimple(ModelWrapper):
                                                 outputlayer,
                                                 self.featureinfo)
         # Decide on the lossfunction function here for training later!
-        self.lossfunction = torch.nn.NLLLoss()
+        self.lossfunction = torch.nn.NLLLoss(ignore_index=-1)
         if self._enable_cuda:
             self.module.cuda()
             self.lossfunction.cuda()
@@ -258,7 +260,7 @@ class ModelWrapperSimple(ModelWrapper):
         hidden2 = torch.nn.LSTM(input_size=n_hidden1lin_out,
                                   hidden_size=lstm_hidden_size,
                                   num_layers=1,
-                                  dropout=0.1,
+                                  # dropout=0.1,
                                   bidirectional=lstm_bidirectional,
                                   batch_first=True)
         # the outputs of the LSTM are of shape b, seq, hidden
@@ -290,7 +292,7 @@ class ModelWrapperSimple(ModelWrapper):
                                                 outputlayer,
                                                 self.featureinfo)
         # For sequence tagging we cannot use CrossEntropyLoss
-        self.lossfunction = torch.nn.NLLLoss(ignore_index=0)
+        self.lossfunction = torch.nn.NLLLoss(ignore_index=-1)
         if self._enable_cuda:
             self.module.cuda()
             self.lossfunction.cuda()
@@ -360,7 +362,9 @@ class ModelWrapperSimple(ModelWrapper):
             _, out_idxs = torch.max(preds.data, dim=1)
             # out_idxs contains the class indices, need to convert back to labels
             getlabel = self.dataset.target.idx2label
-            labels = [getlabel(x) for x in out_idxs]
+            # NOTE/IMPORTANT: we retrieve the label using index+1 because ALL targets use 0 as the pad index,
+            # even if we do not have sequences (for simplicity)
+            labels = [getlabel(x+1) for x in out_idxs]
             probs = [list(x) for x in preds.data]
             ret = [labels, probs]
         return ret
@@ -396,7 +400,9 @@ class ModelWrapperSimple(ModelWrapper):
         """
         if not self.is_data_prepared:
             raise Exception("Must call train or prepare_data first")
-        v_deps = V(torch.LongTensor(validationinstances[1]), requires_grad=False)
+        # NOTE!!! the targets are what we get minus 1, which shifts the padding index to be -1
+        targets = np.array(validationinstances[1])-1
+        v_deps = V(torch.LongTensor(targets), requires_grad=False)
         if self._enable_cuda:
             v_deps = v_deps.cuda()
         v_preds = self._apply_model(validationinstances[0], train_mode=train_mode)
@@ -455,6 +461,8 @@ class ModelWrapperSimple(ModelWrapper):
                 batch_nr += 1
                 totalbatches += 1
                 self.module.zero_grad()
+                # import ipdb
+                # ipdb.set_trace()
                 (loss, acc) = self.evaluate(batch, train_mode=True)
                 logger.debug("Batch loss/acc for epoch=%s, batch=%s: %s / %s" %
                              (epoch, batch_nr, float(loss), acc))

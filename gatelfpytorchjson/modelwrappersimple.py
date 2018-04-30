@@ -353,8 +353,22 @@ class ModelWrapperSimple(ModelWrapper):
         ret = []
         nrClasses = self.dataset.nClasses
         if self.dataset.isSequence:
-            print("!!!!!!!!!!!!DEBUG: preds=", preds, file=sys.stderr)
-            raise Exception("Apply not yet implemented for sequences")
+            # !!! TODO !!!!
+            # MAKE IT WORK IN HERE, then move to the actual implementation!
+            # TODO: the whole apply thing should just expect a single instance or sequence, always!
+            # TODO: figure out what shape the Java code expects us to return! Currently we return some dofferent!
+            dims = preds.size()[-1]
+            reshaped = preds.view(-1, dims)
+            # TODO: this does not produce a proper python list but a list with tensors of shape dims inside!
+            probs = list(reshaped)
+            _, out_idxs = torch.max(reshaped, 1)
+            predictions = out_idxs.numpy()
+            print("DEBUG: predictions: ", predictions, file=sys.stderr)
+            # create the list of corresponding labels
+            labels = [self.dataset.target.idx2label(x+1) for x in predictions]
+            print("DEBUG: labels: ", labels, file=sys.stderr)
+            print("DEBUG: probs: ", probs, file=sys.stderr)
+            return [ labels, probs]
         else:
             # preds should be a 2d tensor of size batchsize x numberClasses
             assert len(preds.size()) == 2

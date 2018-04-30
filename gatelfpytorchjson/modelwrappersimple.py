@@ -353,14 +353,10 @@ class ModelWrapperSimple(ModelWrapper):
         ret = []
         nrClasses = self.dataset.nClasses
         if self.dataset.isSequence:
-            # !!! TODO !!!!
-            # MAKE IT WORK IN HERE, then move to the actual implementation!
             # TODO: the whole apply thing should just expect a single instance or sequence, always!
-            # TODO: figure out what shape the Java code expects us to return! Currently we return some dofferent!
             dims = preds.size()[-1]
             reshaped = preds.view(-1, dims)
-            # TODO: this does not produce a proper python list but a list with tensors of shape dims inside!
-            probs = list(reshaped)
+            probs = [list(x) for x in reshaped]
             _, out_idxs = torch.max(reshaped, 1)
             predictions = out_idxs.numpy()
             print("DEBUG: predictions: ", predictions, file=sys.stderr)
@@ -368,7 +364,7 @@ class ModelWrapperSimple(ModelWrapper):
             labels = [self.dataset.target.idx2label(x+1) for x in predictions]
             print("DEBUG: labels: ", labels, file=sys.stderr)
             print("DEBUG: probs: ", probs, file=sys.stderr)
-            return [ labels, probs]
+            return [[labels], [probs]]
         else:
             # preds should be a 2d tensor of size batchsize x numberClasses
             assert len(preds.size()) == 2
@@ -389,7 +385,7 @@ class ModelWrapperSimple(ModelWrapper):
          and returns a list of predictions as Pytorch variables.
         train_mode influences if the underlying model is used in training mode or not.
         """
-        if not self.is_data_prepared:
+        if train_mode and not self.is_data_prepared:
             raise Exception("Must call train or prepare_data first")
         curmodeistrain = self.module.training
         if train_mode and not curmodeistrain:

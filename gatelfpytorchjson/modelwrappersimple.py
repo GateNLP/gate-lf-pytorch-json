@@ -345,7 +345,7 @@ class ModelWrapperSimple(ModelWrapper):
         if not reshaped:
             instancelist = self.dataset.reshape_batch(instancelist, indep_only=True)
             print("\nDEBUG: instances after reshaping: ", instancelist, file=sys.stderr)
-        preds = self._apply_model(instancelist, train_mode=False)
+        preds = self._apply_model(instancelist, train_mode=False).data
         # for now we only have classification (sequence/non-sequence) so
         # for this, we first use the torch max to find the most likely label index,
         # then convert back to the label itself. We also convert the torch probability vector
@@ -353,19 +353,20 @@ class ModelWrapperSimple(ModelWrapper):
         ret = []
         nrClasses = self.dataset.nClasses
         if self.dataset.isSequence:
+            print("!!!!!!!!!!!!DEBUG: preds=", preds, file=sys.stderr)
             raise Exception("Apply not yet implemented for sequences")
         else:
             # preds should be a 2d tensor of size batchsize x numberClasses
             assert len(preds.size()) == 2
             assert preds.size()[0] == batchsize
             assert preds.size()[1] == nrClasses
-            _, out_idxs = torch.max(preds.data, dim=1)
+            _, out_idxs = torch.max(preds, dim=1)
             # out_idxs contains the class indices, need to convert back to labels
             getlabel = self.dataset.target.idx2label
             # NOTE/IMPORTANT: we retrieve the label using index+1 because ALL targets use 0 as the pad index,
             # even if we do not have sequences (for simplicity)
             labels = [getlabel(x+1) for x in out_idxs]
-            probs = [list(x) for x in preds.data]
+            probs = [list(x) for x in preds]
             ret = [labels, probs]
         return ret
 

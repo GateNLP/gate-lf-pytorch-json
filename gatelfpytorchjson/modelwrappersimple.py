@@ -54,7 +54,7 @@ class ModelWrapperSimple(ModelWrapper):
         self.cuda = cuda
         self.checkpointnr = 0
         self.stopfile = os.path.join(os.path.dirname(dataset.metafile), "STOP")
-        if "stopfile" in config:
+        if "stopfile" in config and config["stopfile"] is not None:
             self.stopfile = config["stopfile"]
         self.stopfile = os.path.abspath(self.stopfile)
         logging.getLogger(__name__).debug("Set the stop file to %s" % self.stopfile)

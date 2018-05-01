@@ -36,7 +36,8 @@ parser.add_argument("--cuda", type=str2bool, help="True/False to use CUDA or not
 # NOTE: resume currently does not make sure that the original metafile info is used (but maybe new data):
 # This should work once the metadata is actually stored as part of the model!
 parser.add_argument("--resume", action='store_true', help="Resume training from the specified model")
-parser.add_argument("--notrain", action='store_true', help="Do not actually run training (for use with LF)")
+parser.add_argument("--notrain", action='store_true', help="Do not actually run training, but show generated model")
+parser.add_argument("--nocreate", action='store_true', help="Do not actually even create module (do nothing)")
 
 args = parser.parse_args(parms)
 config = vars(args)
@@ -67,6 +68,11 @@ logger3.addHandler(streamhandler)
 # parameters relevant to them!
 
 logger3.debug("Running train.py, config is %r" % config)
+
+if config.get("nocreate"):
+    logger3.info("--nocreate specified, exiting")
+    sys.exit(0)
+
 
 logger3.debug("Loading metafile...")
 ds = Dataset(metafile, config=config)

@@ -108,3 +108,6 @@ logger3.debug("Training completed")
 logger3.debug("Saving model...")
 wrapper.save(modelname)
 logger3.debug("Model saved")
+
+# print the model used again so we do not have to scoll back a huge log ...
+logger3.info("Model: %r" % wrapper)

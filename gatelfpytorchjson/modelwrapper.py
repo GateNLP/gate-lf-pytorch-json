@@ -64,8 +64,8 @@ class ModelWrapper(object):
         # convert both to numpy
         # TODO: for now this corresponds to the hack that we subtract 1 from the target indices before
         # calling the loss
-        targets = batch_targets.data.view(-1).numpy()
-        preds = out_idxs.numpy()
+        targets = batch_targets.data.view(-1).cpu().numpy()
+        preds = out_idxs.cpu().numpy()
         mask = targets != pad_index
         n_correct = np.sum(preds[mask] == targets[mask])
         # n_correct = int(out_idxs.eq(batch_targets.data.view(-1)).sum())

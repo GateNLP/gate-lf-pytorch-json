@@ -52,6 +52,7 @@ class ModelWrapperSimple(ModelWrapper):
         """
         super().__init__(dataset, config=config)
         self.config = config
+        print("!!!!! DEBUG: config in modelwrappersimple=",config,file=sys.stderr)
         if "cuda" in config and config["cuda"] is not None:
             cuda = config["cuda"]
         self.cuda = cuda
@@ -64,13 +65,13 @@ class ModelWrapperSimple(ModelWrapper):
         self.override_learningrate = None
         if "learningrate" in config and config["learningrate"]:
             self.override_learningrate = config["learningrate"]
-        super().__init__(dataset)
         cuda_is_available = torch.cuda.is_available()
         if self.cuda is None:
             enable_cuda = cuda_is_available
         else:
             enable_cuda = self.cuda
         self._enable_cuda = enable_cuda  # this tells us if we should actually set cuda or not
+        print("!!!!DEBUG: cuda=",cuda,"_enable_cuda=",self._enable_cuda,file=sys.stderr)
         self.dataset = dataset
         self.init_from_dataset()
         # various configuration settings which can be set before passing on control to the
@@ -361,7 +362,7 @@ class ModelWrapperSimple(ModelWrapper):
             reshaped = preds.view(-1, dims)
             probs = [list(x) for x in reshaped]
             _, out_idxs = torch.max(reshaped, 1)
-            predictions = out_idxs.numpy()
+            predictions = out_idxs.cpu().numpy()
             print("DEBUG: predictions: ", predictions, file=sys.stderr)
             # create the list of corresponding labels
             labels = [self.dataset.target.idx2label(x+1) for x in predictions]
@@ -585,5 +586,5 @@ class ModelWrapperSimple(ModelWrapper):
 
     def __repr__(self):
         repr = "ModelWrapperSimple(config=%r, cuda=%s):\nmodule=%s\noptimizer=%s\nlossfun=%s" % \
-             (self.config, self.cuda, self.module, self.optimizer, self.lossfunction)
+             (self.config, self._enable_cuda, self.module, self.optimizer, self.lossfunction)
         return repr

@@ -49,7 +49,9 @@ class ModelWrapperSimple(ModelWrapper):
         If cuda is None, then if cuda is available it will be used. True and False
         require and prohibit the use of cuda unconditionally.
         """
-        super().__init__(dataset)
+        super().__init__(dataset, config=config)
+        if "cuda" in config and config["cuda"] is not None:
+            cuda = config["cuda"]
         self.cuda = cuda
         cuda_is_available = torch.cuda.is_available()
         if self.cuda is None:

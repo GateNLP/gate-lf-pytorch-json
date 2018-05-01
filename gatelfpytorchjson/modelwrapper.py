@@ -7,7 +7,7 @@ import torch
 class ModelWrapper(object):
 
     # every subclass should implement these methods:
-    def __init__(self, dataset):
+    def __init__(self, dataset, config={}):
         pass
 
     def train(self, epochs=None, batchsize=None):

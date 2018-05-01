@@ -6,6 +6,8 @@ __pycache__/
 # idea
 /.idea/workspace.xml
 /.idea/tasks.xml
+/.idea/gate-lf-pytorch-wrapper.iml
+/.idea/misc.xml
 
 # C extensions
 *.so

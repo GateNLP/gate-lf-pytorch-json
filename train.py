@@ -13,6 +13,15 @@ datadir = Path(metafile).parent
 
 parms = sys.argv[3:]
 
+# The way how argparse treats boolean arguments sucks, so we need to do this
+def str2bool(val):
+    if val.lower() in ["yes", "true", "y", "t", "1"]:
+        return True
+    elif val.lower() in ["no", "false", "n", "f", "0"]:
+        return False
+    else:
+        raise argparse.ArgumentTypeError("Boolean value expected, not %s" % (val,))
+
 parser = argparse.ArgumentParser()
 # Parameter for checkpointing the module
 parser.add_argument("--embs", type=str, help="Override embedding settings, specify as embid:embdims:embtrain:embminfreq,embid:embdims ..")
@@ -22,7 +31,7 @@ parser.add_argument("--batchsize", type=int, default=32, help="Batch size")
 parser.add_argument("--maxepochs", type=int, default=50, help="Maximum number of epochs")
 parser.add_argument("--stopfile", type=str, help="If that file exists, training is stopped")
 parser.add_argument("--learningrate", type=float, help="Override default learning rate for the optimizer")
-parser.add_argument("--cuda", type=bool, help="True/False to use CUDA or not, omit to determine automatically")
+parser.add_argument("--cuda", type=str2bool, help="True/False to use CUDA or not, omit to determine automatically")
 # NOTE: resume currently does not make sure that the original metafile info is used (but maybe new data):
 # This should work once the metadata is actually stored as part of the model!
 parser.add_argument("--resume", action='store_true', help="Resume training from the specified model")

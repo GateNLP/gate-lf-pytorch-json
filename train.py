@@ -67,9 +67,6 @@ logger3.addHandler(streamhandler)
 # parameters relevant to them!
 
 logger3.debug("Running train.py, config is %r" % config)
-if config.get("notrain"):
-    logger3.info("--notrain specified, exiting")
-    sys.exit(0)
 
 logger3.debug("Loading metafile...")
 ds = Dataset(metafile, config=config)
@@ -86,6 +83,11 @@ else:
     wrapper = ModelWrapperSimple(ds, config=config)
     logger3.debug("Modelwrapper created")
     logger3.debug("Model is %r" % wrapper)
+
+if config.get("notrain"):
+    logger3.info("--notrain specified, exiting")
+    sys.exit(0)
+
 
 # TODO: this may need to be done differently if we have our own validation file!
 # TODO: the default to use for validation set size should be settable through config in the constructor!

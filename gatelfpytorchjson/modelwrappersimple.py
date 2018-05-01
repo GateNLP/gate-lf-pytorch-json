@@ -1,12 +1,11 @@
 from . modelwrapper import ModelWrapper
 from . embeddingsmodule import EmbeddingsModule
 from . ngrammodule import NgramModule
+import os
 import torch
 import torch.nn
 import torch.optim
-import math
 from torch.autograd import Variable as V
-import torch.nn.functional as F
 from .classificationmodelsimple import ClassificationModelSimple
 from .takefromtuple import TakeFromTuple
 import logging
@@ -14,6 +13,7 @@ import sys
 import statistics
 import pickle
 from gatelfdata import Dataset
+import numpy as np
 
 # Basic usage:
 # ds = Dataset(metafile)
@@ -43,16 +43,28 @@ class ModelWrapperSimple(ModelWrapper):
         self.info = dataset.get_info()
 
     # This requires an initialized dataset instance
-    def __init__(self, dataset, config=None, cuda=None):
+    def __init__(self, dataset, config={}, cuda=None):
         """This requires a gatelfdata Dataset instance and can optionally take a dictionary with
         configuration/initialization options (NOT SUPPORTED YET).
         If cuda is None, then if cuda is available it will be used. True and False
         require and prohibit the use of cuda unconditionally.
+        Config settings: stopfile: a file path, if found training is stopped
         """
         super().__init__(dataset, config=config)
+        self.config = config
         if "cuda" in config and config["cuda"] is not None:
             cuda = config["cuda"]
         self.cuda = cuda
+        self.checkpointnr = 0
+        self.stopfile = os.path.join(os.path.dirname(dataset.metafile), "STOP")
+        if "stopfile" in config and config["stopfile"] is not None:
+            self.stopfile = config["stopfile"]
+        self.stopfile = os.path.abspath(self.stopfile)
+        logging.getLogger(__name__).debug("Set the stop file to %s" % self.stopfile)
+        self.override_learningrate = None
+        if "learningrate" in config and config["learningrate"]:
+            self.override_learningrate = config["learningrate"]
+        super().__init__(dataset)
         cuda_is_available = torch.cuda.is_available()
         if self.cuda is None:
             enable_cuda = cuda_is_available
@@ -76,7 +88,23 @@ class ModelWrapperSimple(ModelWrapper):
                 self.init_classification(dataset)
             else:
                 raise Exception("Target type not yet implemented: %s" % self.info["targetType"])
-        self.optimizer = torch.optim.SGD(self.module.parameters(), lr=0.001, momentum=0.9)
+        params = self.module.parameters()
+        # self.optimizer = torch.optim.SGD(self.module.parameters(), lr=0.001, momentum=0.9)
+        # self.optimizer = torch.optim.SGD(self.module.parameters(), lr=(self.override_learningrate or 0.001))
+        # self.optimizer = torch.optim.Adadelta(params, lr=1.0, rho=0.9, eps=1e-06, weight_decay=0)
+        # self.optimizer = torch.optim.Adagrad(params, lr=0.01, lr_decay=0, weight_decay=0, initial_accumulator_value=0)
+        self.optimizer = torch.optim.Adam(params, lr=(self.override_learningrate or 0.001), betas=(0.9, 0.999), eps=1e-08, weight_decay=0 )
+        # self.optimizer = torch.optim.Adamax(params, lr=0.002, betas=(0.9, 0.999), eps=1e-08, weight_decay=0)
+        # self.optimizer = torch.optim.ASGD(params, lr=0.01, lambd=0.0001, alpha=0.75, t0=1000000.0, weight_decay=0)
+        # self.optimizer = torch.optim.RMSprop(params, lr=0.01, alpha=0.99, eps=1e-08, weight_decay=0, momentum=0, centered=False)
+        # self.optimizer = torch.optim.Rprop(params, lr=0.01, etas=(0.5, 1.2), step_sizes=(1e-06, 50))
+        # self.optimizer = torch.optim.SGD(params, lr=0.1, momentum=0, dampening=0, weight_decay=0, nesterov=False)
+        # NOTE/TODO: check out how to implement a learning rate scheduler that makes the LR depend e.g. on epoch, see
+        # http://pytorch.org/docs/master/optim.html
+        # e.g. every 10 epochs, make lr half of what it was:
+        # self.scheduler = torch.optim.lr_scheduler.StepLR(self.optimizer, step_size=10, gamma=0.5)
+        # self.optimizer = torch.optim.SGD(params, lr=0.1, momentum=0.0)
+
 
     def init_classification(self, dataset):
         n_classes = self.info["nClasses"]
@@ -139,7 +167,7 @@ class ModelWrapperSimple(ModelWrapper):
                                      hidden1act, hidden2)
         hiddenlayers.append((hidden, {"name": "hidden"}))
         # Create the output layer
-        out = torch.nn.Softmax(dim=1)
+        out = torch.nn.LogSoftmax(dim=1)
         outputlayer = (out, {"name": "output"})
         # create the module and store it
         self.module = ClassificationModelSimple(inputlayers,
@@ -147,7 +175,7 @@ class ModelWrapperSimple(ModelWrapper):
                                                 outputlayer,
                                                 self.featureinfo)
         # Decide on the lossfunction function here for training later!
-        self.lossfunction = torch.nn.CrossEntropyLoss()
+        self.lossfunction = torch.nn.NLLLoss(ignore_index=-1)
         if self._enable_cuda:
             self.module.cuda()
             self.lossfunction.cuda()
@@ -227,12 +255,16 @@ class ModelWrapperSimple(ModelWrapper):
             n_hidden1lin_out = inlayers_outdims
             hidden1layer = None
 
+        # for now, the size of the hidden layer is identical to the input size, up to 
+        # a maximum of 200
+        lstm_hidden_size = min(200, n_hidden1lin_out)
+        lstm_bidirectional = False
         ## Now that we have combined the features, we create the lstm
         hidden2 = torch.nn.LSTM(input_size=n_hidden1lin_out,
-                                  hidden_size=200,
+                                  hidden_size=lstm_hidden_size,
                                   num_layers=1,
-                                  dropout=0.1,
-                                  bidirectional=True,
+                                  # dropout=0.1,
+                                  bidirectional=lstm_bidirectional,
                                   batch_first=True)
         # the outputs of the LSTM are of shape b, seq, hidden
         # We want to get softmax outputs for each, so we need to get this to
@@ -244,15 +276,18 @@ class ModelWrapperSimple(ModelWrapper):
         # tuple in the forward step
         hidden2 = TakeFromTuple(hidden2, which=0)
 
-        # NOTE: since the LSTM is bidirectional, we need 400 instead of 200 here
-        hidden3 = torch.nn.Linear(400, n_classes)
+        # NOTE: if the LSTM is bidirectional, we need to double the size
+        hidden3_size = lstm_hidden_size
+        if lstm_bidirectional:
+            hidden3_size *= 2
+        hidden3 = torch.nn.Linear(hidden3_size, n_classes)
         if not hidden1layer:
             hidden = torch.nn.Sequential(hidden2, hidden3)
         else:
             hidden = torch.nn.Sequential(hidden1layer, hidden2, hidden3)
         hiddenlayers.append((hidden, {"name": "hidden"}))
         # Create the output layer
-        out = torch.nn.Softmax(dim=1)
+        out = torch.nn.LogSoftmax(dim=1)
         outputlayer = (out, {"name": "output"})
         # create the module and store it
         self.module = ClassificationModelSimple(inputlayers,
@@ -260,7 +295,7 @@ class ModelWrapperSimple(ModelWrapper):
                                                 outputlayer,
                                                 self.featureinfo)
         # For sequence tagging we cannot use CrossEntropyLoss
-        self.lossfunction = torch.nn.CrossEntropyLoss(ignore_index=0)
+        self.lossfunction = torch.nn.NLLLoss(ignore_index=-1)
         if self._enable_cuda:
             self.module.cuda()
             self.lossfunction.cuda()
@@ -272,21 +307,28 @@ class ModelWrapperSimple(ModelWrapper):
         return self.module
 
     def prepare_data(self, validationsize=None):
+        """If validationsize is > 1, it is the absolute size, if < 1 it is the portion e.g. 0.01 to use."""
         # get the validation set
+        if validationsize is not None:
+            validationsize = float(validationsize)
         if self.is_data_prepared:
             return
         valsize = None
         valpart = 0.1
+        # TODO: allow not using a validation set at all!
         if validationsize:
-            if isinstance(validationsize, int):
+            if validationsize > 1:
                 valsize = validationsize
-            elif isinstance(validationsize, float):
-                valpart = validationsize
             else:
-                raise Exception("Parameter validationsize must be a float or int")
+                valpart = validationsize
         self.dataset.split(convert=True, validation_part=valpart, validation_size=valsize)
         self.valset = self.dataset.validation_set_converted(as_batch=True)
         self.is_data_prepared = True
+        # if we have a validation set, calculate the class distribution here 
+        # this should be shown before training starts so the validation accuracy makes more sense
+        # this can also be used to use a loss function that re-weights classes in case of class imbalance!
+        deps = self.valset[1]
+        # TODO: calculate the class distribution but if sequences, ONLY for the non-padded parts of the sequences!!!!
 
     def apply(self, instancelist, converted=False, reshaped=False):
         """Given a list of instances in original format (or converted if converted=True), applies
@@ -306,7 +348,7 @@ class ModelWrapperSimple(ModelWrapper):
         if not reshaped:
             instancelist = self.dataset.reshape_batch(instancelist, indep_only=True)
             print("\nDEBUG: instances after reshaping: ", instancelist, file=sys.stderr)
-        preds = self._apply_model(instancelist, train_mode=False)
+        preds = self._apply_model(instancelist, train_mode=False).data
         # for now we only have classification (sequence/non-sequence) so
         # for this, we first use the torch max to find the most likely label index,
         # then convert back to the label itself. We also convert the torch probability vector
@@ -314,17 +356,30 @@ class ModelWrapperSimple(ModelWrapper):
         ret = []
         nrClasses = self.dataset.nClasses
         if self.dataset.isSequence:
-            raise Exception("Apply not yet implemented for sequences")
+            # TODO: the whole apply thing should just expect a single instance or sequence, always!
+            dims = preds.size()[-1]
+            reshaped = preds.view(-1, dims)
+            probs = [list(x) for x in reshaped]
+            _, out_idxs = torch.max(reshaped, 1)
+            predictions = out_idxs.numpy()
+            print("DEBUG: predictions: ", predictions, file=sys.stderr)
+            # create the list of corresponding labels
+            labels = [self.dataset.target.idx2label(x+1) for x in predictions]
+            print("DEBUG: labels: ", labels, file=sys.stderr)
+            print("DEBUG: probs: ", probs, file=sys.stderr)
+            return [[labels], [probs]]
         else:
             # preds should be a 2d tensor of size batchsize x numberClasses
             assert len(preds.size()) == 2
             assert preds.size()[0] == batchsize
             assert preds.size()[1] == nrClasses
-            _, out_idxs = torch.max(preds.data, dim=1)
+            _, out_idxs = torch.max(preds, dim=1)
             # out_idxs contains the class indices, need to convert back to labels
             getlabel = self.dataset.target.idx2label
-            labels = [getlabel(x) for x in out_idxs]
-            probs = [list(x) for x in preds.data]
+            # NOTE/IMPORTANT: we retrieve the label using index+1 because ALL targets use 0 as the pad index,
+            # even if we do not have sequences (for simplicity)
+            labels = [getlabel(x+1) for x in out_idxs]
+            probs = [list(x) for x in preds]
             ret = [labels, probs]
         return ret
 
@@ -333,7 +388,7 @@ class ModelWrapperSimple(ModelWrapper):
          and returns a list of predictions as Pytorch variables.
         train_mode influences if the underlying model is used in training mode or not.
         """
-        if not self.is_data_prepared:
+        if train_mode and not self.is_data_prepared:
             raise Exception("Must call train or prepare_data first")
         curmodeistrain = self.module.training
         if train_mode and not curmodeistrain:
@@ -359,7 +414,9 @@ class ModelWrapperSimple(ModelWrapper):
         """
         if not self.is_data_prepared:
             raise Exception("Must call train or prepare_data first")
-        v_deps = V(torch.LongTensor(validationinstances[1]), requires_grad=False)
+        # NOTE!!! the targets are what we get minus 1, which shifts the padding index to be -1
+        targets = np.array(validationinstances[1])-1
+        v_deps = V(torch.LongTensor(targets), requires_grad=False)
         if self._enable_cuda:
             v_deps = v_deps.cuda()
         v_preds = self._apply_model(validationinstances[0], train_mode=train_mode)
@@ -409,7 +466,6 @@ class ModelWrapperSimple(ModelWrapper):
         # val_targets = V(torch.LongTensor(self.valset[1]), requires_grad=False)
         stop_it_already = False
         validation_losses = []
-        print("DEBUG: before running training...", file=sys.stderr)
         totalbatches = 0
         last_accs = []
         last_losses = []
@@ -419,9 +475,11 @@ class ModelWrapperSimple(ModelWrapper):
                 batch_nr += 1
                 totalbatches += 1
                 self.module.zero_grad()
+                # import ipdb
+                # ipdb.set_trace()
                 (loss, acc) = self.evaluate(batch, train_mode=True)
-                # logger.debug("Batch lossfunction/acc for epoch=%s, batch=%s: %s / %s" %
-                #             (epoch, batch_nr, float(loss), acc))
+                logger.debug("Batch loss/acc for epoch=%s, batch=%s: %s / %s" %
+                             (epoch, batch_nr, float(loss), acc))
                 # print("Batch lossfunction/acc for epoch=%s, batch=%s: %s / %s" % (epoch, batch_nr,
                 # float(lossfunction), acc), file=sys.stderr)
                 loss.backward()
@@ -453,10 +511,29 @@ class ModelWrapperSimple(ModelWrapper):
                     logger.info("EVAL e=%s,b=%s,tloss/vloss/"
                                 "vloss-var/tacc/vacc: %s / %s / %s / %s / %s" %
                                 (epoch, batch_nr, avg_tloss, float(loss_val), var_vloss, avg_tacc, acc_val))
+                    # TODO: if we have set a checkpointing parameter (checkpointevery, telling every how many
+                    # test set validations we want to checkpoint), checkpoint here
+                    # TODO: for this we already should have implemented a way to set the model or checkpoint file
+                    # prefix beforehand (maybe even at construction time, but changable let through a setter?)
+                    # self.checkpoint()
+                    # if there is a stopfile config and we find the file,
+                    if self.stopfile and os.path.exists(self.stopfile):
+                        print("Stop file found, removing and terminating training...", file=sys.stderr)
+                        os.remove(self.stopfile)
+                        stop_it_already = True
                 if stop_it_already:
                     break
             if stop_it_already:
                 break
+
+    def checkpoint(self, filenameprefix, checkpointnr=None):
+        """Save the module, adding a checkpoint number in the name."""
+        # TODO: eventually this should get moved into the module?
+        cp = checkpointnr
+        if cp is None:
+            cp = self.checkpointnr
+            self.checkpointnr += 1
+        torch.save(self.module, filenameprefix + ".module.pytorch")
 
     def save(self, filenameprefix):
         # store everything using pickle, but we do not store the module or the dataset
@@ -486,19 +563,27 @@ class ModelWrapperSimple(ModelWrapper):
         """Currently we do not pickle the dataset instance but rather re-create it when loading,
         and we do not pickle the actual pytorch module but rather use the pytorch-specific saving
         and loading mechanism."""
-        print("DEBUG: self keys=", self.__dict__.keys(), file=sys.stderr)
+        # print("DEBUG: self keys=", self.__dict__.keys(), file=sys.stderr)
         assert hasattr(self, 'metafile')
         state = self.__dict__.copy()  # this creates a shallow copy
-        print("DEBUG: copy keys=", state.keys(), file=sys.stderr)
+        # print("DEBUG: copy keys=", state.keys(), file=sys.stderr)
         assert 'metafile' in state
         del state['dataset']
         del state['module']
+        # do not save these transient variables:
+        del state['is_data_prepared']
         return state
 
     def __setstate__(self, state):
         """We simply restore everything that was pickled earlier plus manually rebuild the dataset
-        instance and manually restore the pytorch module."""
+        instance and manually restore the pytorch module (in the load method)"""
         assert 'metafile' in state
         self.__dict__.update(state)
+        # Set the transient variables to the default values we want after loading
+        self.is_data_prepared = False
         assert hasattr(self, 'metafile')
 
+    def __repr__(self):
+        repr = "ModelWrapperSimple(config=%r, cuda=%s):\nmodule=%s\noptimizer=%s\nlossfun=%s" % \
+             (self.config, self.cuda, self.module, self.optimizer, self.lossfunction)
+        return repr

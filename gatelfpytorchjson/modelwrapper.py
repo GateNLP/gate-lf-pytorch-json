@@ -49,14 +49,28 @@ class ModelWrapper(object):
         return val
 
     @staticmethod
-    def accuracy(batch_predictions, batch_targets, targets_onehot=False):
+    def accuracy(batch_predictions, batch_targets, pad_index=-1):
         """Calculate accuracy for the predictions (one-hot vectors) based on the true class indices in batch_targets.
-        Targets are assumed to be indices unless targets_onehot is True.
-        Both parameters are assumed to be torch Variables."""
+        Targets are assumed to be indices. Both parameters are assumed to be torch Variables.
+        """
         # NOTE: in case we have sequences we reshape to put everything that is not the last dimension
         # into the first dimension for the predictions
+        # TODO: this does not work properly for sequences!!!! We need to ignore all padding elements
+        # when calculating accuracy here!
         dims = batch_predictions.size()[-1]
         _, out_idxs = torch.max(batch_predictions.data.view(-1, dims), 1)
-        n_correct = int(out_idxs.eq(batch_targets.data.view(-1)).sum())
-        acc = n_correct / float(batch_targets.data.view(-1).size()[0])
+
+        # TODO: only do this if we actually have sequences, but for now we do it always ...
+        # convert both to numpy
+        # TODO: for now this corresponds to the hack that we subtract 1 from the target indices before
+        # calling the loss
+        targets = batch_targets.data.view(-1).numpy()
+        preds = out_idxs.numpy()
+        mask = targets != pad_index
+        n_correct = np.sum(preds[mask] == targets[mask])
+        # n_correct = int(out_idxs.eq(batch_targets.data.view(-1)).sum())
+        # acc = n_correct / float(batch_targets.data.view(-1).size()[0])
+        acc = n_correct / np.sum(mask)
+        # import ipdb
+        # ipdb.set_trace()
         return acc

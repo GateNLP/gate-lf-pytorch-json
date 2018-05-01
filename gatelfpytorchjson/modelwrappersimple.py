@@ -136,9 +136,10 @@ class ModelWrapperSimple(ModelWrapper):
             n_in = len(self.float_idxs)
             n_hidden = ModelWrapper.makeless(n_in, p1=0.5)
             lin = torch.nn.Linear(n_in, n_hidden)
-            drp = torch.nn.Dropout(p=0.2)
+            # drp = torch.nn.Dropout(p=0.2)
             act = torch.nn.ELU()
-            layer = torch.nn.Sequential(lin, drp, act)
+            # layer = torch.nn.Sequential(lin, drp, act)
+            layer = torch.nn.Sequential(lin, act)
             inlayers_outdims += n_hidden
             lname = "input_numeric"
             inputlayers.append((layer, {"type": "numeric", "name": lname}))

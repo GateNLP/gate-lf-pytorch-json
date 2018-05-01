@@ -30,6 +30,7 @@ parser.add_argument("--valevery", type=int, default=10, help="Evaluate on valida
 parser.add_argument("--batchsize", type=int, default=32, help="Batch size")
 parser.add_argument("--maxepochs", type=int, default=50, help="Maximum number of epochs")
 parser.add_argument("--stopfile", type=str, help="If that file exists, training is stopped")
+parser.add_argument("--module", type=str, help="The class/file name to use for the pytorch module")
 parser.add_argument("--learningrate", type=float, help="Override default learning rate for the optimizer")
 parser.add_argument("--cuda", type=str2bool, help="True/False to use CUDA or not, omit to determine automatically")
 # NOTE: resume currently does not make sure that the original metafile info is used (but maybe new data):

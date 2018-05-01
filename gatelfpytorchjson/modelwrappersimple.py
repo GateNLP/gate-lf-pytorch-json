@@ -14,6 +14,7 @@ import statistics
 import pickle
 from gatelfdata import Dataset
 import numpy as np
+from . ExampleClFf1 import ExampleClFf1
 
 # Basic usage:
 # ds = Dataset(metafile)
@@ -82,13 +83,31 @@ class ModelWrapperSimple(ModelWrapper):
         self.valset = None   # Validation set created by prepare_data
         self.lossfunction = None
         self.module = None  # the init_<TASK> method actually sets this!!
-        if self.info["isSequence"]:
-            self.init_sequencetagging(dataset)
+        # if the config requires a specific module needs to get used, create it here, otherwise
+        # create the module needed for sequences or non-sequences
+        if "module" in config and config["module"] is not None:
+            # TODO: figure out how to do this right!!
+            ptclassname = config["module"]
+            print("!!!!!DEBUG: trying to use class/file: ", ptclassname, file=sys.stderr)
+            import importlib
+            module = importlib.import_module("gatelfpytorchjson."+ptclassname)
+            class_ = getattr(module, ptclassname)
+            self.module = class_()
+            # TODO: best method to configure the loss for the module? for now we expect a static method
+            # in the class that returns it
+            self.lossfunction = self.module.get_lossfunction(config=config)
+            self.optimizer = self.module.get_optimizer(self.module.parameters(), config=config)
         else:
-            if self.info["targetType"] == "nominal":
-                self.init_classification(dataset)
+            if self.info["isSequence"]:
+                self.init_sequencetagging(dataset)
             else:
-                raise Exception("Target type not yet implemented: %s" % self.info["targetType"])
+                if self.info["targetType"] == "nominal":
+                    self.init_classification(dataset)
+                else:
+                    raise Exception("Target type not yet implemented: %s" % self.info["targetType"])
+        if self._enable_cuda:
+            self.module.cuda()
+            self.lossfunction.cuda()
         params = self.module.parameters()
         # self.optimizer = torch.optim.SGD(self.module.parameters(), lr=0.001, momentum=0.9)
         # self.optimizer = torch.optim.SGD(self.module.parameters(), lr=(self.override_learningrate or 0.001))
@@ -177,9 +196,6 @@ class ModelWrapperSimple(ModelWrapper):
                                                 self.featureinfo)
         # Decide on the lossfunction function here for training later!
         self.lossfunction = torch.nn.NLLLoss(ignore_index=-1)
-        if self._enable_cuda:
-            self.module.cuda()
-            self.lossfunction.cuda()
 
     def init_sequencetagging(self, dataset):
         """Build the module for sequence tagging."""
@@ -297,9 +313,6 @@ class ModelWrapperSimple(ModelWrapper):
                                                 self.featureinfo)
         # For sequence tagging we cannot use CrossEntropyLoss
         self.lossfunction = torch.nn.NLLLoss(ignore_index=-1)
-        if self._enable_cuda:
-            self.module.cuda()
-            self.lossfunction.cuda()
 
 
 

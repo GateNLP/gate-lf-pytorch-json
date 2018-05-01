@@ -21,7 +21,7 @@ setup(
     # keywords="",
     packages=['gatelfpytorchjson'],
     long_description=readme,
-    py_modules=['gatelfpytorchjson', 'torch', 'pkg_resources'],
+    py_modules=['gatelfpytorchjson', 'torch', 'pkg_resources', 'numpy' ],
     # scripts=['some.py'],
     # entry_points = {'console_scripts': ['some=some:main']},
     tests_require=['nose'],

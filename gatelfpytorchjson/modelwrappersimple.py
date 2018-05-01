@@ -500,6 +500,11 @@ class ModelWrapperSimple(ModelWrapper):
                 self.optimizer.step()
                 last_accs.append(float(acc))
                 last_losses.append(float(loss))
+                # if there is a stopfile config and we find the file,
+                if self.stopfile and os.path.exists(self.stopfile):
+                    print("Stop file found, removing and terminating training...", file=sys.stderr)
+                    os.remove(self.stopfile)
+                    stop_it_already = True
                 if (self.validate_every_batches and ((totalbatches % self.validate_every_batches) == 0)) or\
                         (self.validate_every_epochs and ((epoch % self.validate_every_epochs) == 0)):
                     # evaluate on validation set
@@ -530,11 +535,6 @@ class ModelWrapperSimple(ModelWrapper):
                     # TODO: for this we already should have implemented a way to set the model or checkpoint file
                     # prefix beforehand (maybe even at construction time, but changable let through a setter?)
                     # self.checkpoint()
-                    # if there is a stopfile config and we find the file,
-                    if self.stopfile and os.path.exists(self.stopfile):
-                        print("Stop file found, removing and terminating training...", file=sys.stderr)
-                        os.remove(self.stopfile)
-                        stop_it_already = True
                 if stop_it_already:
                     break
             if stop_it_already:

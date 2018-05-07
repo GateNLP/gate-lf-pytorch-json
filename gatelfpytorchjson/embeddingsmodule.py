@@ -19,10 +19,14 @@ class EmbeddingsModule(torch.nn.Module):
         self.emb_id = vocab.emb_id
         self.emb_train = vocab.emb_train
         self.emb_dims = vocab.emb_dims
+        self.emb_minfreq = vocab.emb_minfreq
         if not self.emb_dims:
             self.emb_dims = 100
         self.emb_size = vocab.n
-        self.module = torch.nn.Embedding(self.emb_size, embedding_dim=self.emb_dims, padding_idx=0)
+        self.modulename = "embeddings:{}:{}:{}:{}".format(self.emb_id, self.emb_dims, self.emb_train, self.emb_minfreq)
+        module = torch.nn.Embedding(self.emb_size, embedding_dim=self.emb_dims, padding_idx=0)
+        self.add_module(self.modulename, module)
+        self.modules = [module]
         self._on_cuda = None
 
     def on_cuda(self):
@@ -43,5 +47,5 @@ class EmbeddingsModule(torch.nn.Module):
         batch_var = V(torch.LongTensor(batch), requires_grad=False)
         if self.on_cuda():
             batch_var = batch_var.cuda()
-        out = self.module(batch_var)
+        out = self.modules[0](batch_var)
         return out

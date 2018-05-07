@@ -8,17 +8,19 @@ import logging
 import torch
 # from torch.autograd import Variable as V
 
-logger = logging.getLogger("gatelfdata")
-logger.setLevel(logging.ERROR)
-logger = logging.getLogger("gatelfpytorchjson")
-logger.setLevel(logging.DEBUG)
+logger1 = logging.getLogger("gatelfdata")
+logger1.setLevel(logging.ERROR)
+logger2 = logging.getLogger("gatelfpytorchjson")
+logger2.setLevel(logging.INFO)
 streamhandler = logging.StreamHandler()
 formatter = logging.Formatter(
         '%(asctime)s %(name)-12s %(levelname)-8s %(message)s')
 streamhandler.setFormatter(formatter)
-logger.addHandler(streamhandler)
 filehandler = logging.FileHandler("test_api.log")
-logger.addHandler(filehandler)
+logger1.addHandler(streamhandler)
+logger1.addHandler(filehandler)
+logger2.addHandler(streamhandler)
+logger2.addHandler(filehandler)
 
 TESTDIR = os.path.join(os.path.dirname(__file__), '.')
 DATADIR = os.path.join(TESTDIR, 'data')
@@ -36,7 +38,7 @@ else:
     SLOW_TESTS = False
 
 # In case we want to temporarily override
-SLOW_TESTS = True
+SLOW_TESTS = False
 
 class Test1(unittest.TestCase):
 
@@ -52,13 +54,13 @@ class Test1(unittest.TestCase):
         assert acc < 0.7
         print("\nDEBUG: test1_1 before training loss/acc=%s/%s" % (loss, acc), file=sys.stderr)
         if SLOW_TESTS:
-            wrapper.train(batch_size=20, max_epochs=250, early_stopping=False)
+            wrapper.train(batch_size=20, max_epochs=60, early_stopping=False)
             (loss, acc) = wrapper.evaluate(wrapper.valset, train_mode=False, as_pytorch=False)
-            assert acc > 0.7
+            assert acc > 0.8
             print("\nDEBUG: test1_1 after training loss/acc=%s/%s" % (loss, acc), file=sys.stderr)
 
     def test1_2(self):
-        ds = Dataset(TESTFILE2)
+        ds = Dataset(TESTFILE2, config={})
         torch.manual_seed(1)  # make results based on random weights repeatable
         wrapper = ModelWrapperSimple(ds)
         print("\nDEBUG: dataset=", wrapper.dataset, file=sys.stderr)
@@ -132,7 +134,7 @@ class Test1(unittest.TestCase):
         (loss, acc) = wrapper.evaluate(valset, train_mode=False, as_pytorch=False)
         print("\nDEBUG: test1_5 before training loss/acc=%s/%s" % (loss, acc), file=sys.stderr)
         assert acc < 0.7
-        wrapper.train(batch_size=20, max_epochs=150, early_stopping=False)
+        wrapper.train(batch_size=20, max_epochs=160, early_stopping=False)
         (loss, acc) = wrapper.evaluate(valset, train_mode=False, as_pytorch=False)
         print("\nDEBUG: test1_5 after training loss/acc=%s/%s" % (loss, acc), file=sys.stderr)
         assert acc > 0.7
@@ -143,6 +145,7 @@ class Test1(unittest.TestCase):
         m = None
         wrapper2 = ModelWrapperSimple.load("t1_5")
         ds2 = wrapper2.dataset
+        wrapper2.prepare_data()
         (loss, acc) = wrapper2.evaluate(valset, train_mode=False, as_pytorch=False)
         print("\nDEBUG: test1_5 after restoring loss/acc=%s/%s" % (loss, acc), file=sys.stderr)
         assert acc > 0.7

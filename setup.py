@@ -12,7 +12,7 @@ readme = read('README.md')
 
 setup(
     name="gatelfpytorchjson",
-    version="0.1",
+    version="0.2",
     description="Library to build and use pytorch NN models for GATE Learning Framework",
     author="Johann Petrak",
     author_email="johann.petrak@gmail.com",
@@ -21,7 +21,8 @@ setup(
     # keywords="",
     packages=['gatelfpytorchjson'],
     long_description=readme,
-    py_modules=['gatelfpytorchjson', 'torch', 'pkg_resources', 'numpy' ],
+    install_requires=['gatelfdata>=0.2', 'torch>=0.4', 'numpy'],
+    python_requires=">=3",
     # scripts=['some.py'],
     # entry_points = {'console_scripts': ['some=some:main']},
     tests_require=['nose'],

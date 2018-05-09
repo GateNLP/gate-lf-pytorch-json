@@ -108,7 +108,8 @@ class ModelWrapperSimple(ModelWrapper):
         if self._enable_cuda:
             self.module.cuda()
             self.lossfunction.cuda()
-        params = self.module.parameters()
+        # get the parameters for the optimizer, but make sure we do not include parameters for fixed layers!
+        params = filter(lambda p: p.requires_grad, self.module.parameters())
         # self.optimizer = torch.optim.SGD(self.module.parameters(), lr=0.001, momentum=0.9)
         # self.optimizer = torch.optim.SGD(self.module.parameters(), lr=(self.override_learningrate or 0.001))
         # self.optimizer = torch.optim.Adadelta(params, lr=1.0, rho=0.9, eps=1e-06, weight_decay=0)

@@ -38,7 +38,7 @@ else:
     SLOW_TESTS = False
 
 # In case we want to temporarily override
-SLOW_TESTS = False
+SLOW_TESTS = True
 
 class Test1(unittest.TestCase):
 
@@ -93,7 +93,7 @@ class Test1(unittest.TestCase):
         wrapper.prepare_data()
         (loss, acc) = wrapper.evaluate(wrapper.valset, train_mode=False, as_pytorch=False)
         print("\nDEBUG: test1_3 before training loss/acc=%s/%s" % (loss, acc), file=sys.stderr)
-        assert acc < 0.06
+        assert acc < 0.09
         if SLOW_TESTS:
             wrapper.train(batch_size=20, max_epochs=30, early_stopping=False)
             (loss, acc) = wrapper.evaluate(wrapper.valset, train_mode=False, as_pytorch=False)
@@ -113,10 +113,10 @@ class Test1(unittest.TestCase):
         print("\nDEBUG: test1_4 before training loss/acc=%s/%s" % (loss, acc), file=sys.stderr)
         assert acc < 0.2134
         if SLOW_TESTS:
-            wrapper.train(batch_size=20, max_epochs=30, early_stopping=False)
+            wrapper.train(batch_size=20, max_epochs=10, early_stopping=False)
             (loss, acc) = wrapper.evaluate(wrapper.valset, train_mode=False, as_pytorch=False)
             print("\nDEBUG: test1_4 after training loss/acc=%s/%s" % (loss, acc), file=sys.stderr)
-            assert acc > 0.215
+            assert acc > 0.55
 
     def test1_5(self):
         """Test saving and restoring a model"""
@@ -148,7 +148,7 @@ class Test1(unittest.TestCase):
         wrapper2.prepare_data()
         (loss, acc) = wrapper2.evaluate(valset, train_mode=False, as_pytorch=False)
         print("\nDEBUG: test1_5 after restoring loss/acc=%s/%s" % (loss, acc), file=sys.stderr)
-        assert acc > 0.7
+        assert acc > 0.8
 
         # No test application with the restored model
         vals_orig = ds.validation_set_orig()

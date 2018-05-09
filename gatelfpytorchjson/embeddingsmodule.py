@@ -1,33 +1,37 @@
 import torch
 from torch.autograd import Variable as V
-
+from collections import defaultdict
 
 class EmbeddingsModule(torch.nn.Module):
 
-    def __init__(self, vocab):
+    def __init__(self, vocab, cuda=None):
         """If vocab.train is yes new embeddings will get learned, starting off with random vectors if no pretrained
         embeddings are given, otherwise the pretrained embeddings will be used where possible.
         If train is no, then no training will be done and the pretrained embeddings will be used only.
         If train is mapping then a mapping is learned from pretrained embeddings to our own embeddings.
         NOTE: this should all happen automatically by inspecting and using the vocab instance.
+        NOTE: the actual embeddings getting loaded into the Embeddings module are derived from the vocab,
+        but if there is already an Embedding module for the same emb_id, the weights are shared.
         """
-        # TODO: if we have embeddings, load them
-        # TODO: if we do not have embeddings, update vocab OOV from Embeddings or vice versa
-        # TODO: mapping vocab support not fully implemented yet (need to add embeddings words)
 
         super().__init__()
         self.emb_id = vocab.emb_id
         self.emb_train = vocab.emb_train
         self.emb_dims = vocab.emb_dims
         self.emb_minfreq = vocab.emb_minfreq
-        if not self.emb_dims:
-            self.emb_dims = 100
         self.emb_size = vocab.n
         self.modulename = "embeddings:{}:{}:{}:{}".format(self.emb_id, self.emb_dims, self.emb_train, self.emb_minfreq)
-        module = torch.nn.Embedding(self.emb_size, embedding_dim=self.emb_dims, padding_idx=0)
+        weights = torch.from_numpy(vocab.get_embeddings())
+        module = torch.nn.Embedding(self.emb_size, embedding_dim=self.emb_dims, padding_idx=0, _weight=weights)
+        if self.emb_train == "no" or self.emb_train == "mapping":
+            module.weight.requires_grad = False
+        # if we have a mapping, we learn a nonlinear mapping from the constant embedding vector to our internal
+        # representation which has the exact same number of dimensions
+        if self.emb_train == "mapping":
+            module = torch.nn.Sequential(module, torch.nn.Linear(self.emb_size, self.emb_size), torch.nn.Sigmoid())
         self.add_module(self.modulename, module)
         self.modules = [module]
-        self._on_cuda = None
+        self._on_cuda = cuda
 
     def on_cuda(self):
         """Returns true or false depending on if the module is on cuda or not. Unfortunately

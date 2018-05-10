@@ -30,8 +30,17 @@ class EmbeddingsModule(torch.nn.Module):
             module.weight.requires_grad = False
         # if we have a mapping, we learn a nonlinear mapping from the constant embedding vector to our internal
         # representation which has the exact same number of dimensions
+        # IMPORTANT: the mapping weights also need to get shared between all mapping layers!
+        # Currently we achieve this by storing the parameters in the vocab instance as a transient
+        # field
         if self.emb_train == "mapping":
-            module = torch.nn.Sequential(module, torch.nn.Linear(self.emb_size, self.emb_size), torch.nn.Sigmoid())
+            mappinglayer = torch.nn.Linear(self.emb_dims, self.emb_dims)
+            module.weight.requires_grad = False
+            if hasattr(vocab, "_mappingparms"):
+                mappinglayer.weight.data = vocab._mappingparms
+            else:
+                vocab._mappingparms = mappinglayer.weight.data
+            module = torch.nn.Sequential(module, mappinglayer, torch.nn.Sigmoid())
         self.add_module(self.modulename, module)
         self.modules = [module]
         self._on_cuda = cuda

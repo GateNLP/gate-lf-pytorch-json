@@ -104,7 +104,8 @@ class Test1(unittest.TestCase):
     #         assert acc > 0.3
 
     def test1_4(self):
-        ds = Dataset(TESTFILE4, config={"embs": "token:0:yes:5:tests/data/wiki.en.vec"})
+        ds = Dataset(TESTFILE4, config={"embs": "token:0:no:5:tests/data/glove.6B.50d.txt.gz"})
+        # ds = Dataset(TESTFILE4)
         torch.manual_seed(1)  # make results based on random weights repeatable
         wrapper = ModelWrapperSimple(ds)
         print("\nDEBUG: dataset=", wrapper.dataset, file=sys.stderr)

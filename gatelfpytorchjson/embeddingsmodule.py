@@ -20,7 +20,10 @@ class EmbeddingsModule(torch.nn.Module):
         self.emb_dims = vocab.emb_dims
         self.emb_minfreq = vocab.emb_minfreq
         self.emb_size = vocab.n
-        self.modulename = "embeddings:{}:{}:{}:{}".format(self.emb_id, self.emb_dims, self.emb_train, self.emb_minfreq)
+        self.emb_file = vocab.emb_file
+        self.modulename = "embeddings:{}:{}:{}:{}:{}".format(
+            self.emb_id, self.emb_dims, self.emb_train, self.emb_minfreq, self.emb_file)
+        self.modulename = self.modulename.replace(".","_")
         weights = torch.from_numpy(vocab.get_embeddings())
         module = torch.nn.Embedding(self.emb_size, embedding_dim=self.emb_dims, padding_idx=0, _weight=weights)
         if self.emb_train == "no" or self.emb_train == "mapping":

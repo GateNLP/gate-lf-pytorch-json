@@ -1,7 +1,4 @@
 import torch.nn
-from torch.autograd import Variable as V
-import torch.nn.functional as F
-import sys
 
 
 class ClassificationModelSimple(torch.nn.Module):
@@ -56,7 +53,8 @@ class ClassificationModelSimple(torch.nn.Module):
             inputtype = config["type"]
             if inputtype == "numeric":
                 vals = [batch[i] for i in self.num_idxs]
-                vals4pt = V(torch.FloatTensor(vals).t(), requires_grad=True)
+                vals4pt = torch.FloatTensor(vals).t()
+                vals4pt.requires_grad(True)
                 if self.on_cuda():
                     vals4pt = vals4pt.cuda()
                 out = inputlayer(vals4pt)

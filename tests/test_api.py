@@ -1,12 +1,10 @@
 from gatelfpytorchjson.modelwrappersimple import ModelWrapperSimple
-# from gatelfpytorchjson.modelwrapper import ModelWrapper
 from gatelfdata import Dataset
 import unittest
 import os
 import sys
 import logging
 import torch
-# from torch.autograd import Variable as V
 
 streamhandler = logging.StreamHandler()
 formatter = logging.Formatter(

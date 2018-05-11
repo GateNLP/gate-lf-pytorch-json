@@ -137,9 +137,7 @@ class ModelWrapperSimple(ModelWrapper):
             n_in = len(self.float_idxs)
             n_hidden = ModelWrapper.makeless(n_in, p1=0.5)
             lin = torch.nn.Linear(n_in, n_hidden)
-            # drp = torch.nn.Dropout(p=0.2)
             act = torch.nn.ELU()
-            # layer = torch.nn.Sequential(lin, drp, act)
             layer = torch.nn.Sequential(lin, act)
             inlayers_outdims += n_hidden
             lname = "input_numeric"
@@ -182,10 +180,9 @@ class ModelWrapperSimple(ModelWrapper):
         # to map to the number of classes
         n_hidden1lin_out = ModelWrapper.makeless(inlayers_outdims)
         hidden1lin = torch.nn.Linear(inlayers_outdims, n_hidden1lin_out)
-        hidden1drp = torch.nn.Dropout(p=0.2)
         hidden1act = torch.nn.ELU()
         hidden2 = torch.nn.Linear(n_hidden1lin_out, n_classes)
-        hidden = torch.nn.Sequential(hidden1lin, hidden1drp,
+        hidden = torch.nn.Sequential(hidden1lin,
                                      hidden1act, hidden2)
         hiddenlayers.append((hidden, {"name": "hidden"}))
         # Create the output layer
@@ -220,9 +217,8 @@ class ModelWrapperSimple(ModelWrapper):
             n_in = len(self.float_idxs)
             n_hidden = ModelWrapper.makeless(n_in, p1=0.5)
             lin = torch.nn.Linear(n_in, n_hidden)
-            drp = torch.nn.Dropout(p=0.2)
             act = torch.nn.ELU()
-            layer = torch.nn.Sequential(lin, drp, act)
+            layer = torch.nn.Sequential(lin, act)
             inlayers_outdims += n_hidden
             lname = "input_numeric"
             inputlayers.append((layer, {"type": "numeric", "name": lname}))
@@ -267,9 +263,8 @@ class ModelWrapperSimple(ModelWrapper):
         if False:
             n_hidden1lin_out = ModelWrapper.makeless(inlayers_outdims)
             hidden1lin = torch.nn.Linear(inlayers_outdims, n_hidden1lin_out)
-            hidden1drp = torch.nn.Dropout(p=0.2)
             hidden1act = torch.nn.ELU()
-            hidden1layer = torch.nn.Sequential(hidden1lin, hidden1drp, hidden1act)
+            hidden1layer = torch.nn.Sequential(hidden1lin, hidden1act)
         else:
             n_hidden1lin_out = inlayers_outdims
             hidden1layer = None

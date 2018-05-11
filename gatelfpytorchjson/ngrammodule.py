@@ -28,7 +28,7 @@ class NgramModule(torch.nn.Module):
         self.lstm = torch.nn.LSTM(input_size=self.embeddingsmodule.emb_dims,
                                   hidden_size=hidden_size,
                                   num_layers=num_layers,
-                                  dropout=0.1,
+                                  # dropout=0.1,
                                   bidirectional=bidirectional,
                                   batch_first=True)
         # TODO: create a better lstm initialisation vector here for repeated

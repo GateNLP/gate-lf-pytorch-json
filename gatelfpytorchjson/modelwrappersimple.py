@@ -359,7 +359,8 @@ class ModelWrapperSimple(ModelWrapper):
         if not reshaped:
             instancelist = self.dataset.reshape_batch(instancelist, indep_only=True)
             print("\nDEBUG: instances after reshaping: ", instancelist, file=sys.stderr)
-        preds = self._apply_model(instancelist, train_mode=False).data
+        # TODO: check if using the tensor here as is is correct (previously we used variable.data)
+        preds = self._apply_model(instancelist, train_mode=False)
         # for now we only have classification (sequence/non-sequence) so
         # for this, we first use the torch max to find the most likely label index,
         # then convert back to the label itself. We also convert the torch probability vector

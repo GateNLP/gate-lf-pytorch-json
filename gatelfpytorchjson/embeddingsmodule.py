@@ -23,8 +23,10 @@ class EmbeddingsModule(torch.nn.Module):
         self.emb_file = vocab.emb_file
         self.modulename = "embeddings:{}:{}:{}:{}:{}".format(
             self.emb_id, self.emb_dims, self.emb_train, self.emb_minfreq, self.emb_file)
-        self.modulename = self.modulename.replace(".","_")
+        self.modulename = self.modulename.replace(".", "_")
         weights = torch.from_numpy(vocab.get_embeddings())
+        # TODO: check if there is any difference/advantage of using Embedding.from_pretrained(embs, freeze=True/False)
+        # (this does not allow to set the padding idx!!)
         module = torch.nn.Embedding(self.emb_size, embedding_dim=self.emb_dims, padding_idx=0, _weight=weights)
         if self.emb_train == "no" or self.emb_train == "mapping":
             module.weight.requires_grad = False
@@ -37,9 +39,9 @@ class EmbeddingsModule(torch.nn.Module):
             mappinglayer = torch.nn.Linear(self.emb_dims, self.emb_dims)
             module.weight.requires_grad = False
             if hasattr(vocab, "_mappingparms"):
-                mappinglayer.weight.data = vocab._mappingparms
+                mappinglayer.weight = vocab._mappingparms
             else:
-                vocab._mappingparms = mappinglayer.weight.data
+                vocab._mappingparms = mappinglayer.weight
             module = torch.nn.Sequential(module, mappinglayer, torch.nn.Sigmoid())
         self.add_module(self.modulename, module)
         self.modules = [module]

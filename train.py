@@ -7,11 +7,6 @@ from gatelfpytorchjson import ModelWrapper
 import argparse
 from pathlib import Path
 
-metafile = sys.argv[1]
-modelname = sys.argv[2]
-datadir = Path(metafile).parent
-
-parms = sys.argv[3:]
 
 # The way how argparse treats boolean arguments sucks, so we need to do this
 def str2bool(val):
@@ -38,8 +33,16 @@ parser.add_argument("--cuda", type=str2bool, help="True/False to use CUDA or not
 parser.add_argument("--resume", action='store_true', help="Resume training from the specified model")
 parser.add_argument("--notrain", action='store_true', help="Do not actually run training, but show generated model")
 parser.add_argument("--nocreate", action='store_true', help="Do not actually even create module (do nothing)")
+parser.add_argument("metafile", help="Path to metafile (REQUIRED)")
+parser.add_argument("modelname", help="Model path prefix (full path and beginning of model file name) (REQUIRED)")
 
-args = parser.parse_args(parms)
+
+args = parser.parse_args()
+
+metafile = args.metafile
+modelname = args.modelname
+datadir = Path(metafile).parent
+
 config = vars(args)
 
 # Set up logging

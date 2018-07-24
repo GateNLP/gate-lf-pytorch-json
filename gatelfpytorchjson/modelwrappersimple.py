@@ -14,7 +14,6 @@ import statistics
 import pickle
 from gatelfdata import Dataset
 import numpy as np
-from . ExampleClFf1 import ExampleClFf1
 
 # Basic usage:
 # ds = Dataset(metafile)
@@ -90,7 +89,7 @@ class ModelWrapperSimple(ModelWrapper):
             ptclassname = config["module"]
             print("!!!!!DEBUG: trying to use class/file: ", ptclassname, file=sys.stderr)
             import importlib
-            module = importlib.import_module("gatelfpytorchjson."+ptclassname)
+            module = importlib.import_module("gatelfpytorchjson.modules."+ptclassname)
             class_ = getattr(module, ptclassname)
             self.module = class_()
             # TODO: best method to configure the loss for the module? for now we expect a static method

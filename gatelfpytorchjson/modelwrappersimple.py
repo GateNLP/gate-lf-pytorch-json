@@ -84,18 +84,23 @@ class ModelWrapperSimple(ModelWrapper):
         self.module = None  # the init_<TASK> method actually sets this!!
         # if the config requires a specific module needs to get used, create it here, otherwise
         # create the module needed for sequences or non-sequences
+        # IMPORTANT! the optimizer needs to get created after the module has been moved to a GPU
+        # using cuda()!!!
         if "module" in config and config["module"] is not None:
             # TODO: figure out how to do this right!!
             ptclassname = config["module"]
             print("!!!!!DEBUG: trying to use class/file: ", ptclassname, file=sys.stderr)
             import importlib
-            module = importlib.import_module("gatelfpytorchjson.modules."+ptclassname)
+            module = importlib.import_module(".."+ptclassname, package="gatelfpytorchjson.modules."+ptclassname)
             class_ = getattr(module, ptclassname)
-            self.module = class_()
+            self.module = class_(dataset, config=config)
             # TODO: best method to configure the loss for the module? for now we expect a static method
             # in the class that returns it
             self.lossfunction = self.module.get_lossfunction(config=config)
-            self.optimizer = self.module.get_optimizer(self.module.parameters(), config=config)
+            if self._enable_cuda:
+                self.module.cuda()
+                self.lossfunction.cuda()
+            self.optimizer = self.module.get_optimizer(config=config)
         else:
             if self.info["isSequence"]:
                 self.init_sequencetagging(dataset)
@@ -104,26 +109,26 @@ class ModelWrapperSimple(ModelWrapper):
                     self.init_classification(dataset)
                 else:
                     raise Exception("Target type not yet implemented: %s" % self.info["targetType"])
-        if self._enable_cuda:
-            self.module.cuda()
-            self.lossfunction.cuda()
-        # get the parameters for the optimizer, but make sure we do not include parameters for fixed layers!
-        params = filter(lambda p: p.requires_grad, self.module.parameters())
-        # self.optimizer = torch.optim.SGD(self.module.parameters(), lr=0.001, momentum=0.9)
-        # self.optimizer = torch.optim.SGD(self.module.parameters(), lr=(self.override_learningrate or 0.001))
-        # self.optimizer = torch.optim.Adadelta(params, lr=1.0, rho=0.9, eps=1e-06, weight_decay=0)
-        # self.optimizer = torch.optim.Adagrad(params, lr=0.01, lr_decay=0, weight_decay=0, initial_accumulator_value=0)
-        self.optimizer = torch.optim.Adam(params, lr=(self.override_learningrate or 0.001), betas=(0.9, 0.999), eps=1e-08, weight_decay=0 )
-        # self.optimizer = torch.optim.Adamax(params, lr=0.002, betas=(0.9, 0.999), eps=1e-08, weight_decay=0)
-        # self.optimizer = torch.optim.ASGD(params, lr=0.01, lambd=0.0001, alpha=0.75, t0=1000000.0, weight_decay=0)
-        # self.optimizer = torch.optim.RMSprop(params, lr=0.01, alpha=0.99, eps=1e-08, weight_decay=0, momentum=0, centered=False)
-        # self.optimizer = torch.optim.Rprop(params, lr=0.01, etas=(0.5, 1.2), step_sizes=(1e-06, 50))
-        # self.optimizer = torch.optim.SGD(params, lr=0.1, momentum=0, dampening=0, weight_decay=0, nesterov=False)
-        # NOTE/TODO: check out how to implement a learning rate scheduler that makes the LR depend e.g. on epoch, see
-        # http://pytorch.org/docs/master/optim.html
-        # e.g. every 10 epochs, make lr half of what it was:
-        # self.scheduler = torch.optim.lr_scheduler.StepLR(self.optimizer, step_size=10, gamma=0.5)
-        # self.optimizer = torch.optim.SGD(params, lr=0.1, momentum=0.0)
+            if self._enable_cuda:
+                self.module.cuda()
+                self.lossfunction.cuda()
+            # get the parameters for the optimizer, but make sure we do not include parameters for fixed layers!
+            params = filter(lambda p: p.requires_grad, self.module.parameters())
+            # self.optimizer = torch.optim.SGD(self.module.parameters(), lr=0.001, momentum=0.9)
+            # self.optimizer = torch.optim.SGD(self.module.parameters(), lr=(self.override_learningrate or 0.001))
+            # self.optimizer = torch.optim.Adadelta(params, lr=1.0, rho=0.9, eps=1e-06, weight_decay=0)
+            # self.optimizer = torch.optim.Adagrad(params, lr=0.01, lr_decay=0, weight_decay=0, initial_accumulator_value=0)
+            self.optimizer = torch.optim.Adam(params, lr=(self.override_learningrate or 0.001), betas=(0.9, 0.999), eps=1e-08, weight_decay=0 )
+            # self.optimizer = torch.optim.Adamax(params, lr=0.002, betas=(0.9, 0.999), eps=1e-08, weight_decay=0)
+            # self.optimizer = torch.optim.ASGD(params, lr=0.01, lambd=0.0001, alpha=0.75, t0=1000000.0, weight_decay=0)
+            # self.optimizer = torch.optim.RMSprop(params, lr=0.01, alpha=0.99, eps=1e-08, weight_decay=0, momentum=0, centered=False)
+            # self.optimizer = torch.optim.Rprop(params, lr=0.01, etas=(0.5, 1.2), step_sizes=(1e-06, 50))
+            # self.optimizer = torch.optim.SGD(params, lr=0.1, momentum=0, dampening=0, weight_decay=0, nesterov=False)
+            # NOTE/TODO: check out how to implement a learning rate scheduler that makes the LR depend e.g. on epoch, see
+            # http://pytorch.org/docs/master/optim.html
+            # e.g. every 10 epochs, make lr half of what it was:
+            # self.scheduler = torch.optim.lr_scheduler.StepLR(self.optimizer, step_size=10, gamma=0.5)
+            # self.optimizer = torch.optim.SGD(params, lr=0.1, momentum=0.0)
 
 
     def init_classification(self, dataset):

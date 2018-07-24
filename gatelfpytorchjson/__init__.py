@@ -14,3 +14,6 @@ except ImportError:
 
 from .modelwrappersimple import ModelWrapperSimple
 from .modelwrapper import ModelWrapper
+from .embeddingsmodule import EmbeddingsModule
+from .takefromtuple import TakeFromTuple
+from .CustomModule import CustomModule

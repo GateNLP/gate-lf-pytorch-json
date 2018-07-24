@@ -1,6 +1,7 @@
 import torch
 from torch.autograd import Variable as V
 from collections import defaultdict
+import sys
 
 class EmbeddingsModule(torch.nn.Module):
 
@@ -62,8 +63,12 @@ class EmbeddingsModule(torch.nn.Module):
         # To make it work properly, we also need to make sure that the top-level .cuda() invocation does
         # not enable cuda for the module in here unless we really want it so we need to override the method.
         # NOTE: for now we run on the cuda, if enabled
-        batch_var = V(torch.LongTensor(batch), requires_grad=False)
+
+        # NOTE: we already get a tensor here
+        # TODO: not sure if we can get a float tensor here, if yes, we need to convert to a long tensor
+        # print("DEBUG: type of batch=", type(batch), file=sys.stderr)
+        # batch_var = V(torch.LongTensor(batch), requires_grad=False)
         if self.on_cuda():
-            batch_var = batch_var.cuda()
-        out = self.modules[0](batch_var)
+            batch = batch.cuda()
+        out = self.modules[0](batch)
         return out

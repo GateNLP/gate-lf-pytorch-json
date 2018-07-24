@@ -15,7 +15,7 @@ class CustomModule(torch.nn.Module):
         return torch.nn.NLLLoss(ignore_index=-1)
 
     def get_optimizer(self, config={}):
-        parms = self.parameters()
+        parms = filter(lambda p: p.requires_grad, self.parameters())
         return torch.optim.Adam(parms, lr=0.001, betas=(0.9, 0.999), eps=1e-08, weight_decay=0)
 
     def on_cuda(self):

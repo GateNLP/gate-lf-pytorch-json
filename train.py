@@ -1,6 +1,12 @@
 import sys
 import os
 import logging
+# make sure we can import the gatelfdata library from the default location
+gatelfdatapath = os.path.join("..", "gate-lf-python-data")
+filepath = os.path.dirname(__file__)
+if filepath:
+    gatelfdatapath = os.path.join(filepath, gatelfdatapath)
+sys.path.append(gatelfdatapath)
 from gatelfdata import Dataset
 from gatelfpytorchjson import ModelWrapperSimple
 from gatelfpytorchjson import ModelWrapper
@@ -25,7 +31,8 @@ parser.add_argument("--valevery", type=int, default=10, help="Evaluate on valida
 parser.add_argument("--batchsize", type=int, default=32, help="Batch size")
 parser.add_argument("--maxepochs", type=int, default=50, help="Maximum number of epochs")
 parser.add_argument("--stopfile", type=str, help="If that file exists, training is stopped")
-parser.add_argument("--module", type=str, help="The class/file name to use for the pytorch module")
+parser.add_argument("--module", type=str, help="The class/file name to use for the pytorch module (within modelzoo)")
+parser.add_argument("--wrapper", type=str, help="The class/file name to use as the model wrapper")
 parser.add_argument("--learningrate", type=float, help="Override default learning rate for the optimizer")
 parser.add_argument("--cuda", type=str2bool, help="True/False to use CUDA or not, omit to determine automatically")
 # NOTE: resume currently does not make sure that the original metafile info is used (but maybe new data):
@@ -81,15 +88,25 @@ logger3.debug("Loading metafile...")
 ds = Dataset(metafile, config=config)
 logger3.debug("Metafile loaded.")
 
+# determine and use the correct modelwrapper
+# default is ModelWrapperSimple
+wrapper_class = ModelWrapperSimple
+if config.get("wrapper"):
+    wrapperclassname = config["wrapper"]
+    print("!!!!!DEBUG: trying to use wrapper class/file: ", wrapperclassname, file=sys.stderr)
+    import importlib
+    module = importlib.import_module("gatelfpytorchjson." + wrapperclassname)
+    wrapper_class_ = getattr(module, wrapperclassname)
+
 # TODO: test passing on parameters
 if config.get("resume"):
     logger3.info("--resume specified, loading and continuing on existing model")
-    wrapper = ModelWrapperSimple.load(modelname)
+    wrapper = wrapper_class.load(modelname)
     logger3.debug("Modelwrapper loaded")
     logger3.debug("Model is %r" % wrapper)
 else:
     logger3.debug("Creating ModelWrapperSimple")
-    wrapper = ModelWrapperSimple(ds, config=config)
+    wrapper = wrapper_class(ds, config=config)
     logger3.debug("Modelwrapper created")
     logger3.debug("Model is %r" % wrapper)
 

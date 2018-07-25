@@ -4,10 +4,23 @@ from gatelfpytorchjson import EmbeddingsModule
 from gatelfpytorchjson import TakeFromTuple
 from torch.autograd import Variable as V
 import torch.nn.functional as F
+from collections import OrderedDict
 import sys
 
 
 class SeqTaggerLSTMSimple(CustomModule):
+
+    def get_init_weights(self, batchsize):
+        """A method that returns a tensor that can be used to initialize the hidden states of the LSTM.
+        """
+        # first get the parameters so we can create the same type of vector, from the same device easily
+        # the lstm is really wrapped in a a "takefromtuple" layer, so we have to get it out of there
+        lstmlayer = dict(self.layers.named_modules())['lstm'].module
+        lstmparms = next(lstmlayer.parameters()).data
+        h1 = V(lstmparms.new(lstmlayer.num_layers, batchsize, lstmlayer.hidden_size).zero_())
+        h2 = V(lstmparms.new(lstmlayer.num_layers, batchsize, lstmlayer.hidden_size).zero_())
+        return (h1, h2)
+
 
     # NOTE: make sure the dataset is not stored and only used to decide on parameters etc so
     # that the dataset data is not getting pickled when the model is saved!
@@ -23,22 +36,33 @@ class SeqTaggerLSTMSimple(CustomModule):
         # create the embedding layer from the vocab
         emblayer = EmbeddingsModule(vocab)
 
+        # TODO!!!! To allow initialisation of the hidden state etc. we need to split up
+        # the layers into at least input/lstm/output or just keep them all separately!
+        # Forget sequence!
+
+        lstm_hiddenunits = 100
+        lstm_nlayers = 1
+        is_bidirectional = False
         lstmlayer = torch.nn.LSTM(input_size=emblayer.emb_dims,
-                                hidden_size=200,
-                                num_layers=1,
-                                # dropout=0.1,
-                                bidirectional=True,
+                                hidden_size=lstm_hiddenunits,
+                                num_layers=lstm_nlayers,
+                                # dropout=0.5,
+                                bidirectional=is_bidirectional,
                                 batch_first=True)
         lstmlayer = TakeFromTuple(lstmlayer, which=0)
-        linlayer = torch.nn.Linear(200*2, n_classes)
-        out = torch.nn.LogSoftmax(dim=1)
-        self.layers = torch.nn.Sequential(
-            emblayer,
-            lstmlayer,
-            linlayer,
-            out
-        )
+        lin_units = lstm_hiddenunits*2 if is_bidirectional else lstm_hiddenunits
+        self.lstm_totalunits = lin_units
+        self.lstm_nlayers = lstm_nlayers
+        linlayer = torch.nn.Linear(lin_units, n_classes)
+        outlayer = torch.nn.LogSoftmax(dim=1)
+        layer_seq = OrderedDict()
+        layer_seq['embs'] = emblayer
+        layer_seq['lstm'] = lstmlayer
+        layer_seq['lin'] = linlayer
+        layer_seq['out'] = outlayer
+        self.layers = torch.nn.Sequential(layer_seq)
         print("Network: \n", self.layers, file=sys.stderr)
+        self.get_init_weights(1)
 
     # this gets a batch if independent variables
     # By default this is in reshaped padded batch format.
@@ -55,5 +79,17 @@ class SeqTaggerLSTMSimple(CustomModule):
         batch = torch.LongTensor(batch[0])
         if self.on_cuda():
             batch.cuda()
-        out = self.layers(batch)
-        return out
+        out, hidden = self.layers(batch)
+        return out, hidden
+
+    def get_lossfunction(self, config={}):
+        # IMPORTANT: for the target indices, we use -1 for padding by default!
+        return torch.nn.NLLLoss(ignore_index=-1)
+
+    def get_optimizer(self, config={}):
+        parms = filter(lambda p: p.requires_grad, self.parameters())
+        # optimizer = torch.optim.SGD(parms, lr=0.01, momentum=0.9)
+        # optimizer = torch.optim.SGD(parms, lr=0.01, momentum=0.9, weight_decay=0.05)
+        optimizer = torch.optim.Adam(parms, lr=0.001, betas=(0.9, 0.999), eps=1e-08, weight_decay=0)
+        return optimizer
+

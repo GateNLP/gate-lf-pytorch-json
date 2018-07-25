@@ -10,7 +10,6 @@ class CustomModule(torch.nn.Module):
         # for caching the cuda status, is set when on_cuda() is called the first time
         self._on_cuda = None
 
-
     def get_lossfunction(self, config={}):
         return torch.nn.NLLLoss(ignore_index=-1)
 

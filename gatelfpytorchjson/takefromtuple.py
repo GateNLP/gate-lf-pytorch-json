@@ -8,10 +8,10 @@ class TakeFromTuple(torch.nn.Module):
         tuple it creates is returned.
         """
         super().__init__()
-        self.moduletowrap = moduletowrap
+        self.module = moduletowrap
 
     def forward(self, vals):
-        ret = self.moduletowrap(vals)
+        ret = self.module(vals)
         if isinstance(ret, tuple):
             return ret[0]
         else:

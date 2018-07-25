@@ -30,7 +30,8 @@ class EmbeddingsModule(torch.nn.Module):
         # (this does not allow to set the padding idx!!)
         module = torch.nn.Embedding(self.emb_size, embedding_dim=self.emb_dims, padding_idx=0, _weight=weights)
         if self.emb_train == "no" or self.emb_train == "mapping":
-            module.weight.requires_grad = False
+            # TODO: this was False, changed to True, because False showed much worse performance!
+            module.weight.requires_grad = True
         # if we have a mapping, we learn a nonlinear mapping from the constant embedding vector to our internal
         # representation which has the exact same number of dimensions
         # IMPORTANT: the mapping weights also need to get shared between all mapping layers!
@@ -38,7 +39,6 @@ class EmbeddingsModule(torch.nn.Module):
         # field
         if self.emb_train == "mapping":
             mappinglayer = torch.nn.Linear(self.emb_dims, self.emb_dims)
-            module.weight.requires_grad = False
             if hasattr(vocab, "_mappingparms"):
                 mappinglayer.weight = vocab._mappingparms
             else:

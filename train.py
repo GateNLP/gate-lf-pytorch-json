@@ -48,7 +48,7 @@ args = parser.parse_args()
 
 metafile = args.metafile
 modelname = args.modelname
-datadir = Path(metafile).parent
+datadir = str(Path(metafile).parent)
 
 config = vars(args)
 

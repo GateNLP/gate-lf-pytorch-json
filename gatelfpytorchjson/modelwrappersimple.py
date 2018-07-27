@@ -14,6 +14,8 @@ import statistics
 import pickle
 from gatelfdata import Dataset
 import numpy as np
+import pkgutil
+
 
 # Basic usage:
 # ds = Dataset(metafile)
@@ -87,12 +89,19 @@ class ModelWrapperSimple(ModelWrapper):
         # IMPORTANT! the optimizer needs to get created after the module has been moved to a GPU
         # using cuda()!!!
         if "module" in config and config["module"] is not None:
+            print("!!!!!!!!!! DEBUG: importable:", [x[1] for x in pkgutil.iter_modules(path=".gatelfpytorchjson")], file=sys.stderr)
             # TODO: figure out how to do this right!!
             ptclassname = config["module"]
             print("!!!!!DEBUG: trying to use class/file: ", ptclassname, file=sys.stderr)
             import importlib
-            module = importlib.import_module(".."+ptclassname, package="gatelfpytorchjson.modules."+ptclassname)
-            class_ = getattr(module, ptclassname)
+
+            # NOTE:
+            # the following worked and seemed to be required on one computer ...
+            # parent = importlib.import_module(".."+ptclassname, package=".gatelfpytorchjson.modules."+ptclassname)
+            # this works fine:
+            parent = importlib.import_module("gatelfpytorchjson.modules."+ptclassname)
+
+            class_ = getattr(parent, ptclassname)
             self.module = class_(dataset, config=config)
             # TODO: best method to configure the loss for the module? for now we expect a static method
             # in the class that returns it

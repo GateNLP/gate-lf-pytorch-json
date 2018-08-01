@@ -141,3 +141,12 @@ ENV/
 .mypy_cache/
 
 /data-*
+
+/pylint.out.txt
+/tmp-*
+/debug-*
+
+/docs/.jekyll-metadata
+/docs/Gemfile.lock
+/docs/_site
+

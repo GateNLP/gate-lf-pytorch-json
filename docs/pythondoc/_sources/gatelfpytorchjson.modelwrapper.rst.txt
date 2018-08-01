@@ -1,0 +1,7 @@
+gatelfpytorchjson\.modelwrapper module
+======================================
+
+.. automodule:: gatelfpytorchjson.modelwrapper
+    :members:
+    :undoc-members:
+    :show-inheritance:

@@ -1,0 +1,214 @@
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>gatelfpytorchjson.modelwrappersimple module &#8212; GATE LF Pytorch Wrapper (gatelfpytorch)  documentation</title>
+    
+    <link rel="stylesheet" href="_static/classic.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    './',
+        VERSION:     '',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true,
+        SOURCELINK_SUFFIX: '.txt'
+      };
+    </script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.0/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="gatelfpytorchjson.ngrammodule module" href="gatelfpytorchjson.ngrammodule.html" />
+    <link rel="prev" title="gatelfpytorchjson.modelwrapper module" href="gatelfpytorchjson.modelwrapper.html" /> 
+  </head>
+  <body>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="gatelfpytorchjson.ngrammodule.html" title="gatelfpytorchjson.ngrammodule module"
+             accesskey="N">next</a> |</li>
+        <li class="right" >
+          <a href="gatelfpytorchjson.modelwrapper.html" title="gatelfpytorchjson.modelwrapper module"
+             accesskey="P">previous</a> |</li>
+        <li class="nav-item nav-item-0"><a href="index.html">GATE LF Pytorch Wrapper (gatelfpytorch)  documentation</a> &#187;</li>
+          <li class="nav-item nav-item-1"><a href="gatelfpytorchjson.html" accesskey="U">gatelfpytorchjson package</a> &#187;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <div class="section" id="module-gatelfpytorchjson.modelwrappersimple">
+<span id="gatelfpytorchjson-modelwrappersimple-module"></span><h1>gatelfpytorchjson.modelwrappersimple module<a class="headerlink" href="#module-gatelfpytorchjson.modelwrappersimple" title="Permalink to this headline">¶</a></h1>
+<dl class="class">
+<dt id="gatelfpytorchjson.modelwrappersimple.ModelWrapperSimple">
+<em class="property">class </em><code class="descclassname">gatelfpytorchjson.modelwrappersimple.</code><code class="descname">ModelWrapperSimple</code><span class="sig-paren">(</span><em>dataset</em>, <em>config={}</em>, <em>cuda=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/gatelfpytorchjson/modelwrappersimple.html#ModelWrapperSimple"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#gatelfpytorchjson.modelwrappersimple.ModelWrapperSimple" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="gatelfpytorchjson.modelwrapper.html#gatelfpytorchjson.modelwrapper.ModelWrapper" title="gatelfpytorchjson.modelwrapper.ModelWrapper"><code class="xref py py-class docutils literal"><span class="pre">gatelfpytorchjson.modelwrapper.ModelWrapper</span></code></a></p>
+<dl class="method">
+<dt id="gatelfpytorchjson.modelwrappersimple.ModelWrapperSimple.apply">
+<code class="descname">apply</code><span class="sig-paren">(</span><em>instancelist</em>, <em>converted=False</em>, <em>reshaped=False</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/gatelfpytorchjson/modelwrappersimple.html#ModelWrapperSimple.apply"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#gatelfpytorchjson.modelwrappersimple.ModelWrapperSimple.apply" title="Permalink to this definition">¶</a></dt>
+<dd><p>Given a list of instances in original format (or converted if converted=True), applies
+the model to them in evaluation mode and returns the predictions in the following format as a list
+with the following elements:
+First, a list of the predicted labels, label sequences or values, as many elements as there are instances.
+Second, a list of additional values for each of the labels, whith a list of values corresponding
+to each of the labels or values in the first list. For labels, this is the probablity distribution
+over all labels (TODO: how to index this??)
+for values this could be confidence intervals, variances etc. That second element is optional.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="gatelfpytorchjson.modelwrappersimple.ModelWrapperSimple.checkpoint">
+<code class="descname">checkpoint</code><span class="sig-paren">(</span><em>filenameprefix</em>, <em>checkpointnr=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/gatelfpytorchjson/modelwrappersimple.html#ModelWrapperSimple.checkpoint"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#gatelfpytorchjson.modelwrappersimple.ModelWrapperSimple.checkpoint" title="Permalink to this definition">¶</a></dt>
+<dd><p>Save the module, adding a checkpoint number in the name.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="gatelfpytorchjson.modelwrappersimple.ModelWrapperSimple.evaluate">
+<code class="descname">evaluate</code><span class="sig-paren">(</span><em>validationinstances</em>, <em>train_mode=False</em>, <em>as_pytorch=True</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/gatelfpytorchjson/modelwrappersimple.html#ModelWrapperSimple.evaluate"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#gatelfpytorchjson.modelwrappersimple.ModelWrapperSimple.evaluate" title="Permalink to this definition">¶</a></dt>
+<dd><p>Apply the model to the independent part of the validationset instances and use the dependent part
+to evaluate the predictions. The validationinstances must be in batch format.
+Returns a tuple of loss and accuracy. By default this returns the loss as a
+pyTorch variable and accuracy as a pytorch tensor, if as_pytorch is set to False,
+returns floats instead.
+If prepared=True then validationinstances already contains everything as properly prepared PyTorch
+Variables.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="gatelfpytorchjson.modelwrappersimple.ModelWrapperSimple.get_module">
+<code class="descname">get_module</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/gatelfpytorchjson/modelwrappersimple.html#ModelWrapperSimple.get_module"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#gatelfpytorchjson.modelwrappersimple.ModelWrapperSimple.get_module" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return the PyTorch module that has been built and is used by this wrapper.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="gatelfpytorchjson.modelwrappersimple.ModelWrapperSimple.init_after_load">
+<code class="descname">init_after_load</code><span class="sig-paren">(</span><em>filenameprefix</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/gatelfpytorchjson/modelwrappersimple.html#ModelWrapperSimple.init_after_load"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#gatelfpytorchjson.modelwrappersimple.ModelWrapperSimple.init_after_load" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="gatelfpytorchjson.modelwrappersimple.ModelWrapperSimple.init_classification">
+<code class="descname">init_classification</code><span class="sig-paren">(</span><em>dataset</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/gatelfpytorchjson/modelwrappersimple.html#ModelWrapperSimple.init_classification"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#gatelfpytorchjson.modelwrappersimple.ModelWrapperSimple.init_classification" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="gatelfpytorchjson.modelwrappersimple.ModelWrapperSimple.init_from_dataset">
+<code class="descname">init_from_dataset</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/gatelfpytorchjson/modelwrappersimple.html#ModelWrapperSimple.init_from_dataset"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#gatelfpytorchjson.modelwrappersimple.ModelWrapperSimple.init_from_dataset" title="Permalink to this definition">¶</a></dt>
+<dd><p>Set the convenience attributes which we get from the dataset instance</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="gatelfpytorchjson.modelwrappersimple.ModelWrapperSimple.init_sequencetagging">
+<code class="descname">init_sequencetagging</code><span class="sig-paren">(</span><em>dataset</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/gatelfpytorchjson/modelwrappersimple.html#ModelWrapperSimple.init_sequencetagging"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#gatelfpytorchjson.modelwrappersimple.ModelWrapperSimple.init_sequencetagging" title="Permalink to this definition">¶</a></dt>
+<dd><p>Build the module for sequence tagging.</p>
+</dd></dl>
+
+<dl class="classmethod">
+<dt id="gatelfpytorchjson.modelwrappersimple.ModelWrapperSimple.load">
+<em class="property">classmethod </em><code class="descname">load</code><span class="sig-paren">(</span><em>filenameprefix</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/gatelfpytorchjson/modelwrappersimple.html#ModelWrapperSimple.load"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#gatelfpytorchjson.modelwrappersimple.ModelWrapperSimple.load" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="gatelfpytorchjson.modelwrappersimple.ModelWrapperSimple.prepare_data">
+<code class="descname">prepare_data</code><span class="sig-paren">(</span><em>validationsize=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/gatelfpytorchjson/modelwrappersimple.html#ModelWrapperSimple.prepare_data"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#gatelfpytorchjson.modelwrappersimple.ModelWrapperSimple.prepare_data" title="Permalink to this definition">¶</a></dt>
+<dd><p>If validationsize is &gt; 1, it is the absolute size, if &lt; 1 it is the portion e.g. 0.01 to use.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="gatelfpytorchjson.modelwrappersimple.ModelWrapperSimple.save">
+<code class="descname">save</code><span class="sig-paren">(</span><em>filenameprefix</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/gatelfpytorchjson/modelwrappersimple.html#ModelWrapperSimple.save"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#gatelfpytorchjson.modelwrappersimple.ModelWrapperSimple.save" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="gatelfpytorchjson.modelwrappersimple.ModelWrapperSimple.train">
+<code class="descname">train</code><span class="sig-paren">(</span><em>max_epochs=None</em>, <em>batch_size=None</em>, <em>validationsize=None</em>, <em>early_stopping=True</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/gatelfpytorchjson/modelwrappersimple.html#ModelWrapperSimple.train"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#gatelfpytorchjson.modelwrappersimple.ModelWrapperSimple.train" title="Permalink to this definition">¶</a></dt>
+<dd><p>Train the model on the dataset. max_epochs is the maximum number of
+epochs to train, but if early_stopping is enabled, it could be fewer.
+If early_stopping is True, a default early stopping strategy is used,
+if set to a function that function (taking a last of recent evaluations
+and returning boolean) is used. The batchsize parameter can be used
+to override the batchsize, similar the validationsize parameter to
+override the validation set size (if float, the portion, if int the
+numer of instances)</p>
+</dd></dl>
+
+</dd></dl>
+
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+  <h4>Previous topic</h4>
+  <p class="topless"><a href="gatelfpytorchjson.modelwrapper.html"
+                        title="previous chapter">gatelfpytorchjson.modelwrapper module</a></p>
+  <h4>Next topic</h4>
+  <p class="topless"><a href="gatelfpytorchjson.ngrammodule.html"
+                        title="next chapter">gatelfpytorchjson.ngrammodule module</a></p>
+  <div role="note" aria-label="source link">
+    <h3>This Page</h3>
+    <ul class="this-page-menu">
+      <li><a href="_sources/gatelfpytorchjson.modelwrappersimple.rst.txt"
+            rel="nofollow">Show Source</a></li>
+    </ul>
+   </div>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <form class="search" action="search.html" method="get">
+      <div><input type="text" name="q" /></div>
+      <div><input type="submit" value="Go" /></div>
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="gatelfpytorchjson.ngrammodule.html" title="gatelfpytorchjson.ngrammodule module"
+             >next</a> |</li>
+        <li class="right" >
+          <a href="gatelfpytorchjson.modelwrapper.html" title="gatelfpytorchjson.modelwrapper module"
+             >previous</a> |</li>
+        <li class="nav-item nav-item-0"><a href="index.html">GATE LF Pytorch Wrapper (gatelfpytorch)  documentation</a> &#187;</li>
+          <li class="nav-item nav-item-1"><a href="gatelfpytorchjson.html" >gatelfpytorchjson package</a> &#187;</li> 
+      </ul>
+    </div>
+    <div class="footer" role="contentinfo">
+        &#169; Copyright 2018, University of Sheffield.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.6.2.
+    </div>
+  </body>
+</html>

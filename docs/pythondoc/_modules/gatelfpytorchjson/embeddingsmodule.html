@@ -1,0 +1,165 @@
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>gatelfpytorchjson.embeddingsmodule &#8212; GATE LF Pytorch Wrapper (gatelfpytorch)  documentation</title>
+    
+    <link rel="stylesheet" href="../../_static/classic.css" type="text/css" />
+    <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../',
+        VERSION:     '',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true,
+        SOURCELINK_SUFFIX: '.txt'
+      };
+    </script>
+    <script type="text/javascript" src="../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../_static/doctools.js"></script>
+    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.0/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" /> 
+  </head>
+  <body>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../../index.html">GATE LF Pytorch Wrapper (gatelfpytorch)  documentation</a> &#187;</li>
+          <li class="nav-item nav-item-1"><a href="../index.html" accesskey="U">Module code</a> &#187;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <h1>Source code for gatelfpytorchjson.embeddingsmodule</h1><div class="highlight"><pre>
+<span></span><span class="kn">import</span> <span class="nn">torch</span>
+<span class="kn">from</span> <span class="nn">torch.autograd</span> <span class="k">import</span> <span class="n">Variable</span> <span class="k">as</span> <span class="n">V</span>
+<span class="kn">from</span> <span class="nn">collections</span> <span class="k">import</span> <span class="n">defaultdict</span>
+<span class="kn">import</span> <span class="nn">sys</span>
+
+<div class="viewcode-block" id="EmbeddingsModule"><a class="viewcode-back" href="../../gatelfpytorchjson.embeddingsmodule.html#gatelfpytorchjson.embeddingsmodule.EmbeddingsModule">[docs]</a><span class="k">class</span> <span class="nc">EmbeddingsModule</span><span class="p">(</span><span class="n">torch</span><span class="o">.</span><span class="n">nn</span><span class="o">.</span><span class="n">Module</span><span class="p">):</span>
+
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">vocab</span><span class="p">,</span> <span class="n">cuda</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;If vocab.train is yes new embeddings will get learned, starting off with random vectors if no pretrained</span>
+<span class="sd">        embeddings are given, otherwise the pretrained embeddings will be used where possible.</span>
+<span class="sd">        If train is no, then no training will be done and the pretrained embeddings will be used only.</span>
+<span class="sd">        If train is mapping then a mapping is learned from pretrained embeddings to our own embeddings.</span>
+<span class="sd">        NOTE: this should all happen automatically by inspecting and using the vocab instance.</span>
+<span class="sd">        NOTE: the actual embeddings getting loaded into the Embeddings module are derived from the vocab,</span>
+<span class="sd">        but if there is already an Embedding module for the same emb_id, the weights are shared.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">emb_id</span> <span class="o">=</span> <span class="n">vocab</span><span class="o">.</span><span class="n">emb_id</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">emb_train</span> <span class="o">=</span> <span class="n">vocab</span><span class="o">.</span><span class="n">emb_train</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">emb_dims</span> <span class="o">=</span> <span class="n">vocab</span><span class="o">.</span><span class="n">emb_dims</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">emb_minfreq</span> <span class="o">=</span> <span class="n">vocab</span><span class="o">.</span><span class="n">emb_minfreq</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">emb_size</span> <span class="o">=</span> <span class="n">vocab</span><span class="o">.</span><span class="n">n</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">emb_file</span> <span class="o">=</span> <span class="n">vocab</span><span class="o">.</span><span class="n">emb_file</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">modulename</span> <span class="o">=</span> <span class="s2">&quot;embeddings:</span><span class="si">{}</span><span class="s2">:</span><span class="si">{}</span><span class="s2">:</span><span class="si">{}</span><span class="s2">:</span><span class="si">{}</span><span class="s2">:</span><span class="si">{}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">emb_id</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">emb_dims</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">emb_train</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">emb_minfreq</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">emb_file</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">modulename</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">modulename</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s2">&quot;.&quot;</span><span class="p">,</span> <span class="s2">&quot;_&quot;</span><span class="p">)</span>
+        <span class="n">weights</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">from_numpy</span><span class="p">(</span><span class="n">vocab</span><span class="o">.</span><span class="n">get_embeddings</span><span class="p">())</span>
+        <span class="c1"># TODO: check if there is any difference/advantage of using Embedding.from_pretrained(embs, freeze=True/False)</span>
+        <span class="c1"># (this does not allow to set the padding idx!!)</span>
+        <span class="n">module</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">nn</span><span class="o">.</span><span class="n">Embedding</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">emb_size</span><span class="p">,</span> <span class="n">embedding_dim</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">emb_dims</span><span class="p">,</span> <span class="n">padding_idx</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">_weight</span><span class="o">=</span><span class="n">weights</span><span class="p">)</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">emb_train</span> <span class="o">==</span> <span class="s2">&quot;no&quot;</span> <span class="ow">or</span> <span class="bp">self</span><span class="o">.</span><span class="n">emb_train</span> <span class="o">==</span> <span class="s2">&quot;mapping&quot;</span><span class="p">:</span>
+            <span class="c1"># TODO: this was False, changed to True, because False showed much worse performance!</span>
+            <span class="n">module</span><span class="o">.</span><span class="n">weight</span><span class="o">.</span><span class="n">requires_grad</span> <span class="o">=</span> <span class="kc">True</span>
+        <span class="c1"># if we have a mapping, we learn a nonlinear mapping from the constant embedding vector to our internal</span>
+        <span class="c1"># representation which has the exact same number of dimensions</span>
+        <span class="c1"># IMPORTANT: the mapping weights also need to get shared between all mapping layers!</span>
+        <span class="c1"># Currently we achieve this by storing the parameters in the vocab instance as a transient</span>
+        <span class="c1"># field</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">emb_train</span> <span class="o">==</span> <span class="s2">&quot;mapping&quot;</span><span class="p">:</span>
+            <span class="n">mappinglayer</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">nn</span><span class="o">.</span><span class="n">Linear</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">emb_dims</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">emb_dims</span><span class="p">)</span>
+            <span class="k">if</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">vocab</span><span class="p">,</span> <span class="s2">&quot;_mappingparms&quot;</span><span class="p">):</span>
+                <span class="n">mappinglayer</span><span class="o">.</span><span class="n">weight</span> <span class="o">=</span> <span class="n">vocab</span><span class="o">.</span><span class="n">_mappingparms</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">vocab</span><span class="o">.</span><span class="n">_mappingparms</span> <span class="o">=</span> <span class="n">mappinglayer</span><span class="o">.</span><span class="n">weight</span>
+            <span class="n">module</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">nn</span><span class="o">.</span><span class="n">Sequential</span><span class="p">(</span><span class="n">module</span><span class="p">,</span> <span class="n">mappinglayer</span><span class="p">,</span> <span class="n">torch</span><span class="o">.</span><span class="n">nn</span><span class="o">.</span><span class="n">Sigmoid</span><span class="p">())</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">add_module</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">modulename</span><span class="p">,</span> <span class="n">module</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">modules</span> <span class="o">=</span> <span class="p">[</span><span class="n">module</span><span class="p">]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_on_cuda</span> <span class="o">=</span> <span class="n">cuda</span>
+
+<div class="viewcode-block" id="EmbeddingsModule.on_cuda"><a class="viewcode-back" href="../../gatelfpytorchjson.embeddingsmodule.html#gatelfpytorchjson.embeddingsmodule.EmbeddingsModule.on_cuda">[docs]</a>    <span class="k">def</span> <span class="nf">on_cuda</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Returns true or false depending on if the module is on cuda or not. Unfortunately</span>
+<span class="sd">        there is no API method in PyTorch for this so we get this from the first parameter of the</span>
+<span class="sd">        model and cache it.&quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_on_cuda</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_on_cuda</span> <span class="o">=</span> <span class="nb">next</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">parameters</span><span class="p">())</span><span class="o">.</span><span class="n">is_cuda</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_on_cuda</span></div>
+
+<div class="viewcode-block" id="EmbeddingsModule.forward"><a class="viewcode-back" href="../../gatelfpytorchjson.embeddingsmodule.html#gatelfpytorchjson.embeddingsmodule.EmbeddingsModule.forward">[docs]</a>    <span class="k">def</span> <span class="nf">forward</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">batch</span><span class="p">):</span>
+        <span class="c1"># TODO: eventually, we should decide if an embeddings layer should be on the GPU or not.</span>
+        <span class="c1"># Then we also need to place the tensor on the GPU or not before runninng the embeddings layer.</span>
+        <span class="c1"># This should depend on several factos, embeddings matrix size, if we learn etc.</span>
+        <span class="c1"># To make it work properly, we also need to make sure that the top-level .cuda() invocation does</span>
+        <span class="c1"># not enable cuda for the module in here unless we really want it so we need to override the method.</span>
+        <span class="c1"># NOTE: for now we run on the cuda, if enabled</span>
+
+        <span class="c1"># NOTE: we already get a tensor here</span>
+        <span class="c1"># TODO: not sure if we can get a float tensor here, if yes, we need to convert to a long tensor</span>
+        <span class="c1"># print(&quot;DEBUG: type of batch=&quot;, type(batch), file=sys.stderr)</span>
+        <span class="c1"># batch_var = V(torch.LongTensor(batch), requires_grad=False)</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">on_cuda</span><span class="p">():</span>
+            <span class="n">batch</span> <span class="o">=</span> <span class="n">batch</span><span class="o">.</span><span class="n">cuda</span><span class="p">()</span>
+        <span class="n">out</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">modules</span><span class="p">[</span><span class="mi">0</span><span class="p">](</span><span class="n">batch</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">out</span></div></div>
+</pre></div>
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <form class="search" action="../../search.html" method="get">
+      <div><input type="text" name="q" /></div>
+      <div><input type="submit" value="Go" /></div>
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../../index.html">GATE LF Pytorch Wrapper (gatelfpytorch)  documentation</a> &#187;</li>
+          <li class="nav-item nav-item-1"><a href="../index.html" >Module code</a> &#187;</li> 
+      </ul>
+    </div>
+    <div class="footer" role="contentinfo">
+        &#169; Copyright 2018, University of Sheffield.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.6.2.
+    </div>
+  </body>
+</html>

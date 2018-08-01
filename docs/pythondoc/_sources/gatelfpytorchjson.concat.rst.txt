@@ -1,0 +1,7 @@
+gatelfpytorchjson\.concat module
+================================
+
+.. automodule:: gatelfpytorchjson.concat
+    :members:
+    :undoc-members:
+    :show-inheritance:

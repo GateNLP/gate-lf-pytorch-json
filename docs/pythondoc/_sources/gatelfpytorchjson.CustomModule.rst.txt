@@ -1,0 +1,7 @@
+gatelfpytorchjson\.CustomModule module
+======================================
+
+.. automodule:: gatelfpytorchjson.CustomModule
+    :members:
+    :undoc-members:
+    :show-inheritance:

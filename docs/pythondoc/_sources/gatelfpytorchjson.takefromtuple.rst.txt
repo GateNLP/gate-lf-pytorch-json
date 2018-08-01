@@ -1,0 +1,7 @@
+gatelfpytorchjson\.takefromtuple module
+=======================================
+
+.. automodule:: gatelfpytorchjson.takefromtuple
+    :members:
+    :undoc-members:
+    :show-inheritance:

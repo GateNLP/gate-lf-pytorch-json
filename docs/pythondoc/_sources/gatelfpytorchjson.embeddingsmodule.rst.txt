@@ -1,0 +1,7 @@
+gatelfpytorchjson\.embeddingsmodule module
+==========================================
+
+.. automodule:: gatelfpytorchjson.embeddingsmodule
+    :members:
+    :undoc-members:
+    :show-inheritance:

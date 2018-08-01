@@ -1,0 +1,7 @@
+gatelfpytorchjson\.seqtaggingmodelsimple module
+===============================================
+
+.. automodule:: gatelfpytorchjson.seqtaggingmodelsimple
+    :members:
+    :undoc-members:
+    :show-inheritance:

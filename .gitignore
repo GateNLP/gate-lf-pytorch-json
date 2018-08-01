@@ -2,32 +2,20 @@
 __pycache__/
 *.py[cod]
 *$py.class
+\#*#
+
+/pythondoc
+
+*.pickle
+*.pytorch
 
 # idea
-# User-specific stuff
-.idea/**/workspace.xml
-.idea/**/tasks.xml
-.idea/**/dictionaries
-.idea/**/shelf
-
-# Sensitive or high-churn files
-.idea/**/dataSources/
-.idea/**/dataSources.ids
-.idea/**/dataSources.local.xml
-.idea/**/sqlDataSources.xml
-.idea/**/dynamic.xml
-.idea/**/uiDesigner.xml
-
-# Gradle
-.idea/**/gradle.xml
-.idea/**/libraries
+.idea
 
 # CMake
 cmake-build-debug/
 cmake-build-release/
 
-# Mongo Explorer plugin
-.idea/**/mongoSettings.xml
 
 # File-based project format
 *.iws
@@ -41,8 +29,6 @@ out/
 # JIRA plugin
 atlassian-ide-plugin.xml
 
-# Cursive Clojure plugin
-.idea/replstate.xml
 
 # Crashlytics plugin (for Android Studio and IntelliJ)
 com_crashlytics_export_strings.xml
@@ -50,8 +36,6 @@ crashlytics.properties
 crashlytics-build.properties
 fabric.properties
 
-# Editor-based Rest Client
-.idea/httpRequests
 
 
 # C extensions
@@ -155,3 +139,5 @@ ENV/
 
 # mypy
 .mypy_cache/
+
+/data-*

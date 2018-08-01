@@ -65,14 +65,30 @@ class SeqTaggerLSTMSimple(CustomModule):
         # print("DEBUG: batch=", batch, file=sys.stderr)
         batch = torch.LongTensor(batch[0])
         print("DEBUG: batch size=", batch.size(), file=sys.stderr)
+        # debug: try to get the words for each of the indices in the batch
+        # this is of shape batchsize,maxseqlength
+        sequences = []
+        for i in range(batch.size()[0]):
+            sequence = []
+            for j in range(batch.size()[1]):
+                sequence.append(self.vocab.itos[batch[i,j]])
+            sequences.append(sequence)
+
+        print("DEBUG: sequences=", sequences, file=sys.stderr)
         if self.on_cuda():
             batch.cuda()
         tmp = self.layer_emb(batch)
-        # hidden_init = self.get_init_weights(len(batch))
-        tmp, hidden = self.layer_lstm(tmp)
+        # print("DEBUG: embout=", tmp, file=sys.stderr)
+        hidden_init = self.get_init_weights(len(batch))
+        # print("DEBUG: lstm input size=", tmp.size(), file=sys.stderr)
+        # print("DEBUG: hidden_init[0] size=", hidden_init[0].size(), file=sys.stderr)
+        # print("DEBUG: hidden_init[1] size=", hidden_init[1].size(), file=sys.stderr)
+        tmp, hidden = self.layer_lstm(tmp, hidden_init)
+        # tmp, hidden = self.layer_lstm(tmp)
 
         tmp = self.layer_lin(tmp)
         out = self.layer_out(tmp)
+        sys.exit()
         return out
 
     def get_lossfunction(self, config={}):

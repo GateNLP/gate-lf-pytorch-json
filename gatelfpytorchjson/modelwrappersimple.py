@@ -15,6 +15,7 @@ import pickle
 from gatelfdata import Dataset
 import numpy as np
 import pkgutil
+import timeit
 
 
 # Basic usage:
@@ -568,10 +569,18 @@ class ModelWrapperSimple(ModelWrapper):
         # TODO: eventually, make every module know what is the best way to save and load itself,
         # and delegate, but for now we just use the standard pytorch approach
         # self.module.save(self.module, filenameprefix+"module.pytorch")
+
+        start = timeit.timeit()
         torch.save(self.module, filenameprefix+".module.pytorch")
+        end = timeit.timeit()
+        print("DEBUG: Time to save module: ", (end-start), file=sys.stderr)
         assert hasattr(self, 'metafile')
         with open(filenameprefix+".wrapper.pickle", "wb") as outf:
+            start2 = timeit.timeit()
             pickle.dump(self, outf)
+            end = timeit.timeit()
+            print("DEBUG: Time to save wrapper: ", (end - start2), file=sys.stderr)
+            print("DEBUG: Time to save total: ", (end - start), file=sys.stderr)
 
     @classmethod
     def load(cls, filenameprefix):
@@ -579,10 +588,15 @@ class ModelWrapperSimple(ModelWrapper):
             w = pickle.load(inf)
         print("DEBUG: restored instance keys=", w.__dict__.keys(), file=sys.stderr)
         assert hasattr(w, 'metafile')
-        w.dataset = Dataset(w.metafile)
-        w.init_from_dataset()
-        w.module = torch.load(filenameprefix+".module.pytorch")
+        w.init_after_load(filenameprefix)
         return w
+
+    def init_after_load(self, filenameprefix):
+        self.dataset = Dataset(self.metafile)
+        self.init_from_dataset()
+        self.module = torch.load(filenameprefix+".module.pytorch")
+        self.is_data_prepared = False
+        self.valset = None
 
     def __getstate__(self):
         """Currently we do not pickle the dataset instance but rather re-create it when loading,
@@ -593,19 +607,18 @@ class ModelWrapperSimple(ModelWrapper):
         state = self.__dict__.copy()  # this creates a shallow copy
         # print("DEBUG: copy keys=", state.keys(), file=sys.stderr)
         assert 'metafile' in state
+        # do not save these transient variables:
         del state['dataset']
         del state['module']
-        # do not save these transient variables:
+        del state['valset']
         del state['is_data_prepared']
         return state
 
     def __setstate__(self, state):
-        """We simply restore everything that was pickled earlier plus manually rebuild the dataset
-        instance and manually restore the pytorch module (in the load method)"""
+        """We simply restore everything that was pickled earlier, the missing fields
+        then need to get restored using the _init_after_load method (called from load)"""
         assert 'metafile' in state
         self.__dict__.update(state)
-        # Set the transient variables to the default values we want after loading
-        self.is_data_prepared = False
         assert hasattr(self, 'metafile')
 
     def __repr__(self):

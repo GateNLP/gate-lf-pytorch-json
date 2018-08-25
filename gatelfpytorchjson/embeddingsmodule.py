@@ -54,6 +54,10 @@ class EmbeddingsModule(torch.nn.Module):
         model and cache it."""
         if self._on_cuda is None:
             self._on_cuda = next(self.parameters()).is_cuda
+            # if we actually are on cuda, make sure all the modules are on cuda as well!
+            if self._on_cuda:
+                for module in self.modules:
+                    module.cuda()
         return self._on_cuda
 
     def forward(self, batch):
@@ -67,8 +71,8 @@ class EmbeddingsModule(torch.nn.Module):
         # NOTE: we already get a tensor here
         # TODO: not sure if we can get a float tensor here, if yes, we need to convert to a long tensor
         # print("DEBUG: type of batch=", type(batch), file=sys.stderr)
-        # batch_var = V(torch.LongTensor(batch), requires_grad=False)
+        batch_var = V(torch.LongTensor(batch), requires_grad=False)
         if self.on_cuda():
-            batch = batch.cuda()
-        out = self.modules[0](batch)
+            batch_var = batch_var.cuda()
+        out = self.modules[0](batch_var)
         return out

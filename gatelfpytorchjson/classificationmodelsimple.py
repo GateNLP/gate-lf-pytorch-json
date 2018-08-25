@@ -1,4 +1,14 @@
 import torch.nn
+import logging
+import sys
+
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.DEBUG)
+streamhandler = logging.StreamHandler(stream=sys.stderr)
+formatter = logging.Formatter(
+                '%(asctime)s %(name)-12s %(levelname)-8s %(message)s')
+streamhandler.setFormatter(formatter)
+logger.addHandler(streamhandler)
 
 
 class ClassificationModelSimple(torch.nn.Module):
@@ -43,6 +53,8 @@ class ClassificationModelSimple(torch.nn.Module):
         return self._on_cuda
 
     def forward(self, batch):
+        # logger.debug("Calling forward with %s" % (batch,))
+        # logger.debug("inputlayersinfo is %s" % (self.inputlayersinfo,))
         i_nom = 0
         i_ngr = 0
         input_layer_outputs = []

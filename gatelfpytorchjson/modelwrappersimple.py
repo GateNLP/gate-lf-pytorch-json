@@ -326,7 +326,7 @@ class ModelWrapperSimple(ModelWrapper):
             hidden = torch.nn.Sequential(hidden1layer, hidden2, hidden3)
         hiddenlayers.append((hidden, {"name": "hidden"}))
         # Create the output layer
-        out = torch.nn.LogSoftmax(dim=1)
+        out = torch.nn.LogSoftmax(dim=2)
         outputlayer = (out, {"name": "output"})
         # create the module and store it
         self.module = ClassificationModelSimple(inputlayers,

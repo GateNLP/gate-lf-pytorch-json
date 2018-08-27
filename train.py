@@ -55,8 +55,8 @@ config = vars(args)
 # Set up logging
 logger1 = logging.getLogger("gatelfdata")
 logger1.setLevel(logging.INFO)
-logger2 = logging.getLogger("gatelfpytorchjson")
-logger2.setLevel(logging.INFO)
+#logger2 = logging.getLogger("gatelfpytorchjson")
+#logger2.setLevel(logging.DEBUG)
 logger3 = logging.getLogger(__name__)
 logger3.setLevel(logging.DEBUG)
 streamhandler = logging.StreamHandler(stream=sys.stderr)
@@ -67,8 +67,8 @@ filehandler = logging.FileHandler(os.path.join(datadir, "pytorch-json.train.log"
 filehandler.setFormatter(formatter)
 logger1.addHandler(filehandler)
 logger1.addHandler(streamhandler)
-logger2.addHandler(filehandler)
-logger2.addHandler(streamhandler)
+#logger2.addHandler(filehandler)
+#logger2.addHandler(streamhandler)
 logger3.addHandler(filehandler)
 logger3.addHandler(streamhandler)
 
@@ -119,7 +119,7 @@ if config.get("notrain"):
 # TODO: the default to use for validation set size should be settable through config in the constructor!
 logger3.debug("Preparing the data...")
 valsize = config.get("valsize")
-if valsize:
+if valsize is not None:
     wrapper.prepare_data(validationsize=valsize)
 else:
     wrapper.prepare_data()

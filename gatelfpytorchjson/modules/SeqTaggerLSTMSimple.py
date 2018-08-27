@@ -3,6 +3,7 @@ from gatelfpytorchjson import CustomModule
 from gatelfpytorchjson import EmbeddingsModule
 import sys
 import logging
+import torch.nn.functional as F
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
@@ -31,7 +32,7 @@ class SeqTaggerLSTMSimple(CustomModule):
     # that the dataset data is not getting pickled when the model is saved!
     def __init__(self, dataset, config={}):
         super().__init__(config=config)
-
+        torch.manual_seed(1)
         self.n_classes = dataset.get_info()["nClasses"]
         logger.debug("Initializing module SeqTaggerLSTMSimple for classes: %s" % (self.n_classes,))
         # create a simple LSTM-based network: the input uses an embedding layer created from
@@ -42,7 +43,12 @@ class SeqTaggerLSTMSimple(CustomModule):
         logger.debug("Initializing module SeqTaggerLSTMSimple for classes: %s and vocab %s" %
                      (self.n_classes, vocab, ))
         # create the embedding layer from the vocab
-        self.layer_emb = EmbeddingsModule(vocab)
+        # self.layer_emb = EmbeddingsModule(vocab)
+
+        # for debugging: lets create our own embedding layer
+        emb_dims = 100
+        emb_size = vocab.size()
+        self.layer_emb = torch.nn.Embedding(emb_size, emb_dims, padding_idx=0)
 
         # for debugging, save the vocab here
         self.vocab = vocab
@@ -50,23 +56,27 @@ class SeqTaggerLSTMSimple(CustomModule):
         self.lstm_hiddenunits = 200
         self.lstm_nlayers = 1
         self.lstm_is_bidirectional = False
-        self.layer_lstm = torch.nn.LSTM(input_size=self.layer_emb.emb_dims,
-                                        hidden_size=self.lstm_hiddenunits,
-                                        num_layers=self.lstm_nlayers,
-                                        dropout=0.0,
-                                        bidirectional=self.lstm_is_bidirectional,
-                                        batch_first=True)
+        self.layer_lstm = torch.nn.LSTM(
+            # input_size=self.layer_emb.emb_dims,
+            input_size=emb_dims,
+            hidden_size=self.lstm_hiddenunits,
+            num_layers=self.lstm_nlayers,
+            dropout=0.0,
+            bidirectional=self.lstm_is_bidirectional,
+            batch_first=True)
         lin_units = self.lstm_hiddenunits*2 if self.lstm_is_bidirectional else self.lstm_hiddenunits
         self.lstm_totalunits = lin_units
         self.layer_lin = torch.nn.Linear(lin_units, self.n_classes)
-        self.layer_out = torch.nn.LogSoftmax(dim=1)
+        # DEBUG: we replace this with just calling the function in forward
+        # self.layer_out = torch.nn.LogSoftmax(dim=1)  # TODO: which DIM????
         logger.info("Network created: %s" % (self, ))
+        # print("Random initial weights for embedding index 3:", self.layer_emb(torch.LongTensor([3])), file=sys.stderr)
 
     # this gets a batch if independent variables
     # By default this is in reshaped padded batch format.
     # For sequences and a single feature this has the format:
     # * a list containing a sublist for each instance
-    # * each sublist contains a list with the padded sequence of word indices
+    # * each sublist contains one nested list with the padded sequence of word indices
     #   (by default the padding index is 0)
     # Note: the calling model wrapper does not automatically put the batch on cuda,
     # so if we want this, it has to be done explicitly in here, using the method
@@ -84,7 +94,8 @@ class SeqTaggerLSTMSimple(CustomModule):
         lstm_hidden, (lstm_c_last, lstm_h_last) = self.layer_lstm(tmp_embs)
 
         tmp_lin = self.layer_lin(lstm_hidden)
-        out = self.layer_out(tmp_lin)
+        # out = self.layer_out(tmp_lin)
+        out = F.log_softmax(tmp_lin, 2)
         logger.debug("output tensor is if size %s: %s" % (out.size(), out, ))
         return out
 

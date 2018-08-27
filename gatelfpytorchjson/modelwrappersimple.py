@@ -350,20 +350,23 @@ class ModelWrapperSimple(ModelWrapper):
         if self.is_data_prepared:
             return
         valsize = None
-        valpart = 0.1
+        valpart = None
         # TODO: allow not using a validation set at all!
-        if validationsize:
-            if validationsize > 1:
+        if validationsize is not None:
+            if validationsize > 1 or validationsize == 0:
                 valsize = validationsize
             else:
                 valpart = validationsize
+        else:
+            valpart = 0.1
         self.dataset.split(convert=True, validation_part=valpart, validation_size=valsize)
         self.valset = self.dataset.validation_set_converted(as_batch=True)
         self.is_data_prepared = True
         # if we have a validation set, calculate the class distribution here 
         # this should be shown before training starts so the validation accuracy makes more sense
         # this can also be used to use a loss function that re-weights classes in case of class imbalance!
-        deps = self.valset[1]
+
+        # deps = self.valset[1]
         # TODO: calculate the class distribution but if sequences, ONLY for the non-padded parts of the sequences!!!!
 
     def apply(self, instancelist, converted=False, reshaped=False):
@@ -453,8 +456,11 @@ class ModelWrapperSimple(ModelWrapper):
         if not self.is_data_prepared:
             raise Exception("Must call train or prepare_data first")
         # NOTE!!! the targets are what we get minus 1, which shifts the padding index to be -1
-        targets = np.array(validationinstances[1])-1
-        v_deps = V(torch.LongTensor(targets), requires_grad=False)
+        # TODO: IF we use padded targets, we need to subtract 1 here, otherwise we have to leave this
+        # as is!!
+        targets = np.array(validationinstances[1])
+        # v_deps = V(torch.LongTensor(targets), requires_grad=False)
+        v_deps = torch.LongTensor(targets)
         if self._enable_cuda:
             v_deps = v_deps.cuda()
         v_preds = self._apply_model(validationinstances[0], train_mode=train_mode)
@@ -465,11 +471,18 @@ class ModelWrapperSimple(ModelWrapper):
         # NOTE: the v_preds may or may not be sequences, if sequences we get the wrong shape here
         # so for now we simply put all the items (sequences and batch items) in the first dimension
         valuedim = v_preds.size()[-1]
-        loss = self.lossfunction(v_preds.view(-1, valuedim), v_deps.view(-1))
+        # ORIG: loss = self.lossfunction(v_preds.view(-1, valuedim), v_deps.view(-1))
+        loss_function = torch.nn.NLLLoss(ignore_index=-1, size_average=True)
+        v_preds_reshape = v_preds.view(-1, valuedim)
+        # !!DEBUG print("Predictions, reshaped, size=", v_preds_reshape.size(), "is", v_preds_reshape, file=sys.stderr)
+        v_deps_reshape = v_deps.view(-1)
+        # !!DEBUG print("Targets, reshaped, size=", v_deps_reshape.size(), "is", v_deps_reshape, file=sys.stderr)
+        loss = loss_function(v_preds_reshape, v_deps_reshape)
         # calculate the accuracy as well, since we know we have a classification problem
         acc = ModelWrapper.accuracy(v_preds, v_deps)
-        logger.debug("got accuracy %s" % (acc, ))
-        # sys.exit()
+        logger.debug("got loss %s accuracy %s" % (loss, acc, ))
+        # print("loss=", loss, "preds=", v_preds, "targets=", v_deps, file=sys.stderr)
+        # !!DEBUG sys.exit()
         if not as_pytorch:
             loss = float(loss)
             acc = float(acc)
@@ -519,7 +532,11 @@ class ModelWrapperSimple(ModelWrapper):
                 self.module.zero_grad()
                 # import ipdb
                 # ipdb.set_trace()
+                # print("DEBUG BATCH=", batch_nr, file=sys.stderr)
                 (loss, acc) = self.evaluate(batch, train_mode=True)
+                #if batch_nr == 10:
+                #    sys.exit()
+                # print("Loss for batch", batch_nr, "is", loss, file=sys.stderr)
                 logger.debug("Batch loss/acc for epoch=%s, batch=%s: %s / %s" %
                              (epoch, batch_nr, float(loss), acc))
                 # print("Batch lossfunction/acc for epoch=%s, batch=%s: %s / %s" % (epoch, batch_nr,
@@ -557,7 +574,7 @@ class ModelWrapperSimple(ModelWrapper):
                     last_accs = []
                     logger.info("EVAL e=%s,b=%s,tloss/vloss/"
                                 "vloss-var/tacc/vacc: %s / %s / %s / %s / %s" %
-                                (epoch, batch_nr, avg_tloss, float(loss_val), var_vloss, avg_tacc, acc_val))
+                                (epoch, totalbatches, avg_tloss, float(loss_val), var_vloss, avg_tacc, acc_val))
                     # TODO: if we have set a checkpointing parameter (checkpointevery, telling every how many
                     # test set validations we want to checkpoint), checkpoint here
                     # TODO: for this we already should have implemented a way to set the model or checkpoint file

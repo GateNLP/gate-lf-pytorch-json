@@ -2,6 +2,15 @@ import torch.nn
 from gatelfpytorchjson import CustomModule
 from gatelfpytorchjson import EmbeddingsModule
 import sys
+import logging
+
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.INFO)
+streamhandler = logging.StreamHandler(stream=sys.stderr)
+formatter = logging.Formatter(
+                '%(asctime)s %(name)-12s %(levelname)-8s %(message)s')
+streamhandler.setFormatter(formatter)
+logger.addHandler(streamhandler)
 
 
 class SeqTaggerLSTMSimple(CustomModule):
@@ -24,31 +33,34 @@ class SeqTaggerLSTMSimple(CustomModule):
         super().__init__(config=config)
 
         self.n_classes = dataset.get_info()["nClasses"]
+        logger.debug("Initializing module SeqTaggerLSTMSimple for classes: %s" % (self.n_classes,))
         # create a simple LSTM-based network: the input uses an embedding layer created from
         # the vocabulary, then a bidirectional LSTM followed by a simple softmax layer for each element
         # in the sequence
         feature = dataset.get_index_features()[0]
         vocab = feature.vocab
+        logger.debug("Initializing module SeqTaggerLSTMSimple for classes: %s and vocab %s" %
+                     (self.n_classes, vocab, ))
         # create the embedding layer from the vocab
         self.layer_emb = EmbeddingsModule(vocab)
 
         # for debugging, save the vocab here
         self.vocab = vocab
 
-        self.lstm_hiddenunits = 100
+        self.lstm_hiddenunits = 200
         self.lstm_nlayers = 1
         self.lstm_is_bidirectional = False
         self.layer_lstm = torch.nn.LSTM(input_size=self.layer_emb.emb_dims,
                                         hidden_size=self.lstm_hiddenunits,
                                         num_layers=self.lstm_nlayers,
-                                        dropout=0.5,
+                                        dropout=0.0,
                                         bidirectional=self.lstm_is_bidirectional,
                                         batch_first=True)
         lin_units = self.lstm_hiddenunits*2 if self.lstm_is_bidirectional else self.lstm_hiddenunits
         self.lstm_totalunits = lin_units
         self.layer_lin = torch.nn.Linear(lin_units, self.n_classes)
         self.layer_out = torch.nn.LogSoftmax(dim=1)
-        print("Network: \n", self, file=sys.stderr)
+        logger.info("Network created: %s" % (self, ))
 
     # this gets a batch if independent variables
     # By default this is in reshaped padded batch format.
@@ -64,15 +76,16 @@ class SeqTaggerLSTMSimple(CustomModule):
         # we need only the first feature:
         # print("DEBUG: batch=", batch, file=sys.stderr)
         batch = torch.LongTensor(batch[0])
-        print("DEBUG: batch size=", batch.size(), file=sys.stderr)
+        logger.debug("forward called with batch of size %s: %s" % (batch.size(), batch,))
         if self.on_cuda():
             batch.cuda()
-        tmp = self.layer_emb(batch)
+        tmp_embs = self.layer_emb(batch)
         # hidden_init = self.get_init_weights(len(batch))
-        tmp, hidden = self.layer_lstm(tmp)
+        lstm_hidden, (lstm_c_last, lstm_h_last) = self.layer_lstm(tmp_embs)
 
-        tmp = self.layer_lin(tmp)
-        out = self.layer_out(tmp)
+        tmp_lin = self.layer_lin(lstm_hidden)
+        out = self.layer_out(tmp_lin)
+        logger.debug("output tensor is if size %s: %s" % (out.size(), out, ))
         return out
 
     def get_lossfunction(self, config={}):

@@ -16,6 +16,7 @@ from gatelfdata import Dataset
 import numpy as np
 import pkgutil
 import timeit
+import logging
 
 
 # Basic usage:
@@ -26,6 +27,16 @@ import timeit
 # instances = get_them()
 # preditions = wrapper.apply(instances)
 # NOTE: maybe use the same naming conventions as scikit learn here!!
+
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.INFO)
+streamhandler = logging.StreamHandler(stream=sys.stderr)
+formatter = logging.Formatter(
+                '%(asctime)s %(name)-12s %(levelname)-8s %(message)s')
+streamhandler.setFormatter(formatter)
+logger.addHandler(streamhandler)
+
+
 
 
 class ModelWrapperSimple(ModelWrapper):
@@ -424,6 +435,7 @@ class ModelWrapperSimple(ModelWrapper):
             self.module.eval()
 
         output = self.module(indeps)
+        # logger.debug("Output of model is of size %s: %s" % (output.size(), output, ))
 
         if self.module.training == curmodeistrain:
             self.module.train(curmodeistrain)
@@ -446,6 +458,8 @@ class ModelWrapperSimple(ModelWrapper):
         if self._enable_cuda:
             v_deps = v_deps.cuda()
         v_preds = self._apply_model(validationinstances[0], train_mode=train_mode)
+        logger.debug("Got v_preds of size %s: %s" % (v_preds.size(), v_preds,))
+        logger.debug("Evaluating against targets of size %s: %s" % (v_deps.size(), v_deps))
         # TODO: not sure if and when to zero the grads for the loss function if we use it
         # in between training steps?
         # NOTE: the v_preds may or may not be sequences, if sequences we get the wrong shape here
@@ -454,6 +468,8 @@ class ModelWrapperSimple(ModelWrapper):
         loss = self.lossfunction(v_preds.view(-1, valuedim), v_deps.view(-1))
         # calculate the accuracy as well, since we know we have a classification problem
         acc = ModelWrapper.accuracy(v_preds, v_deps)
+        logger.debug("got accuracy %s" % (acc, ))
+        # sys.exit()
         if not as_pytorch:
             loss = float(loss)
             acc = float(acc)

@@ -1,3 +1,4 @@
+import torch
 import torch.nn
 from torch.autograd import Variable as V
 import torch.nn.functional as F
@@ -16,6 +17,12 @@ class CustomModule(torch.nn.Module):
     def get_optimizer(self, config={}):
         parms = filter(lambda p: p.requires_grad, self.parameters())
         return torch.optim.Adam(parms, lr=0.001, betas=(0.9, 0.999), eps=1e-08, weight_decay=0)
+
+    def set_seed(self, seed):
+        torch.manual_seed(seed)
+        # make sure it is set on all GPUs as well, we can always do this as torch ignores
+        # this if no CUDA is available
+        torch.cuda.manual_seed_all(seed)
 
     def on_cuda(self):
         """Returns true or false depending on if the module is on cuda or not. Unfortunately

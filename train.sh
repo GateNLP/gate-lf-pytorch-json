@@ -7,11 +7,11 @@ shift
 modelname="$1"
 shift
 
-if [[ "x$modelname" == "x" ]]
-then
-  echo 'Two parameters required: metafile and modelname'
-  exit 1
-fi
+#if [[ "x$modelname" == "x" ]]
+#then
+#  echo 'Two parameters required: metafile and modelname'
+#  exit 1
+#fi
 
 versionpython="UNKNOWN"
 wherepython=`which python`

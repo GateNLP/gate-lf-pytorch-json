@@ -37,6 +37,9 @@ streamhandler.setFormatter(formatter)
 logger.addHandler(streamhandler)
 
 
+def f(value):
+    """Format a float value to have 3 digits after the decimal point"""
+    return "{0:.3f}".format(value)
 
 
 class ModelWrapperSimple(ModelWrapper):
@@ -90,12 +93,17 @@ class ModelWrapperSimple(ModelWrapper):
         self.init_from_dataset()
         # various configuration settings which can be set before passing on control to the
         # task-speicific initialization
-        self.validate_every_batches = 100
-        self.validate_every_epochs = None
+        self.best_model_saved = False
+        self.validate_every_batches = None
+        self.validate_every_epochs = 1
+        self.validate_every_instances = None
+        self.report_every_batches = None
+        self.report_every_instances = 500
         self.is_data_prepared = False
         self.valset = None   # Validation set created by prepare_data
         self.lossfunction = None
         self.module = None  # the init_<TASK> method actually sets this!!
+        self.random_seed = 0
         # if the config requires a specific module needs to get used, create it here, otherwise
         # create the module needed for sequences or non-sequences
         # IMPORTANT! the optimizer needs to get created after the module has been moved to a GPU
@@ -345,10 +353,11 @@ class ModelWrapperSimple(ModelWrapper):
     def prepare_data(self, validationsize=None):
         """If validationsize is > 1, it is the absolute size, if < 1 it is the portion e.g. 0.01 to use."""
         # get the validation set
+        if self.is_data_prepared:
+            logger.warning("Called prepare_data after it was already called, doing nothing")
+            return
         if validationsize is not None:
             validationsize = float(validationsize)
-        if self.is_data_prepared:
-            return
         valsize = None
         valpart = None
         # TODO: allow not using a validation set at all!
@@ -479,107 +488,128 @@ class ModelWrapperSimple(ModelWrapper):
         # !!DEBUG print("Targets, reshaped, size=", v_deps_reshape.size(), "is", v_deps_reshape, file=sys.stderr)
         loss = loss_function(v_preds_reshape, v_deps_reshape)
         # calculate the accuracy as well, since we know we have a classification problem
-        acc = ModelWrapper.accuracy(v_preds, v_deps)
+        acc, correct, total = ModelWrapper.accuracy(v_preds, v_deps)
         logger.debug("got loss %s accuracy %s" % (loss, acc, ))
         # print("loss=", loss, "preds=", v_preds, "targets=", v_deps, file=sys.stderr)
         # !!DEBUG sys.exit()
         if not as_pytorch:
             loss = float(loss)
             acc = float(acc)
-        return tuple((loss, acc))
+        return tuple((loss, acc, correct, total))
+
 
     # the implementation should figure out best values if parameter
     # is set to None
     # Also, by default, the method should decide which format
     # to use for reading the data (original or converted)
-    def train(self, max_epochs=None, batch_size=None, validationsize=None, early_stopping=True,
+    def train(self, max_epochs=20, batch_size=20, early_stopping=True, filenameprefix=None
               ):
         """Train the model on the dataset. max_epochs is the maximum number of
         epochs to train, but if early_stopping is enabled, it could be fewer.
-        If early_stopping is True, a default early stopping strategy is used,
-        if set to a function that function (taking a last of recent evaluations
-        and returning boolean) is used. The batchsize parameter can be used
-        to override the batchsize, similar the validationsize parameter to
-        override the validation set size (if float, the portion, if int the
-        numer of instances)"""
-        if not max_epochs:
-            # TODO: need some clever way to set the epochs here
-            max_epochs = 10000
+        If early_stopping is True, then a default strategy is used where training
+        stops after the validation accuracy did not improve for 2 epochs.
+        If set to a function that function (which must accept a standard set of parameters
+        and return a boolean) is used.
+        TODO: check if config should be used by default for the batch_size etc here!
+        """
         if early_stopping:
+            if not filenameprefix:
+                raise Exception("If early stopping is specified, filenameprefix is needed")
             if isinstance(early_stopping, bool):
-                early_stopping_function = ModelWrapper.early_stopping_checker
+                if early_stopping:
+                    early_stopping_function = ModelWrapper.early_stopping_checker
+                else:
+                    early_stopping = lambda *args, **kwargs : False
             else:
                 early_stopping_function = early_stopping
-        logger = logging.getLogger(__name__)
-        # get the validation set
-        self.prepare_data()
+        if not self.is_data_prepared:
+            logger.warning("Invoked train without calling prepare_data first, running default")
+            self.prepare_data()
         # make sure we are in training mode
         self.module.train(mode=True)
-        if not batch_size:
-            batch_size = 10
-        # val_indeps = self.valset[0]
-        # val_targets = V(torch.LongTensor(self.valset[1]), requires_grad=False)
+        # set the random seed, every module must know how to handle this
+        self.module.set_seed(self.random_seed)
+        # if this get set to True we bail out of all loops, save the model if necessary and stop training
         stop_it_already = False
+        # the list of all validation losses so far
         validation_losses = []
+        # list of all validation accuracies so far
+        validation_accs = []
+        # total number of batches processed over all epochs
         totalbatches = 0
-        last_accs = []
-        last_losses = []
+        # for calculating loss and acc over a number of batches or instances for reporting
+        report_correct = 0
+        report_total = 0
+        report_loss = 0
+        # for calculating loss and acc over the whole epoch / training set
+        epoch_correct = 0
+        epoch_total = 0
+        epoch_loss = 0
+        # best validation accuracy so far
+        best_acc = 0
+        # initialize the last epoch number for validation to 1 so we do not validate right away
+        last_epoch = 1
         for epoch in range(1, max_epochs+1):
+            # batch number within an epoch
             batch_nr = 0
+            # number of instances already used for training during this epoch
+            nr_instances = 0
             for batch in self.dataset.batches_converted(train=True, batch_size=batch_size):
                 batch_nr += 1
                 totalbatches += 1
+                nr_instances += batch_size  # we should use the actual batch size which could be less
                 self.module.zero_grad()
                 # import ipdb
                 # ipdb.set_trace()
-                # print("DEBUG BATCH=", batch_nr, file=sys.stderr)
-                (loss, acc) = self.evaluate(batch, train_mode=True)
-                #if batch_nr == 10:
-                #    sys.exit()
-                # print("Loss for batch", batch_nr, "is", loss, file=sys.stderr)
-                logger.debug("Batch loss/acc for epoch=%s, batch=%s: %s / %s" %
-                             (epoch, batch_nr, float(loss), acc))
-                # print("Batch lossfunction/acc for epoch=%s, batch=%s: %s / %s" % (epoch, batch_nr,
-                # float(lossfunction), acc), file=sys.stderr)
+                (loss, acc, correct, total) = self.evaluate(batch, train_mode=True)
+                logger.debug("Epoch=%s, batch=%s: loss=%s acc=%s" %
+                             (epoch, batch_nr, f(loss), f(acc)))
                 loss.backward()
+                report_loss += float(loss)
+                report_correct += float(correct)
+                report_total += float(total)
+                epoch_loss += float(loss)
+                epoch_correct += float(correct)
+                epoch_total += float(total)
                 self.optimizer.step()
-                last_accs.append(float(acc))
-                last_losses.append(float(loss))
-                # if there is a stopfile config and we find the file,
+                # evaluation on the training set only for reporting
+                if (self.report_every_batches and ((totalbatches % self.report_every_batches) == 0)) or \
+                        (self.report_every_instances and ((nr_instances % self.report_every_instances) == 0)):
+                    logger.info("Epoch=%s, batch=%s, insts=%s: loss=%s acc=%s / totalloss=%s totalacc=%s" %
+                                (epoch, batch_nr, nr_instances,
+                                 f(report_loss), f(report_correct / report_total),
+                                 f(epoch_loss), f(epoch_correct / epoch_total)))
+                    report_loss = 0
+                    report_correct = 0
+                    report_total = 0
+                # this is for validating against the validation set and possibly early stopping
+                if (self.validate_every_batches and ((totalbatches % self.validate_every_batches) == 0)) or\
+                        (self.validate_every_epochs and ((epoch - last_epoch) == self.validate_every_epochs)) or \
+                        (self.validate_every_instances and ((nr_instances % self.validate_every_instances) == 0)):
+                    # evaluate on validation set
+                    last_epoch = epoch
+                    (loss_val, acc_val, correct, total) = self.evaluate(self.valset, train_mode=False)
+                    logger.info("Epoch=%s, VALIDATION: loss=%s acc=%s" %
+                                (epoch, f(loss_val), f(acc_val)))
+                    validation_losses.append(float(loss_val))
+                    validation_accs.append(float(acc_val))
+                    # if we have early stopping, check if we should stop
+                    if early_stopping:
+                        stop_it_already = early_stopping_function(
+                            losses=validation_losses, accs=validation_accs)
+                        if stop_it_already:
+                            logger.info("Early stopping criterion reached, stopping training")
+                    # if the current validation accuracy is better than what we had so far, save
+                    # the model
+                    if acc_val > best_acc:
+                        best_acc = acc_val
+                        self.save_model(filenameprefix)
+                        self.best_model_saved = True
+
                 if self.stopfile and os.path.exists(self.stopfile):
                     print("Stop file found, removing and terminating training...", file=sys.stderr)
                     os.remove(self.stopfile)
                     stop_it_already = True
-                if (self.validate_every_batches and ((totalbatches % self.validate_every_batches) == 0)) or\
-                        (self.validate_every_epochs and ((epoch % self.validate_every_epochs) == 0)):
-                    # evaluate on validation set
-                    (loss_val, acc_val) = self.evaluate(self.valset, train_mode=False)
-                    # self.module.eval()
-                    # out_val = self.module(val_indeps)
-                    # loss_val = self.lossfunction(out_val, val_targets)
-                    # acc_val = ModelWrapper.accuracy(out_val, val_targets)
-                    validation_losses.append(float(loss_val))
-                    # if we have early stopping, check if we should stop
-                    var = None
-                    if early_stopping:
-                        (stop_it_already, var) = early_stopping_function(validation_losses)
-                        if stop_it_already:
-                            logger.info("Early stopping criterion reached, stopping training, var=%s" % var)
-                    avg_tloss = statistics.mean(last_losses)
-                    avg_tacc = statistics.mean(last_accs)
-                    var_vloss = None
-                    if len(validation_losses) > 10:
-                        var_vloss = statistics.variance(validation_losses[-10:])
-                    last_losses = []
-                    last_accs = []
-                    logger.info("EVAL e=%s,b=%s,tloss/vloss/"
-                                "vloss-var/tacc/vacc: %s / %s / %s / %s / %s" %
-                                (epoch, totalbatches, avg_tloss, float(loss_val), var_vloss, avg_tacc, acc_val))
-                    # TODO: if we have set a checkpointing parameter (checkpointevery, telling every how many
-                    # test set validations we want to checkpoint), checkpoint here
-                    # TODO: for this we already should have implemented a way to set the model or checkpoint file
-                    # prefix beforehand (maybe even at construction time, but changable let through a setter?)
-                    # self.checkpoint()
                 if stop_it_already:
                     break
             if stop_it_already:
@@ -594,26 +624,28 @@ class ModelWrapperSimple(ModelWrapper):
             self.checkpointnr += 1
         torch.save(self.module, filenameprefix + ".module.pytorch")
 
+    def save_model(self, filenameprefix):
+        start = timeit.timeit()
+        filename = filenameprefix + ".module.pytorch"
+        torch.save(self.module, filename)
+        end = timeit.timeit()
+        logger.info("Saved model to %s in %s" % (filename, f(end - start)))
+
     def save(self, filenameprefix):
         # store everything using pickle, but we do not store the module or the dataset
         # the dataset will simply get recreated when loading, but the module needs to get saved
         # separately
 
-        # TODO: eventually, make every module know what is the best way to save and load itself,
-        # and delegate, but for now we just use the standard pytorch approach
-        # self.module.save(self.module, filenameprefix+"module.pytorch")
-
-        start = timeit.timeit()
-        torch.save(self.module, filenameprefix+".module.pytorch")
-        end = timeit.timeit()
-        print("DEBUG: Time to save module: ", (end-start), file=sys.stderr)
+        # only if we did not already save the best model during training for some reason
+        if not self.best_model_saved:
+            self.save_model(filenameprefix)
         assert hasattr(self, 'metafile')
-        with open(filenameprefix+".wrapper.pickle", "wb") as outf:
-            start2 = timeit.timeit()
+        filename = filenameprefix+".wrapper.pickle"
+        with open(filename, "wb") as outf:
+            start = timeit.timeit()
             pickle.dump(self, outf)
             end = timeit.timeit()
-            print("DEBUG: Time to save wrapper: ", (end - start2), file=sys.stderr)
-            print("DEBUG: Time to save total: ", (end - start), file=sys.stderr)
+            logger.info("Saved wrapper to %s in %s" % (filename, f(end-start)))
 
     @classmethod
     def load(cls, filenameprefix):

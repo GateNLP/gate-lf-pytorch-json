@@ -42,18 +42,18 @@ class ModelWrapper(object):
 
     # Additional useful methods
     @staticmethod
-    def early_stopping_checker(evaluations, k=10, max_variance=0.0001):
-        """Takes an array of floats, with the most recent evaluation being the last in the list
-        and returns True if training should be stopped"""
-        # simple criterion: if the variance of the last k evaluation is smaller than
-        # the max_variance, stop.
-        if len(evaluations) > k:
-            var = np.var(evaluations[-k:])
-            if var < max_variance:
-                return tuple((True, var))
-        else:
-            var = None
-        return tuple((False, var))
+    def early_stopping_checker(losses=None, accs=None):
+        """Takes two lists of numbers, representing the losses and accuracies of all validation
+        steps. If the accs are not null, early stopping is initiated if the accuracy of the last
+        2 validations are not better then the one before. If accuracies are not specified
+        then this method always returns false, meaning no early stopping. The losses are ignored
+        by this method"""
+        if not accs:
+            return False
+        if len(accs) < 3:
+            return False
+        if accs[-1] < accs[-3] and accs[-2] < accs[-3]:
+            return True
 
     @staticmethod
     def makeless(n, func=math.pow, preshift=-1.0, postshift=1.0, p1=0.5):
@@ -97,8 +97,9 @@ class ModelWrapper(object):
         mask = (targets != pad_index)
         logger.debug("mask reshaped: %s" % (mask,))
         n_correct = np.sum(pred_idxs[mask] == targets[mask])
-        acc = n_correct / np.sum(mask)
+        n_total = np.sum(mask)
+        acc = n_correct / n_total
         logger.debug("Total=%s, correct=%s, acc=%s" % (np.sum(mask), n_correct, acc,))
         # import ipdb
         # ipdb.set_trace()
-        return acc
+        return acc, n_correct, n_total

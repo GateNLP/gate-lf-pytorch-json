@@ -107,6 +107,6 @@ class SeqTaggerLSTMSimple(CustomModule):
         parms = filter(lambda p: p.requires_grad, self.parameters())
         # optimizer = torch.optim.SGD(parms, lr=0.01, momentum=0.9)
         # optimizer = torch.optim.SGD(parms, lr=0.01, momentum=0.9, weight_decay=0.05)
-        optimizer = torch.optim.Adam(parms, lr=0.001, betas=(0.9, 0.999), eps=1e-08, weight_decay=0)
+        optimizer = torch.optim.Adam(parms, lr=0.015, betas=(0.9, 0.999), eps=1e-08, weight_decay=0)
         return optimizer
 

@@ -27,7 +27,11 @@ parser = argparse.ArgumentParser()
 # Parameter for checkpointing the module
 parser.add_argument("--embs", type=str, help="Override embedding settings, specify as embid:embdims:embtrain:embminfreq,embid:embdims ..")
 parser.add_argument("--valsize", type=float, help="Set the validation set size (>1) or proportion (<1)")
-parser.add_argument("--valevery", type=int, default=10, help="Evaluate on validation set and log every that many batches")
+parser.add_argument("--valeverybatches", type=int, default=None, help="Evaluate on validation set and log every that many batches (None)")
+parser.add_argument("--valeveryepochs", type=int, default=1, help="Evaluate on validation set and log every that many epochs (1)")
+parser.add_argument("--valeveryinstances", type=int, default=None, help="Evaluate on validation set and log every that many instances (None)")
+parser.add_argument("--repeveryinstances", type=int, default=500, help="Report on training set and log every that many instances (500)")
+parser.add_argument("--repeverybatches", type=int, default=None, help="Report on training set and log every that many batches (None)")
 parser.add_argument("--batchsize", type=int, default=32, help="Batch size")
 parser.add_argument("--maxepochs", type=int, default=50, help="Maximum number of epochs")
 parser.add_argument("--stopfile", type=str, help="If that file exists, training is stopped")
@@ -37,6 +41,7 @@ parser.add_argument("--learningrate", type=float, help="Override default learnin
 parser.add_argument("--cuda", type=str2bool, help="True/False to use CUDA or not, omit to determine automatically")
 # NOTE: resume currently does not make sure that the original metafile info is used (but maybe new data):
 # This should work once the metadata is actually stored as part of the model!
+parser.add_argument("--seed", type=int, help="Random seed to make experiments repeatable/explore randomness (default 0=random random seed)")
 parser.add_argument("--resume", action='store_true', help="Resume training from the specified model")
 parser.add_argument("--notrain", action='store_true', help="Do not actually run training, but show generated model")
 parser.add_argument("--nocreate", action='store_true', help="Do not actually even create module (do nothing)")
@@ -48,6 +53,10 @@ args = parser.parse_args()
 
 metafile = args.metafile
 modelname = args.modelname
+
+if not metafile or not modelname:
+    raise Exception("Metafile or modelfile not specified, use --help parameter for help")
+
 datadir = str(Path(metafile).parent)
 
 config = vars(args)
@@ -125,15 +134,22 @@ else:
     wrapper.prepare_data()
 logger3.debug("Data prepared")
 
-# TODO: check if setters or using constructor parameters make more sense here
-wrapper.validate_every_batches = config["valevery"]
+wrapper.validate_every_batches = config["valeverybatches"]
+wrapper.validate_every_epochs = config["valeveryepochs"]
+wrapper.validate_every_instances = config["valeveryinstances"]
+wrapper.report_every_instances = config["repeveryinstances"]
+wrapper.report_every_batches = config["repeverybatches"]
+wrapper.random_seed = config["seed"]
 
 # TODO: figure out what good defaults are here and what we want to set here rather than
 # in the constructor. Maybe allow to set everything in the constructor for simplicity?
 logger3.debug("Start training...")
-wrapper.train(batch_size=config["batchsize"], early_stopping=False, max_epochs=config["maxepochs"])
+wrapper.train(batch_size=config["batchsize"],
+              early_stopping=True, max_epochs=config["maxepochs"], filenameprefix=modelname)
 logger3.debug("Training completed")
 
+# NOTE: this will save the modelwrapper, and will ONLY save the model if we did not already
+# save the best model during training!
 logger3.debug("Saving model...")
 wrapper.save(modelname)
 logger3.debug("Model saved")

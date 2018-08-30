@@ -629,7 +629,7 @@ class ModelWrapperSimple(ModelWrapper):
         filename = filenameprefix + ".module.pytorch"
         torch.save(self.module, filename)
         end = timeit.timeit()
-        logger.info("Saved model to %s in %s" % (filename, f(end - start)))
+        logger.info("Saved model to %s in %s" % (filename, f(abs(end - start))))
 
     def save(self, filenameprefix):
         # store everything using pickle, but we do not store the module or the dataset
@@ -645,7 +645,7 @@ class ModelWrapperSimple(ModelWrapper):
             start = timeit.timeit()
             pickle.dump(self, outf)
             end = timeit.timeit()
-            logger.info("Saved wrapper to %s in %s" % (filename, f(end-start)))
+            logger.info("Saved wrapper to %s in %s" % (filename, f(abs((end-start))))
 
     @classmethod
     def load(cls, filenameprefix):

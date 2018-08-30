@@ -44,6 +44,12 @@ class ClassificationModelSimple(torch.nn.Module):
         self.add_module(outconfig.get("name"), outlayer)
         self._on_cuda = None
 
+    def set_seed(self, seed):
+        torch.manual_seed(seed)
+        # make sure it is set on all GPUs as well, we can always do this as torch ignores
+        # this if no CUDA is available
+        torch.cuda.manual_seed_all(seed)
+
     def on_cuda(self):
         """Returns true or false depending on if the module is on cuda or not. Unfortunately
         there is no API method in PyTorch for this so we get this from the first parameter of the

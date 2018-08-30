@@ -17,6 +17,7 @@ import numpy as np
 import pkgutil
 import timeit
 import logging
+import signal
 
 
 # Basic usage:
@@ -158,7 +159,13 @@ class ModelWrapperSimple(ModelWrapper):
             # e.g. every 10 epochs, make lr half of what it was:
             # self.scheduler = torch.optim.lr_scheduler.StepLR(self.optimizer, step_size=10, gamma=0.5)
             # self.optimizer = torch.optim.SGD(params, lr=0.1, momentum=0.0)
+        self.interrupted = False
+        signal.signal(signal.SIGINT, self._signal_handler)
 
+
+    def _signal_handler(self, sig, frame):
+        logger.info("Received interrupt signal, setting interrupt flag")
+        self.interrupted = True
 
     def init_classification(self, dataset):
         n_classes = self.info["nClasses"]
@@ -517,6 +524,12 @@ class ModelWrapperSimple(ModelWrapper):
         and return a boolean) is used.
         TODO: check if config should be used by default for the batch_size etc here!
         """
+
+        # if this get set to True we bail out of all loops, save the model if necessary and stop training
+        stop_it_already = False
+        # this gets set by the signal handler and has the same effect as stop_it_already
+        self.interrupted = False
+
         if early_stopping:
             if not filenameprefix:
                 raise Exception("If early stopping is specified, filenameprefix is needed")
@@ -534,8 +547,6 @@ class ModelWrapperSimple(ModelWrapper):
         self.module.train(mode=True)
         # set the random seed, every module must know how to handle this
         self.module.set_seed(self.random_seed)
-        # if this get set to True we bail out of all loops, save the model if necessary and stop training
-        stop_it_already = False
         # the list of all validation losses so far
         validation_losses = []
         # list of all validation accuracies so far
@@ -615,9 +626,10 @@ class ModelWrapperSimple(ModelWrapper):
                     print("Stop file found, removing and terminating training...", file=sys.stderr)
                     os.remove(self.stopfile)
                     stop_it_already = True
-                if stop_it_already:
+                if stop_it_already or self.interrupted:
                     break
-            if stop_it_already:
+            if stop_it_already or self.interrupted:
+                self.interrupted = False
                 break
 
     def checkpoint(self, filenameprefix, checkpointnr=None):

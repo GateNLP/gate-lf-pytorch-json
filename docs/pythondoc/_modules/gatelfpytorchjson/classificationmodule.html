@@ -1,0 +1,196 @@
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>gatelfpytorchjson.classificationmodule &#8212; GATE LF Pytorch Wrapper (gatelfpytorch)  documentation</title>
+    
+    <link rel="stylesheet" href="../../_static/classic.css" type="text/css" />
+    <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../',
+        VERSION:     '',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true,
+        SOURCELINK_SUFFIX: '.txt'
+      };
+    </script>
+    <script type="text/javascript" src="../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../_static/doctools.js"></script>
+    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.0/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" /> 
+  </head>
+  <body>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../../index.html">GATE LF Pytorch Wrapper (gatelfpytorch)  documentation</a> &#187;</li>
+          <li class="nav-item nav-item-1"><a href="../index.html" accesskey="U">Module code</a> &#187;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <h1>Source code for gatelfpytorchjson.classificationmodule</h1><div class="highlight"><pre>
+<span></span><span class="kn">import</span> <span class="nn">torch.nn</span>
+<span class="kn">import</span> <span class="nn">logging</span>
+<span class="kn">import</span> <span class="nn">sys</span>
+
+<span class="n">logger</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">getLogger</span><span class="p">(</span><span class="n">__name__</span><span class="p">)</span>
+<span class="n">logger</span><span class="o">.</span><span class="n">setLevel</span><span class="p">(</span><span class="n">logging</span><span class="o">.</span><span class="n">DEBUG</span><span class="p">)</span>
+<span class="n">streamhandler</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">StreamHandler</span><span class="p">(</span><span class="n">stream</span><span class="o">=</span><span class="n">sys</span><span class="o">.</span><span class="n">stderr</span><span class="p">)</span>
+<span class="n">formatter</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">Formatter</span><span class="p">(</span>
+                <span class="s1">&#39;</span><span class="si">%(asctime)s</span><span class="s1"> </span><span class="si">%(name)-12s</span><span class="s1"> </span><span class="si">%(levelname)-8s</span><span class="s1"> </span><span class="si">%(message)s</span><span class="s1">&#39;</span><span class="p">)</span>
+<span class="n">streamhandler</span><span class="o">.</span><span class="n">setFormatter</span><span class="p">(</span><span class="n">formatter</span><span class="p">)</span>
+<span class="n">logger</span><span class="o">.</span><span class="n">addHandler</span><span class="p">(</span><span class="n">streamhandler</span><span class="p">)</span>
+
+
+<div class="viewcode-block" id="ClassificationModule"><a class="viewcode-back" href="../../gatelfpytorchjson.classificationmodule.html#gatelfpytorchjson.classificationmodule.ClassificationModule">[docs]</a><span class="k">class</span> <span class="nc">ClassificationModule</span><span class="p">(</span><span class="n">torch</span><span class="o">.</span><span class="n">nn</span><span class="o">.</span><span class="n">Module</span><span class="p">):</span>
+
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">inputlayersinfo</span><span class="p">,</span> <span class="n">hiddenlayersinfo</span><span class="p">,</span> <span class="n">outputlayerinfo</span><span class="p">,</span>
+                 <span class="n">featureconfig</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Construct the model: inputlayers is a list of tuples, where</span>
+<span class="sd">        the first element is the PyTorch module and the second element</span>
+<span class="sd">        is a dictionary of config data for that layer. The config data</span>
+<span class="sd">        must contain the &quot;type&quot; key. Hiddenlayers is a  similar list</span>
+<span class="sd">        of hidden layers, where the first element of the list corresponds</span>
+<span class="sd">        to the layer after the input layer and the last element to</span>
+<span class="sd">        the layer before the output layer.</span>
+<span class="sd">        Output layer is a single tuple (module,configs).</span>
+<span class="sd">        The featureconfig parameter contains the feature indices</span>
+<span class="sd">        per type and maybe other config info created by the wrapper.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="n">__init__</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">inputlayersinfo</span> <span class="o">=</span> <span class="n">inputlayersinfo</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">hiddenlayersinfo</span> <span class="o">=</span> <span class="n">hiddenlayersinfo</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">outputlayerinfo</span> <span class="o">=</span> <span class="n">outputlayerinfo</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">num_idxs</span> <span class="o">=</span> <span class="n">featureconfig</span><span class="p">[</span><span class="s2">&quot;num_idxs&quot;</span><span class="p">]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">nom_idxs</span> <span class="o">=</span> <span class="n">featureconfig</span><span class="p">[</span><span class="s2">&quot;nom_idxs&quot;</span><span class="p">]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">ngr_idxs</span> <span class="o">=</span> <span class="n">featureconfig</span><span class="p">[</span><span class="s2">&quot;ngr_idxs&quot;</span><span class="p">]</span>
+        <span class="c1"># register all the layers with the module so PyTorch knows</span>
+        <span class="c1"># about parameters etc.</span>
+        <span class="k">for</span> <span class="n">layer</span><span class="p">,</span> <span class="n">config</span> <span class="ow">in</span> <span class="n">inputlayersinfo</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">add_module</span><span class="p">(</span><span class="n">config</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;name&quot;</span><span class="p">),</span> <span class="n">layer</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">layer</span><span class="p">,</span> <span class="n">config</span> <span class="ow">in</span> <span class="n">hiddenlayersinfo</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">add_module</span><span class="p">(</span><span class="n">config</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;name&quot;</span><span class="p">),</span> <span class="n">layer</span><span class="p">)</span>
+        <span class="n">outlayer</span> <span class="o">=</span> <span class="n">outputlayerinfo</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="n">outconfig</span> <span class="o">=</span> <span class="n">outputlayerinfo</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">add_module</span><span class="p">(</span><span class="n">outconfig</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;name&quot;</span><span class="p">),</span> <span class="n">outlayer</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_on_cuda</span> <span class="o">=</span> <span class="kc">None</span>
+
+<div class="viewcode-block" id="ClassificationModule.set_seed"><a class="viewcode-back" href="../../gatelfpytorchjson.classificationmodule.html#gatelfpytorchjson.classificationmodule.ClassificationModule.set_seed">[docs]</a>    <span class="k">def</span> <span class="nf">set_seed</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">seed</span><span class="p">):</span>
+        <span class="n">torch</span><span class="o">.</span><span class="n">manual_seed</span><span class="p">(</span><span class="n">seed</span><span class="p">)</span>
+        <span class="c1"># make sure it is set on all GPUs as well, we can always do this as torch ignores</span>
+        <span class="c1"># this if no CUDA is available</span>
+        <span class="n">torch</span><span class="o">.</span><span class="n">cuda</span><span class="o">.</span><span class="n">manual_seed_all</span><span class="p">(</span><span class="n">seed</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="ClassificationModule.on_cuda"><a class="viewcode-back" href="../../gatelfpytorchjson.classificationmodule.html#gatelfpytorchjson.classificationmodule.ClassificationModule.on_cuda">[docs]</a>    <span class="k">def</span> <span class="nf">on_cuda</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Returns true or false depending on if the module is on cuda or not. Unfortunately</span>
+<span class="sd">        there is no API method in PyTorch for this so we get this from the first parameter of the</span>
+<span class="sd">        model and cache it.&quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_on_cuda</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_on_cuda</span> <span class="o">=</span> <span class="nb">next</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">parameters</span><span class="p">())</span><span class="o">.</span><span class="n">is_cuda</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_on_cuda</span></div>
+
+<div class="viewcode-block" id="ClassificationModule.forward"><a class="viewcode-back" href="../../gatelfpytorchjson.classificationmodule.html#gatelfpytorchjson.classificationmodule.ClassificationModule.forward">[docs]</a>    <span class="k">def</span> <span class="nf">forward</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">batch</span><span class="p">):</span>
+        <span class="c1"># logger.debug(&quot;Calling forward with %s&quot; % (batch,))</span>
+        <span class="c1"># logger.debug(&quot;inputlayersinfo is %s&quot; % (self.inputlayersinfo,))</span>
+        <span class="n">i_nom</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="n">i_ngr</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="n">input_layer_outputs</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="c1"># TODO: when we use the Concat layer instead of manually concatenating,</span>
+        <span class="c1"># we just create all the input variables her and append to the inputs list,</span>
+        <span class="c1"># then pass this on to the concat layer.</span>
+        <span class="k">for</span> <span class="n">inputlayer</span><span class="p">,</span> <span class="n">config</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">inputlayersinfo</span><span class="p">:</span>
+            <span class="n">inputtype</span> <span class="o">=</span> <span class="n">config</span><span class="p">[</span><span class="s2">&quot;type&quot;</span><span class="p">]</span>
+            <span class="k">if</span> <span class="n">inputtype</span> <span class="o">==</span> <span class="s2">&quot;numeric&quot;</span><span class="p">:</span>
+                <span class="n">vals</span> <span class="o">=</span> <span class="p">[</span><span class="n">batch</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">num_idxs</span><span class="p">]</span>
+                <span class="n">vals4pt</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">FloatTensor</span><span class="p">(</span><span class="n">vals</span><span class="p">)</span><span class="o">.</span><span class="n">t</span><span class="p">()</span>
+                <span class="n">vals4pt</span><span class="o">.</span><span class="n">requires_grad_</span><span class="p">(</span><span class="kc">True</span><span class="p">)</span>
+                <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">on_cuda</span><span class="p">():</span>
+                    <span class="n">vals4pt</span> <span class="o">=</span> <span class="n">vals4pt</span><span class="o">.</span><span class="n">cuda</span><span class="p">()</span>
+                <span class="n">out</span> <span class="o">=</span> <span class="n">inputlayer</span><span class="p">(</span><span class="n">vals4pt</span><span class="p">)</span>
+                <span class="n">input_layer_outputs</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">out</span><span class="p">)</span>
+            <span class="k">elif</span> <span class="n">inputtype</span> <span class="o">==</span> <span class="s2">&quot;nominal&quot;</span><span class="p">:</span>
+                <span class="n">nom_idx</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">nom_idxs</span><span class="p">[</span><span class="n">i_nom</span><span class="p">]</span>
+                <span class="n">i_nom</span> <span class="o">+=</span> <span class="mi">1</span>
+                <span class="c1"># the EmbeddingsModule takes the original converted batch values, not a Tensor or Variable</span>
+                <span class="c1"># vals4pt = V(torch.LongTensor(batch[nom_idx]), requires_grad=False)</span>
+                <span class="n">out</span> <span class="o">=</span> <span class="n">inputlayer</span><span class="p">(</span><span class="n">batch</span><span class="p">[</span><span class="n">nom_idx</span><span class="p">])</span>
+                <span class="n">input_layer_outputs</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">out</span><span class="p">)</span>
+            <span class="k">elif</span> <span class="n">inputtype</span> <span class="o">==</span> <span class="s2">&quot;ngram&quot;</span><span class="p">:</span>
+                <span class="n">ngr_idx</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">ngr_idxs</span><span class="p">[</span><span class="n">i_ngr</span><span class="p">]</span>
+                <span class="n">i_ngr</span> <span class="o">+=</span> <span class="mi">1</span>
+                <span class="n">out</span> <span class="o">=</span> <span class="n">inputlayer</span><span class="p">(</span><span class="n">batch</span><span class="p">[</span><span class="n">ngr_idx</span><span class="p">])</span>
+                <span class="n">input_layer_outputs</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">out</span><span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="ne">Exception</span><span class="p">(</span><span class="s2">&quot;Odd input type: </span><span class="si">%s</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="n">inputtype</span><span class="p">)</span>
+        <span class="c1"># concatenate the outputs, i.e. the last dimension</span>
+        <span class="n">hidden_vals</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">cat</span><span class="p">(</span><span class="n">input_layer_outputs</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">input_layer_outputs</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">size</span><span class="p">())</span><span class="o">-</span><span class="mi">1</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">hiddenlayer</span><span class="p">,</span> <span class="n">config</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">hiddenlayersinfo</span><span class="p">:</span>
+            <span class="c1"># print(&quot;DEBUG: Have shape: &quot;, hidden_vals.size(),  file=sys.stderr)</span>
+            <span class="c1"># print(&quot;DEBUG: Trying to apply hidden layer: &quot;, hiddenlayer,  file=sys.stderr)</span>
+            <span class="c1"># TODO: IMPORTANT: if we have an LSTM somewhere, the lstm returns a tuple, so passing</span>
+            <span class="c1"># it on to the next layer will not work!! Instead we need to wrap the LSTM into a</span>
+            <span class="c1"># takefromtuple layer.</span>
+            <span class="n">hidden_vals</span> <span class="o">=</span> <span class="n">hiddenlayer</span><span class="p">(</span><span class="n">hidden_vals</span><span class="p">)</span>
+        <span class="n">outputlayer</span><span class="p">,</span> <span class="n">outputlayerconfig</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">outputlayerinfo</span>
+        <span class="n">out</span> <span class="o">=</span> <span class="n">outputlayer</span><span class="p">(</span><span class="n">hidden_vals</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">out</span></div></div>
+</pre></div>
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <form class="search" action="../../search.html" method="get">
+      <div><input type="text" name="q" /></div>
+      <div><input type="submit" value="Go" /></div>
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../../index.html">GATE LF Pytorch Wrapper (gatelfpytorch)  documentation</a> &#187;</li>
+          <li class="nav-item nav-item-1"><a href="../index.html" >Module code</a> &#187;</li> 
+      </ul>
+    </div>
+    <div class="footer" role="contentinfo">
+        &#169; Copyright 2018, University of Sheffield.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.6.2.
+    </div>
+  </body>
+</html>

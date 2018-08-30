@@ -11,7 +11,7 @@ streamhandler.setFormatter(formatter)
 logger.addHandler(streamhandler)
 
 
-class ClassificationModelSimple(torch.nn.Module):
+class ClassificationModule(torch.nn.Module):
 
     def __init__(self, inputlayersinfo, hiddenlayersinfo, outputlayerinfo,
                  featureconfig):

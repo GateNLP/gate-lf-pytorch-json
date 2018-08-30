@@ -66,7 +66,7 @@
 <span class="sd">        but if there is already an Embedding module for the same emb_id, the weights are shared.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
 
-        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">()</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="n">__init__</span><span class="p">()</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">emb_id</span> <span class="o">=</span> <span class="n">vocab</span><span class="o">.</span><span class="n">emb_id</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">emb_train</span> <span class="o">=</span> <span class="n">vocab</span><span class="o">.</span><span class="n">emb_train</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">emb_dims</span> <span class="o">=</span> <span class="n">vocab</span><span class="o">.</span><span class="n">emb_dims</span>
@@ -105,6 +105,10 @@
 <span class="sd">        model and cache it.&quot;&quot;&quot;</span>
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_on_cuda</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">_on_cuda</span> <span class="o">=</span> <span class="nb">next</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">parameters</span><span class="p">())</span><span class="o">.</span><span class="n">is_cuda</span>
+            <span class="c1"># if we actually are on cuda, make sure all the modules are on cuda as well!</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_on_cuda</span><span class="p">:</span>
+                <span class="k">for</span> <span class="n">module</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">modules</span><span class="p">:</span>
+                    <span class="n">module</span><span class="o">.</span><span class="n">cuda</span><span class="p">()</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_on_cuda</span></div>
 
 <div class="viewcode-block" id="EmbeddingsModule.forward"><a class="viewcode-back" href="../../gatelfpytorchjson.embeddingsmodule.html#gatelfpytorchjson.embeddingsmodule.EmbeddingsModule.forward">[docs]</a>    <span class="k">def</span> <span class="nf">forward</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">batch</span><span class="p">):</span>
@@ -118,10 +122,10 @@
         <span class="c1"># NOTE: we already get a tensor here</span>
         <span class="c1"># TODO: not sure if we can get a float tensor here, if yes, we need to convert to a long tensor</span>
         <span class="c1"># print(&quot;DEBUG: type of batch=&quot;, type(batch), file=sys.stderr)</span>
-        <span class="c1"># batch_var = V(torch.LongTensor(batch), requires_grad=False)</span>
+        <span class="n">batch_var</span> <span class="o">=</span> <span class="n">V</span><span class="p">(</span><span class="n">torch</span><span class="o">.</span><span class="n">LongTensor</span><span class="p">(</span><span class="n">batch</span><span class="p">),</span> <span class="n">requires_grad</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">on_cuda</span><span class="p">():</span>
-            <span class="n">batch</span> <span class="o">=</span> <span class="n">batch</span><span class="o">.</span><span class="n">cuda</span><span class="p">()</span>
-        <span class="n">out</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">modules</span><span class="p">[</span><span class="mi">0</span><span class="p">](</span><span class="n">batch</span><span class="p">)</span>
+            <span class="n">batch_var</span> <span class="o">=</span> <span class="n">batch_var</span><span class="o">.</span><span class="n">cuda</span><span class="p">()</span>
+        <span class="n">out</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">modules</span><span class="p">[</span><span class="mi">0</span><span class="p">](</span><span class="n">batch_var</span><span class="p">)</span>
         <span class="k">return</span> <span class="n">out</span></div></div>
 </pre></div>
 

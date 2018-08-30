@@ -121,11 +121,6 @@ Variables.</p>
 <dd><p>Build the module for sequence tagging.</p>
 </dd></dl>
 
-<dl class="classmethod">
-<dt id="gatelfpytorchjson.modelwrappersimple.ModelWrapperSimple.load">
-<em class="property">classmethod </em><code class="descname">load</code><span class="sig-paren">(</span><em>filenameprefix</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/gatelfpytorchjson/modelwrappersimple.html#ModelWrapperSimple.load"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#gatelfpytorchjson.modelwrappersimple.ModelWrapperSimple.load" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
-
 <dl class="method">
 <dt id="gatelfpytorchjson.modelwrappersimple.ModelWrapperSimple.prepare_data">
 <code class="descname">prepare_data</code><span class="sig-paren">(</span><em>validationsize=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/gatelfpytorchjson/modelwrappersimple.html#ModelWrapperSimple.prepare_data"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#gatelfpytorchjson.modelwrappersimple.ModelWrapperSimple.prepare_data" title="Permalink to this definition">¶</a></dt>
@@ -138,18 +133,28 @@ Variables.</p>
 <dd></dd></dl>
 
 <dl class="method">
+<dt id="gatelfpytorchjson.modelwrappersimple.ModelWrapperSimple.save_model">
+<code class="descname">save_model</code><span class="sig-paren">(</span><em>filenameprefix</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/gatelfpytorchjson/modelwrappersimple.html#ModelWrapperSimple.save_model"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#gatelfpytorchjson.modelwrappersimple.ModelWrapperSimple.save_model" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
 <dt id="gatelfpytorchjson.modelwrappersimple.ModelWrapperSimple.train">
-<code class="descname">train</code><span class="sig-paren">(</span><em>max_epochs=None</em>, <em>batch_size=None</em>, <em>validationsize=None</em>, <em>early_stopping=True</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/gatelfpytorchjson/modelwrappersimple.html#ModelWrapperSimple.train"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#gatelfpytorchjson.modelwrappersimple.ModelWrapperSimple.train" title="Permalink to this definition">¶</a></dt>
+<code class="descname">train</code><span class="sig-paren">(</span><em>max_epochs=20</em>, <em>batch_size=20</em>, <em>early_stopping=True</em>, <em>filenameprefix=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/gatelfpytorchjson/modelwrappersimple.html#ModelWrapperSimple.train"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#gatelfpytorchjson.modelwrappersimple.ModelWrapperSimple.train" title="Permalink to this definition">¶</a></dt>
 <dd><p>Train the model on the dataset. max_epochs is the maximum number of
 epochs to train, but if early_stopping is enabled, it could be fewer.
-If early_stopping is True, a default early stopping strategy is used,
-if set to a function that function (taking a last of recent evaluations
-and returning boolean) is used. The batchsize parameter can be used
-to override the batchsize, similar the validationsize parameter to
-override the validation set size (if float, the portion, if int the
-numer of instances)</p>
+If early_stopping is True, then a default strategy is used where training
+stops after the validation accuracy did not improve for 2 epochs.
+If set to a function that function (which must accept a standard set of parameters
+and return a boolean) is used.
+TODO: check if config should be used by default for the batch_size etc here!</p>
 </dd></dl>
 
+</dd></dl>
+
+<dl class="function">
+<dt id="gatelfpytorchjson.modelwrappersimple.f">
+<code class="descclassname">gatelfpytorchjson.modelwrappersimple.</code><code class="descname">f</code><span class="sig-paren">(</span><em>value</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/gatelfpytorchjson/modelwrappersimple.html#f"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#gatelfpytorchjson.modelwrappersimple.f" title="Permalink to this definition">¶</a></dt>
+<dd><p>Format a float value to have 3 digits after the decimal point</p>
 </dd></dl>
 
 </div>

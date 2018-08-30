@@ -69,36 +69,24 @@
 Targets are assumed to be indices. Both parameters are assumed to be torch Variables.</p>
 </dd></dl>
 
-<dl class="method">
-<dt id="gatelfpytorchjson.modelwrapper.ModelWrapper.apply">
-<code class="descname">apply</code><span class="sig-paren">(</span><em>indeps</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/gatelfpytorchjson/modelwrapper.html#ModelWrapper.apply"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#gatelfpytorchjson.modelwrapper.ModelWrapper.apply" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
-
 <dl class="staticmethod">
 <dt id="gatelfpytorchjson.modelwrapper.ModelWrapper.early_stopping_checker">
-<em class="property">static </em><code class="descname">early_stopping_checker</code><span class="sig-paren">(</span><em>evaluations</em>, <em>k=10</em>, <em>max_variance=0.0001</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/gatelfpytorchjson/modelwrapper.html#ModelWrapper.early_stopping_checker"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#gatelfpytorchjson.modelwrapper.ModelWrapper.early_stopping_checker" title="Permalink to this definition">¶</a></dt>
-<dd><p>Takes an array of floats, with the most recent evaluation being the last in the list
-and returns True if training should be stopped</p>
+<em class="property">static </em><code class="descname">early_stopping_checker</code><span class="sig-paren">(</span><em>losses=None</em>, <em>accs=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/gatelfpytorchjson/modelwrapper.html#ModelWrapper.early_stopping_checker"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#gatelfpytorchjson.modelwrapper.ModelWrapper.early_stopping_checker" title="Permalink to this definition">¶</a></dt>
+<dd><p>Takes two lists of numbers, representing the losses and accuracies of all validation
+steps. If the accs are not null, early stopping is initiated if the accuracy of the last
+2 validations are not better then the one before. If accuracies are not specified
+then this method always returns false, meaning no early stopping. The losses are ignored
+by this method</p>
 </dd></dl>
 
 <dl class="classmethod">
 <dt id="gatelfpytorchjson.modelwrapper.ModelWrapper.load">
-<em class="property">classmethod </em><code class="descname">load</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/gatelfpytorchjson/modelwrapper.html#ModelWrapper.load"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#gatelfpytorchjson.modelwrapper.ModelWrapper.load" title="Permalink to this definition">¶</a></dt>
+<em class="property">classmethod </em><code class="descname">load</code><span class="sig-paren">(</span><em>filenameprefix</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/gatelfpytorchjson/modelwrapper.html#ModelWrapper.load"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#gatelfpytorchjson.modelwrapper.ModelWrapper.load" title="Permalink to this definition">¶</a></dt>
 <dd></dd></dl>
 
 <dl class="staticmethod">
 <dt id="gatelfpytorchjson.modelwrapper.ModelWrapper.makeless">
 <em class="property">static </em><code class="descname">makeless</code><span class="sig-paren">(</span><em>n</em>, <em>func=&lt;built-in function pow&gt;</em>, <em>preshift=-1.0</em>, <em>postshift=1.0</em>, <em>p1=0.5</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/gatelfpytorchjson/modelwrapper.html#ModelWrapper.makeless"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#gatelfpytorchjson.modelwrapper.ModelWrapper.makeless" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
-
-<dl class="method">
-<dt id="gatelfpytorchjson.modelwrapper.ModelWrapper.save">
-<code class="descname">save</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/gatelfpytorchjson/modelwrapper.html#ModelWrapper.save"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#gatelfpytorchjson.modelwrapper.ModelWrapper.save" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
-
-<dl class="method">
-<dt id="gatelfpytorchjson.modelwrapper.ModelWrapper.train">
-<code class="descname">train</code><span class="sig-paren">(</span><em>epochs=None</em>, <em>batchsize=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/gatelfpytorchjson/modelwrapper.html#ModelWrapper.train"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#gatelfpytorchjson.modelwrapper.ModelWrapper.train" title="Permalink to this definition">¶</a></dt>
 <dd></dd></dl>
 
 </dd></dl>

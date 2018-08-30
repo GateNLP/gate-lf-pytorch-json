@@ -6,7 +6,7 @@ import torch
 import torch.nn
 import torch.optim
 from torch.autograd import Variable as V
-from .classificationmodelsimple import ClassificationModelSimple
+from .classificationmodule import ClassificationModule
 from .takefromtuple import TakeFromTuple
 import logging
 import sys
@@ -222,10 +222,10 @@ class ModelWrapperSimple(ModelWrapper):
         out = torch.nn.LogSoftmax(dim=1)
         outputlayer = (out, {"name": "output"})
         # create the module and store it
-        self.module = ClassificationModelSimple(inputlayers,
-                                                hiddenlayers,
-                                                outputlayer,
-                                                self.featureinfo)
+        self.module = ClassificationModule(inputlayers,
+                                           hiddenlayers,
+                                           outputlayer,
+                                           self.featureinfo)
         # Decide on the lossfunction function here for training later!
         self.lossfunction = torch.nn.NLLLoss(ignore_index=-1)
 
@@ -337,10 +337,10 @@ class ModelWrapperSimple(ModelWrapper):
         out = torch.nn.LogSoftmax(dim=2)
         outputlayer = (out, {"name": "output"})
         # create the module and store it
-        self.module = ClassificationModelSimple(inputlayers,
-                                                hiddenlayers,
-                                                outputlayer,
-                                                self.featureinfo)
+        self.module = ClassificationModule(inputlayers,
+                                           hiddenlayers,
+                                           outputlayer,
+                                           self.featureinfo)
         # For sequence tagging we cannot use CrossEntropyLoss
         self.lossfunction = torch.nn.NLLLoss(ignore_index=-1)
 
@@ -645,16 +645,8 @@ class ModelWrapperSimple(ModelWrapper):
             start = timeit.timeit()
             pickle.dump(self, outf)
             end = timeit.timeit()
-            logger.info("Saved wrapper to %s in %s" % (filename, f(abs((end-start))))
+            logger.info("Saved wrapper to %s in %s" % (filename, f(abs((end-start)))))
 
-    @classmethod
-    def load(cls, filenameprefix):
-        with open(filenameprefix+".wrapper.pickle", "rb") as inf:
-            w = pickle.load(inf)
-        print("DEBUG: restored instance keys=", w.__dict__.keys(), file=sys.stderr)
-        assert hasattr(w, 'metafile')
-        w.init_after_load(filenameprefix)
-        return w
 
     def init_after_load(self, filenameprefix):
         self.dataset = Dataset(self.metafile)

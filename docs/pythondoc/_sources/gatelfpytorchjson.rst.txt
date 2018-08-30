@@ -7,14 +7,12 @@ Submodules
 .. toctree::
 
    gatelfpytorchjson.CustomModule
-   gatelfpytorchjson.DebugWrapper
-   gatelfpytorchjson.classificationmodelsimple
+   gatelfpytorchjson.classificationmodule
    gatelfpytorchjson.concat
    gatelfpytorchjson.embeddingsmodule
    gatelfpytorchjson.modelwrapper
    gatelfpytorchjson.modelwrappersimple
    gatelfpytorchjson.ngrammodule
-   gatelfpytorchjson.seqtaggingmodelsimple
    gatelfpytorchjson.takefromtuple
 
 Module contents

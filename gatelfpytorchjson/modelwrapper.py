@@ -3,6 +3,7 @@ import numpy as np
 import torch
 import logging
 import sys
+import pickle
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
@@ -22,23 +23,20 @@ class ModelWrapper(object):
     def __init__(self, dataset, config={}):
         pass
 
-    def train(self, epochs=None, batchsize=None):
-        # train the model
-        pass
-
-    def save(self):
-        # save the wrapper and contained pytorch model
-        pass
-
     @classmethod
-    def load(cls):
+    def load(cls, filenameprefix):
         # return an instance of the wrapper ready for application
         # or maybe continuing training
         pass
 
-    def apply(self, indeps):
-        # return output for the indeps
-        pass
+    @classmethod
+    def load(cls, filenameprefix):
+        with open(filenameprefix+".wrapper.pickle", "rb") as inf:
+            w = pickle.load(inf)
+        print("DEBUG: restored instance keys=", w.__dict__.keys(), file=sys.stderr)
+        assert hasattr(w, 'metafile')
+        w.init_after_load(filenameprefix)
+        return w
 
     # Additional useful methods
     @staticmethod

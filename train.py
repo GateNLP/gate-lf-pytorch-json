@@ -45,6 +45,7 @@ parser.add_argument("--seed", type=int, help="Random seed to make experiments re
 parser.add_argument("--resume", action='store_true', help="Resume training from the specified model")
 parser.add_argument("--notrain", action='store_true', help="Do not actually run training, but show generated model")
 parser.add_argument("--nocreate", action='store_true', help="Do not actually even create module (do nothing)")
+parser.add_argument("--valfile", type=str, default=None, help="Use this file for validation")
 parser.add_argument("metafile", help="Path to metafile (REQUIRED)")
 parser.add_argument("modelname", help="Model path prefix (full path and beginning of model file name) (REQUIRED)")
 
@@ -62,20 +63,20 @@ datadir = str(Path(metafile).parent)
 config = vars(args)
 
 # Set up logging
-logger1 = logging.getLogger("gatelfdata")
-logger1.setLevel(logging.INFO)
+#logger1 = logging.getLogger("gatelfdata")
+#logger1.setLevel(logging.INFO)
 #logger2 = logging.getLogger("gatelfpytorchjson")
 #logger2.setLevel(logging.DEBUG)
 logger3 = logging.getLogger(__name__)
-logger3.setLevel(logging.DEBUG)
+logger3.setLevel(logging.INFO)
 streamhandler = logging.StreamHandler(stream=sys.stderr)
 formatter = logging.Formatter(
                 '%(asctime)s %(name)-12s %(levelname)-8s %(message)s')
 streamhandler.setFormatter(formatter)
 filehandler = logging.FileHandler(os.path.join(datadir, "pytorch-json.train.log"))
 filehandler.setFormatter(formatter)
-logger1.addHandler(filehandler)
-logger1.addHandler(streamhandler)
+#logger1.addHandler(filehandler)
+#logger1.addHandler(streamhandler)
 #logger2.addHandler(filehandler)
 #logger2.addHandler(streamhandler)
 logger3.addHandler(filehandler)
@@ -124,14 +125,17 @@ if config.get("notrain"):
     sys.exit(0)
 
 
-# TODO: this may need to be done differently if we have our own validation file!
 # TODO: the default to use for validation set size should be settable through config in the constructor!
 logger3.debug("Preparing the data...")
-valsize = config.get("valsize")
-if valsize is not None:
-    wrapper.prepare_data(validationsize=valsize)
+# if we have a validation file, use it, ignore the valsize
+if config.get("valfile"):
+    wrapper.prepare_data(file=config["valfile"])
 else:
-    wrapper.prepare_data()
+    valsize = config.get("valsize")
+    if valsize is not None:
+        wrapper.prepare_data(validationsize=valsize)
+    else:
+        wrapper.prepare_data()
 logger3.debug("Data prepared")
 
 wrapper.validate_every_batches = config["valeverybatches"]

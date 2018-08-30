@@ -350,28 +350,33 @@ class ModelWrapperSimple(ModelWrapper):
         """Return the PyTorch module that has been built and is used by this wrapper."""
         return self.module
 
-    def prepare_data(self, validationsize=None):
-        """If validationsize is > 1, it is the absolute size, if < 1 it is the portion e.g. 0.01 to use."""
+    def prepare_data(self, validationsize=None, file=None):
+        """If file is not None, use the content of  the file, ignore the size.
+        If validationsize is > 1, it is the absolute size, if < 1 it is the portion e.g. 0.01 to use."""
         # get the validation set
         if self.is_data_prepared:
             logger.warning("Called prepare_data after it was already called, doing nothing")
             return
-        if validationsize is not None:
-            validationsize = float(validationsize)
-        valsize = None
-        valpart = None
-        # TODO: allow not using a validation set at all!
-        if validationsize is not None:
-            if validationsize > 1 or validationsize == 0:
-                valsize = validationsize
-            else:
-                valpart = validationsize
+        if file is not None:
+            # use the file for validation
+            self.dataset.split(convert=True, validation_file=file)
         else:
-            valpart = 0.1
-        self.dataset.split(convert=True, validation_part=valpart, validation_size=valsize)
+            if validationsize is not None:
+                validationsize = float(validationsize)
+            valsize = None
+            valpart = None
+            # TODO: allow not using a validation set at all!
+            if validationsize is not None:
+                if validationsize > 1 or validationsize == 0:
+                    valsize = validationsize
+                else:
+                    valpart = validationsize
+            else:
+                valpart = 0.1
+            self.dataset.split(convert=True, validation_part=valpart, validation_size=valsize)
         self.valset = self.dataset.validation_set_converted(as_batch=True)
         self.is_data_prepared = True
-        # if we have a validation set, calculate the class distribution here 
+        # TODO if we have a validation set, calculate the class distribution here
         # this should be shown before training starts so the validation accuracy makes more sense
         # this can also be used to use a loss function that re-weights classes in case of class imbalance!
 
@@ -541,10 +546,6 @@ class ModelWrapperSimple(ModelWrapper):
         report_correct = 0
         report_total = 0
         report_loss = 0
-        # for calculating loss and acc over the whole epoch / training set
-        epoch_correct = 0
-        epoch_total = 0
-        epoch_loss = 0
         # best validation accuracy so far
         best_acc = 0
         # initialize the last epoch number for validation to 1 so we do not validate right away
@@ -554,6 +555,10 @@ class ModelWrapperSimple(ModelWrapper):
             batch_nr = 0
             # number of instances already used for training during this epoch
             nr_instances = 0
+            # for calculating loss and acc over the whole epoch / training set
+            epoch_correct = 0
+            epoch_total = 0
+            epoch_loss = 0
             for batch in self.dataset.batches_converted(train=True, batch_size=batch_size):
                 batch_nr += 1
                 totalbatches += 1
@@ -575,7 +580,7 @@ class ModelWrapperSimple(ModelWrapper):
                 # evaluation on the training set only for reporting
                 if (self.report_every_batches and ((totalbatches % self.report_every_batches) == 0)) or \
                         (self.report_every_instances and ((nr_instances % self.report_every_instances) == 0)):
-                    logger.info("Epoch=%s, batch=%s, insts=%s: loss=%s acc=%s / totalloss=%s totalacc=%s" %
+                    logger.info("Epoch=%s, batch=%s, insts=%s: loss=%s acc=%s / epoch_loss=%s epoch_acc=%s" %
                                 (epoch, batch_nr, nr_instances,
                                  f(report_loss), f(report_correct / report_total),
                                  f(epoch_loss), f(epoch_correct / epoch_total)))

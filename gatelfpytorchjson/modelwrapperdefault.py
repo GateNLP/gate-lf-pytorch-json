@@ -440,7 +440,7 @@ class ModelWrapperDefault(ModelWrapper):
             predictions = out_idxs.cpu().numpy()
             print("DEBUG: predictions: ", predictions, file=sys.stderr)
             # create the list of corresponding labels
-            labels = [self.dataset.target.idx2label(x+1) for x in predictions]
+            labels = [self.dataset.target.idx2label(x) for x in predictions]
             print("DEBUG: labels: ", labels, file=sys.stderr)
             print("DEBUG: probs: ", probs, file=sys.stderr)
             return [[labels], [probs]]
@@ -452,9 +452,7 @@ class ModelWrapperDefault(ModelWrapper):
             _, out_idxs = torch.max(preds, dim=1)
             # out_idxs contains the class indices, need to convert back to labels
             getlabel = self.dataset.target.idx2label
-            # NOTE/IMPORTANT: we retrieve the label using index+1 because ALL targets use 0 as the pad index,
-            # even if we do not have sequences (for simplicity)
-            labels = [getlabel(x+1) for x in out_idxs]
+            labels = [getlabel(x) for x in out_idxs]
             probs = [list(x) for x in preds]
             ret = [labels, probs]
         return ret

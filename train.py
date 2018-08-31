@@ -41,7 +41,7 @@ def main(sysargs):
     parser.add_argument("--wrapper", type=str, help="The class/file name to use as the model wrapper")
     parser.add_argument("--learningrate", type=float, help="Override default learning rate for the optimizer")
     parser.add_argument("--cuda", type=utils.str2bool, help="True/False to use CUDA or not, omit to determine automatically")
-    parser.add_argument("--seed", type=int, help="Random seed to make experiments repeatable/explore randomness (default 0=random random seed)")
+    parser.add_argument("--seed", type=int, default=0, help="Random seed to make experiments repeatable/explore randomness (default 0=random random seed)")
     # NOTE: resume currently does not make sure that the original metafile info is used (but maybe new data):
     # This should work once the metadata is actually stored as part of the model!
     parser.add_argument("--resume", action='store_true', help="Resume training from the specified model")

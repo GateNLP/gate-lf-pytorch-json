@@ -147,6 +147,7 @@ wrapper.random_seed = config["seed"]
 
 # TODO: figure out what good defaults are here and what we want to set here rather than
 # in the constructor. Maybe allow to set everything in the constructor for simplicity?
+logger3.info("Model: %r" % wrapper)
 logger3.debug("Start training...")
 wrapper.train(batch_size=config["batchsize"],
               early_stopping=True, max_epochs=config["maxepochs"], filenameprefix=modelname)

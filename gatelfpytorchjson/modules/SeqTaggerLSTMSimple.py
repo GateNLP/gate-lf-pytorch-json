@@ -19,6 +19,9 @@ class SeqTaggerLSTMSimple(CustomModule):
     def get_init_weights(self, batchsize):
         """A method that returns a tensor that can be used to initialize the hidden states of the LSTM.
         """
+        # NOTE: this can be used in forward to use a weight initialization that is different from
+        # the default zero initialization.
+
         # first get the parameters so we can create the same type of vector, from the same device easily
         # the lstm is really wrapped in a a "takefromtuple" layer, so we have to get it out of there
         lstmparms = next(self.layer_lstm.parameters()).data
@@ -28,7 +31,7 @@ class SeqTaggerLSTMSimple(CustomModule):
         c0.copy_(torch.randn(self.layer_lstm.num_layers, batchsize, self.layer_lstm.hidden_size)*0.01)
         return h0, c0
 
-    # NOTE: make sure the dataset is not stored and only used to decide on parameters etc so
+    # TODO: make sure the dataset is not stored and only used to decide on parameters etc so
     # that the dataset data is not getting pickled when the model is saved!
     def __init__(self, dataset, config={}):
         super().__init__(config=config)
@@ -42,22 +45,23 @@ class SeqTaggerLSTMSimple(CustomModule):
         vocab = feature.vocab
         logger.debug("Initializing module SeqTaggerLSTMSimple for classes: %s and vocab %s" %
                      (self.n_classes, vocab, ))
+
         # create the embedding layer from the vocab
-        # self.layer_emb = EmbeddingsModule(vocab)
+        self.layer_emb = EmbeddingsModule(vocab)
+        emb_dims = self.layer_emb.emb_dims
 
-        # for debugging: lets create our own embedding layer
-        emb_dims = 100
-        emb_size = vocab.size()
-        self.layer_emb = torch.nn.Embedding(emb_size, emb_dims, padding_idx=0)
+        # NOTE: instead of using our own EmbeddingsModule, we could also just use
+        # a fixed embedding layer here:
+        # emb_dims = 100
+        # emb_size = vocab.size()
+        # self.layer_emb = torch.nn.Embedding(emb_size, emb_dims, padding_idx=0)
 
-        # for debugging, save the vocab here
-        self.vocab = vocab
-
+        # configure the LSTM; this can be overriden using config parameters
+        # TODO: for now just fixed parms!
         self.lstm_hiddenunits = 200
         self.lstm_nlayers = 1
         self.lstm_is_bidirectional = False
         self.layer_lstm = torch.nn.LSTM(
-            # input_size=self.layer_emb.emb_dims,
             input_size=emb_dims,
             hidden_size=self.lstm_hiddenunits,
             num_layers=self.lstm_nlayers,
@@ -67,10 +71,8 @@ class SeqTaggerLSTMSimple(CustomModule):
         lin_units = self.lstm_hiddenunits*2 if self.lstm_is_bidirectional else self.lstm_hiddenunits
         self.lstm_totalunits = lin_units
         self.layer_lin = torch.nn.Linear(lin_units, self.n_classes)
-        # DEBUG: we replace this with just calling the function in forward
-        # self.layer_out = torch.nn.LogSoftmax(dim=1)  # TODO: which DIM????
+        # Note: the log-softmax function is used directly in forward, we do not define a layer for that
         logger.info("Network created: %s" % (self, ))
-        # print("Random initial weights for embedding index 3:", self.layer_emb(torch.LongTensor([3])), file=sys.stderr)
 
     # this gets a batch if independent variables
     # By default this is in reshaped padded batch format.

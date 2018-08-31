@@ -5,7 +5,7 @@ import sys
 
 class EmbeddingsModule(torch.nn.Module):
 
-    def __init__(self, vocab, cuda=None):
+    def __init__(self, vocab, cuda=None, emb_dims=None):
         """If vocab.train is yes new embeddings will get learned, starting off with random vectors if no pretrained
         embeddings are given, otherwise the pretrained embeddings will be used where possible.
         If train is no, then no training will be done and the pretrained embeddings will be used only.

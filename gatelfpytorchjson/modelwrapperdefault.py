@@ -43,7 +43,7 @@ def f(value):
     return "{0:.3f}".format(value)
 
 
-class ModelWrapperSimple(ModelWrapper):
+class ModelWrapperDefault(ModelWrapper):
 
     def init_from_dataset(self):
         """Set the convenience attributes which we get from the dataset instance"""

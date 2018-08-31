@@ -1,5 +1,17 @@
 from . embeddingsmodule import EmbeddingsModule
 import torch
+import sys
+import logging
+
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.INFO)
+streamhandler = logging.StreamHandler(stream=sys.stderr)
+formatter = logging.Formatter(
+                '%(asctime)s %(name)-12s %(levelname)-8s %(message)s')
+streamhandler.setFormatter(formatter)
+logger.addHandler(streamhandler)
+
+
 
 class NgramModule(torch.nn.Module):
 

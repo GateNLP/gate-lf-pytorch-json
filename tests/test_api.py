@@ -1,4 +1,4 @@
-from gatelfpytorchjson.modelwrappersimple import ModelWrapperSimple
+from gatelfpytorchjson.modelwrapperdefault import ModelWrapperDefault
 from gatelfdata import Dataset
 import unittest
 import os
@@ -46,7 +46,7 @@ class Test1(unittest.TestCase):
     def test1_1(self):
         ds = Dataset(TESTFILE1)
         torch.manual_seed(1)  # make results based on random weights repeatable
-        wrapper = ModelWrapperSimple(ds)
+        wrapper = ModelWrapperDefault(ds)
         print("\nDEBUG: dataset=", wrapper.dataset, file=sys.stderr)
         m = wrapper.get_module()
         wrapper.prepare_data()

@@ -8,10 +8,19 @@ if filepath:
     gatelfdatapath = os.path.join(filepath, gatelfdatapath)
 sys.path.append(gatelfdatapath)
 from gatelfdata import Dataset
-from gatelfpytorchjson import ModelWrapperSimple
+from gatelfpytorchjson import ModelWrapperDefault
 from gatelfpytorchjson import ModelWrapper
 import argparse
 from pathlib import Path
+
+
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.INFO)
+streamhandler = logging.StreamHandler(stream=sys.stderr)
+formatter = logging.Formatter(
+                '%(asctime)s %(name)-12s %(levelname)-8s %(message)s')
+streamhandler.setFormatter(formatter)
+logger.addHandler(streamhandler)
 
 
 # The way how argparse treats boolean arguments sucks, so we need to do this
@@ -22,6 +31,7 @@ def str2bool(val):
         return False
     else:
         raise argparse.ArgumentTypeError("Boolean value expected, not %s" % (val,))
+
 
 parser = argparse.ArgumentParser()
 # Parameter for checkpointing the module
@@ -62,45 +72,34 @@ datadir = str(Path(metafile).parent)
 
 config = vars(args)
 
-# Set up logging
-#logger1 = logging.getLogger("gatelfdata")
-#logger1.setLevel(logging.INFO)
-#logger2 = logging.getLogger("gatelfpytorchjson")
-#logger2.setLevel(logging.DEBUG)
-logger3 = logging.getLogger(__name__)
-logger3.setLevel(logging.INFO)
-streamhandler = logging.StreamHandler(stream=sys.stderr)
-formatter = logging.Formatter(
-                '%(asctime)s %(name)-12s %(levelname)-8s %(message)s')
-streamhandler.setFormatter(formatter)
+# Also log to a file
 filehandler = logging.FileHandler(os.path.join(datadir, "pytorch-json.train.log"))
 filehandler.setFormatter(formatter)
-#logger1.addHandler(filehandler)
-#logger1.addHandler(streamhandler)
-#logger2.addHandler(filehandler)
-#logger2.addHandler(streamhandler)
-logger3.addHandler(filehandler)
-logger3.addHandler(streamhandler)
+
+# in order to override the logging level of any of the modules/classes used,
+# get the logger and do it here
+# logger1 = logging.getLogger("gatelfpytorchjson.modelwrapperdefault")
+# logger1.setLevel(logging.DEBUG)
 
 
 # TODO: use a static Dataset method to parse the remaining args and create an args
 # dict to pass to the constructors of Dataset and the wrapper so each can pick the 
 # parameters relevant to them!
 
-logger3.debug("Running train.py, config is %r" % config)
+logger.debug("Running train.py, config is %r" % config)
 
 if config.get("nocreate"):
-    logger3.info("--nocreate specified, exiting")
+    logger.info("--nocreate specified, exiting")
     sys.exit(0)
 
 
-logger3.debug("Loading metafile...")
+logger.debug("Loading metafile...")
 ds = Dataset(metafile, config=config)
-logger3.debug("Metafile loaded.")
+logger.debug("Metafile loaded.")
 
 # determine and use the correct modelwrapper
 # default is ModelWrapperSimple
-wrapper_class = ModelWrapperSimple
+wrapper_class = ModelWrapperDefault
 if config.get("wrapper"):
     wrapperclassname = config["wrapper"]
     print("!!!!!DEBUG: trying to use wrapper class/file: ", wrapperclassname, file=sys.stderr)
@@ -110,23 +109,23 @@ if config.get("wrapper"):
 
 # TODO: test passing on parameters
 if config.get("resume"):
-    logger3.info("--resume specified, loading and continuing on existing model")
+    logger.info("--resume specified, loading and continuing on existing model")
     wrapper = wrapper_class.load(modelname)
-    logger3.debug("Modelwrapper loaded")
-    logger3.debug("Model is %r" % wrapper)
+    logger.debug("Modelwrapper loaded")
+    logger.debug("Model is %r" % wrapper)
 else:
-    logger3.debug("Creating ModelWrapperSimple")
+    logger.debug("Creating ModelWrapperSimple")
     wrapper = wrapper_class(ds, config=config)
-    logger3.debug("Modelwrapper created")
-    logger3.debug("Model is %r" % wrapper)
+    logger.debug("Modelwrapper created")
+    logger.debug("Model is %r" % wrapper)
 
 if config.get("notrain"):
-    logger3.info("--notrain specified, exiting")
+    logger.info("--notrain specified, exiting")
     sys.exit(0)
 
 
 # TODO: the default to use for validation set size should be settable through config in the constructor!
-logger3.debug("Preparing the data...")
+logger.debug("Preparing the data...")
 # if we have a validation file, use it, ignore the valsize
 if config.get("valfile"):
     wrapper.prepare_data(file=config["valfile"])
@@ -136,7 +135,7 @@ else:
         wrapper.prepare_data(validationsize=valsize)
     else:
         wrapper.prepare_data()
-logger3.debug("Data prepared")
+logger.debug("Data prepared")
 
 wrapper.validate_every_batches = config["valeverybatches"]
 wrapper.validate_every_epochs = config["valeveryepochs"]
@@ -147,17 +146,17 @@ wrapper.random_seed = config["seed"]
 
 # TODO: figure out what good defaults are here and what we want to set here rather than
 # in the constructor. Maybe allow to set everything in the constructor for simplicity?
-logger3.info("Model: %r" % wrapper)
-logger3.debug("Start training...")
+logger.info("Model: %r" % wrapper)
+logger.debug("Start training...")
 wrapper.train(batch_size=config["batchsize"],
               early_stopping=True, max_epochs=config["maxepochs"], filenameprefix=modelname)
-logger3.debug("Training completed")
+logger.debug("Training completed")
 
 # NOTE: this will save the modelwrapper, and will ONLY save the model if we did not already
 # save the best model during training!
-logger3.debug("Saving model...")
+logger.debug("Saving model...")
 wrapper.save(modelname)
-logger3.debug("Model saved")
+logger.debug("Model saved")
 
 # print the model used again so we do not have to scoll back a huge log ...
-logger3.info("Model: %r" % wrapper)
+logger.info("Model: %r" % wrapper)

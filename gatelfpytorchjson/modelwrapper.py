@@ -14,31 +14,30 @@ streamhandler.setFormatter(formatter)
 logger.addHandler(streamhandler)
 
 
-
-# NOTE/TODO: eventually we will refactor some generally useful stuff from the
-# subclasses up to here
 class ModelWrapper(object):
+    """Common base class for all wrappers. Defines instance methods which are the same
+    for all subclasses plus common static utility methods."""
 
-    # every subclass should implement these methods:
+    # This has been defined so that subclasses can call the superclass init function
+    # with parameter config. This does nothing yet, but could do some common initialization
+    # processing in the future.
     def __init__(self, dataset, config={}):
         pass
 
-    @classmethod
-    def load(cls, filenameprefix):
-        # return an instance of the wrapper ready for application
-        # or maybe continuing training
-        pass
 
     @classmethod
     def load(cls, filenameprefix):
+        """Load a saved wrapper instance and return it. The file name is made of the
+        filenameprefix with '.wrapper.pickle' appended."""
         with open(filenameprefix+".wrapper.pickle", "rb") as inf:
             w = pickle.load(inf)
-        print("DEBUG: restored instance keys=", w.__dict__.keys(), file=sys.stderr)
+        logger.debug("Restored instance keys=%s" % (w.__dict__.keys(),))
         assert hasattr(w, 'metafile')
         w.init_after_load(filenameprefix)
         return w
 
-    # Additional useful methods
+    # Useful utility methods below this line
+
     @staticmethod
     def early_stopping_checker(losses=None, accs=None):
         """Takes two lists of numbers, representing the losses and accuracies of all validation
@@ -55,24 +54,23 @@ class ModelWrapper(object):
 
     @staticmethod
     def makeless(n, func=math.pow, preshift=-1.0, postshift=1.0, p1=0.5):
+        """Function to return logarithmic or inverse polynomial values for such tasks
+        as calculating number of dimensions from vocabulary size."""
         val = int(func((n+preshift), p1)+postshift)
         return val
 
     @staticmethod
     def accuracy(batch_predictions, batch_targets, pad_index=-1):
-        """Calculate accuracy for the predictions (one-hot vectors) based on the true class indices in batch_targets.
-        Targets are assumed to be indices. Both parameters are assumed to be torch Variables.
+        """Calculate the accuracy from a tensor with predictions, which contains scores for each
+        class in the last dimension (higher scores are better) and a tensor with target indices.
+        Tensor elements where the target has the padding index are ignored.
+        If the tensors represent sequences the shape of the predictions is batchsize, maxseqlen, nclasses
+        and of the targets is batchsize, maxseqlen, otherwise the predictions have shape
+        batchsize, nclasses, targets have shape batchsize
         """
 
-        # NOTE: for classification the shapes should be:
-        # * batch_predictions: batch_size, n_classes
-        # * batch_targets: batch_size
-        # For sequence tagging the shapes should be:
-        # * batch_predictions: batch_size, max_seq_len, n_classes
-        # * batch_targets: batch_size, max_seq_len
-
-        n_pred_dims = len(batch_predictions.size())
-        pred_size = batch_predictions.size()[-1]  # the size of the predictions dimension
+        # n_pred_dims = len(batch_predictions.size())  # this should be 3 for sequences, otherwise 2
+        pred_size = batch_predictions.size()[-1]  # the size of the predictions dimension = nclasses
 
         # first reshape so that we have the prediction scores in the last/second dimension
         # then find the argmax index along the last/second dimension (dimension=1)

@@ -12,7 +12,7 @@ except ImportError:
     # than insist that setuptools must be installed
     pass
 
-from .modelwrappersimple import ModelWrapperSimple
+from .modelwrapperdefault import ModelWrapperDefault
 from .modelwrapper import ModelWrapper
 from .embeddingsmodule import EmbeddingsModule
 from .takefromtuple import TakeFromTuple

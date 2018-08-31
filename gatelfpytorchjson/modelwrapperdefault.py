@@ -70,7 +70,7 @@ class ModelWrapperDefault(ModelWrapper):
         """
         super().__init__(dataset, config=config)
         self.config = config
-        print("!!!!! DEBUG: config in modelwrappersimple=",config,file=sys.stderr)
+        logger.debug("Init with config=%s" % (config,))
         if "cuda" in config and config["cuda"] is not None:
             cuda = config["cuda"]
         self.cuda = cuda
@@ -89,7 +89,7 @@ class ModelWrapperDefault(ModelWrapper):
         else:
             enable_cuda = self.cuda
         self._enable_cuda = enable_cuda  # this tells us if we should actually set cuda or not
-        print("!!!!DEBUG: cuda=",cuda,"_enable_cuda=",self._enable_cuda,file=sys.stderr)
+        logger.debug("Init cuda=%s enable_cuda=%s" % (cuda, self._enable_cuda,))
         self.dataset = dataset
         self.init_from_dataset()
         # various configuration settings which can be set before passing on control to the
@@ -110,10 +110,11 @@ class ModelWrapperDefault(ModelWrapper):
         # IMPORTANT! the optimizer needs to get created after the module has been moved to a GPU
         # using cuda()!!!
         if "module" in config and config["module"] is not None:
-            print("!!!!!!!!!! DEBUG: importable:", [x[1] for x in pkgutil.iter_modules(path=".gatelfpytorchjson")], file=sys.stderr)
+            logger.debug("Init, modules importable: %s" %
+                         ([x[1] for x in pkgutil.iter_modules(path=".gatelfpytorchjson")],))
             # TODO: figure out how to do this right!!
             ptclassname = config["module"]
-            print("!!!!!DEBUG: trying to use class/file: ", ptclassname, file=sys.stderr)
+            logger.debug("Init import, trying to use class/file: %s" % (ptclassname,))
             import importlib
 
             # NOTE:

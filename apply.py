@@ -44,14 +44,21 @@ def main(sysargs):
     # ??? Should we actually ever use the GPU for application?
     wrapper.set_cuda(args.cuda)
 
+    # get the target vocab
+    vocab_target = wrapper.dataset.vocabs.vocabs.get_vocab("<<TARGET>>")
+    labels = vocab_target.itos
+
     with sys.stdin as infile:
         for line in infile:
-            print("PYTHON APPLICATION, input=", line, file=sys.stderr)
+            logger.debug("Application input=%s" % (line,))
             if line == "STOP":
                 break
-            # TODO: currently the LF sends individual instances here, we may want to change
-            # However we need to always apply to a set of instances, so wrap into another array
+            # NOTE: currently the LF always sends instances individually.
+            # This may change in the future, but for now this simplifies dealing with the
+            # special case where the LF can use the assigned class of the previous instance as a feature.
+            # However we need to always apply to a set of instances, so wrap into another array here
             instancedata = json.loads(line)
+
             # TODO: better error handling: put the apply call into a try block and catch any error, also
             # check returned data. If there is a problem send back in the map we return!!
             # NOTE: the  LF expects to get a map with the following elements:
@@ -60,18 +67,24 @@ def main(sysargs):
             # confidence: some confidence/probability score for the output, may be null: this gets extracted
             # from our returned data here
             # confidences: a map with confidences for all labels, may be null: this is NOT SUPPORTED in the LF yet!
-            preds=wrapper.apply([instancedata])
-            print("PYTHON APPLICATION, preds=", preds, file=sys.stderr)
-            # preds are a list of one or two lists, where the first list contains all the labels and the second
-            # list contains all the confidences in the order used by the model.
-            # For now we just extract the label or for a sequence, the list of labels,
-            # knowing that for now we always process only one instance/sequence!
-            ret = {"status":"ok", "output":preds[0][0]}
-            print("PYTHON APPLICATION, return=", ret, file=sys.stderr)
+            try:
+                preds = wrapper.apply([instancedata])
+                # preds are a list of one or two lists, where the first list contains all the labels and the second
+                # list contains all the confidences in the order used by the model.
+                # For now we just extract the label or for a sequence, the list of labels,
+                # knowing that for now we always process only one instance/sequence!
+                output = preds[0][0]  # this must always exist
+                if len(preds[0]) > 1:
+                    scores = preds[0][1]
+                else:
+                    scores = [0.0] * len(labels)  # return a fake list of all zeroes
+                ret = {"status": "ok", "output": output, "labels": labels, "scores": scores}
+            except Exception as e:
+                ret = {"status": "error", "error": str(e), "output":None}
+            logger.debug("Application result=%s" % (ret,))
             print(json.dumps(ret))
-            # TODO: IMPORTANT!!! What the model returns is currently different from what the LF code expects!!!
             sys.stdout.flush()
-    print("PYTHON APPLICATION SCRIPT: finishing",file=sys.stderr)
+    logger.debug("Application program terminating")
 
 
 if __name__ == '__main__':

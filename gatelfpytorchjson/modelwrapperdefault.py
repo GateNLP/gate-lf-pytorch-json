@@ -418,7 +418,7 @@ class ModelWrapperDefault(ModelWrapper):
         batchsize = len(instancelist)
         if not converted:
             # TODO: check if and when to do instance normalization here!
-            instancelist = [ self.dataset.convert_indep(x) for x in instancelist]
+            instancelist = [self.dataset.convert_indep(x) for x in instancelist]
             print("\nDEBUG: instances after conversion: ", instancelist, file=sys.stderr)
         if not reshaped:
             instancelist = self.dataset.reshape_batch(instancelist, indep_only=True)
@@ -438,11 +438,11 @@ class ModelWrapperDefault(ModelWrapper):
             probs = [list(x) for x in reshaped]
             _, out_idxs = torch.max(reshaped, 1)
             predictions = out_idxs.cpu().numpy()
-            print("DEBUG: predictions: ", predictions, file=sys.stderr)
+            logger.debug("apply, predictions=%s" % (predictions,))
             # create the list of corresponding labels
             labels = [self.dataset.target.idx2label(x) for x in predictions]
-            print("DEBUG: labels: ", labels, file=sys.stderr)
-            print("DEBUG: probs: ", probs, file=sys.stderr)
+            logger.debug("apply, labels=%s" % (labels,))
+            logger.debug("apply, probs=%s" % (probs,))
             return [[labels], [probs]]
         else:
             # preds should be a 2d tensor of size batchsize x numberClasses

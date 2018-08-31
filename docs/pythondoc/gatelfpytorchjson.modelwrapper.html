@@ -27,7 +27,7 @@
     <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.0/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
     <link rel="index" title="Index" href="genindex.html" />
     <link rel="search" title="Search" href="search.html" />
-    <link rel="next" title="gatelfpytorchjson.modelwrappersimple module" href="gatelfpytorchjson.modelwrappersimple.html" />
+    <link rel="next" title="gatelfpytorchjson.modelwrapperdefault module" href="gatelfpytorchjson.modelwrapperdefault.html" />
     <link rel="prev" title="gatelfpytorchjson.embeddingsmodule module" href="gatelfpytorchjson.embeddingsmodule.html" /> 
   </head>
   <body>
@@ -41,7 +41,7 @@
           <a href="py-modindex.html" title="Python Module Index"
              >modules</a> |</li>
         <li class="right" >
-          <a href="gatelfpytorchjson.modelwrappersimple.html" title="gatelfpytorchjson.modelwrappersimple module"
+          <a href="gatelfpytorchjson.modelwrapperdefault.html" title="gatelfpytorchjson.modelwrapperdefault module"
              accesskey="N">next</a> |</li>
         <li class="right" >
           <a href="gatelfpytorchjson.embeddingsmodule.html" title="gatelfpytorchjson.embeddingsmodule module"
@@ -62,11 +62,17 @@
 <dt id="gatelfpytorchjson.modelwrapper.ModelWrapper">
 <em class="property">class </em><code class="descclassname">gatelfpytorchjson.modelwrapper.</code><code class="descname">ModelWrapper</code><span class="sig-paren">(</span><em>dataset</em>, <em>config={}</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/gatelfpytorchjson/modelwrapper.html#ModelWrapper"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#gatelfpytorchjson.modelwrapper.ModelWrapper" title="Permalink to this definition">¶</a></dt>
 <dd><p>Bases: <code class="xref py py-class docutils literal"><span class="pre">object</span></code></p>
+<p>Common base class for all wrappers. Defines instance methods which are the same
+for all subclasses plus common static utility methods.</p>
 <dl class="staticmethod">
 <dt id="gatelfpytorchjson.modelwrapper.ModelWrapper.accuracy">
 <em class="property">static </em><code class="descname">accuracy</code><span class="sig-paren">(</span><em>batch_predictions</em>, <em>batch_targets</em>, <em>pad_index=-1</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/gatelfpytorchjson/modelwrapper.html#ModelWrapper.accuracy"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#gatelfpytorchjson.modelwrapper.ModelWrapper.accuracy" title="Permalink to this definition">¶</a></dt>
-<dd><p>Calculate accuracy for the predictions (one-hot vectors) based on the true class indices in batch_targets.
-Targets are assumed to be indices. Both parameters are assumed to be torch Variables.</p>
+<dd><p>Calculate the accuracy from a tensor with predictions, which contains scores for each
+class in the last dimension (higher scores are better) and a tensor with target indices.
+Tensor elements where the target has the padding index are ignored.
+If the tensors represent sequences the shape of the predictions is batchsize, maxseqlen, nclasses
+and of the targets is batchsize, maxseqlen, otherwise the predictions have shape
+batchsize, nclasses, targets have shape batchsize</p>
 </dd></dl>
 
 <dl class="staticmethod">
@@ -82,12 +88,16 @@ by this method</p>
 <dl class="classmethod">
 <dt id="gatelfpytorchjson.modelwrapper.ModelWrapper.load">
 <em class="property">classmethod </em><code class="descname">load</code><span class="sig-paren">(</span><em>filenameprefix</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/gatelfpytorchjson/modelwrapper.html#ModelWrapper.load"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#gatelfpytorchjson.modelwrapper.ModelWrapper.load" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
+<dd><p>Load a saved wrapper instance and return it. The file name is made of the
+filenameprefix with ‘.wrapper.pickle’ appended.</p>
+</dd></dl>
 
 <dl class="staticmethod">
 <dt id="gatelfpytorchjson.modelwrapper.ModelWrapper.makeless">
 <em class="property">static </em><code class="descname">makeless</code><span class="sig-paren">(</span><em>n</em>, <em>func=&lt;built-in function pow&gt;</em>, <em>preshift=-1.0</em>, <em>postshift=1.0</em>, <em>p1=0.5</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/gatelfpytorchjson/modelwrapper.html#ModelWrapper.makeless"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#gatelfpytorchjson.modelwrapper.ModelWrapper.makeless" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
+<dd><p>Function to return logarithmic or inverse polynomial values for such tasks
+as calculating number of dimensions from vocabulary size.</p>
+</dd></dl>
 
 </dd></dl>
 
@@ -103,8 +113,8 @@ by this method</p>
   <p class="topless"><a href="gatelfpytorchjson.embeddingsmodule.html"
                         title="previous chapter">gatelfpytorchjson.embeddingsmodule module</a></p>
   <h4>Next topic</h4>
-  <p class="topless"><a href="gatelfpytorchjson.modelwrappersimple.html"
-                        title="next chapter">gatelfpytorchjson.modelwrappersimple module</a></p>
+  <p class="topless"><a href="gatelfpytorchjson.modelwrapperdefault.html"
+                        title="next chapter">gatelfpytorchjson.modelwrapperdefault module</a></p>
   <div role="note" aria-label="source link">
     <h3>This Page</h3>
     <ul class="this-page-menu">
@@ -136,7 +146,7 @@ by this method</p>
           <a href="py-modindex.html" title="Python Module Index"
              >modules</a> |</li>
         <li class="right" >
-          <a href="gatelfpytorchjson.modelwrappersimple.html" title="gatelfpytorchjson.modelwrappersimple module"
+          <a href="gatelfpytorchjson.modelwrapperdefault.html" title="gatelfpytorchjson.modelwrapperdefault module"
              >next</a> |</li>
         <li class="right" >
           <a href="gatelfpytorchjson.embeddingsmodule.html" title="gatelfpytorchjson.embeddingsmodule module"

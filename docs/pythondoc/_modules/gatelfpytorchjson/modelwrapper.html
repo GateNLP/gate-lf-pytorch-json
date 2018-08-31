@@ -65,31 +65,30 @@
 <span class="n">logger</span><span class="o">.</span><span class="n">addHandler</span><span class="p">(</span><span class="n">streamhandler</span><span class="p">)</span>
 
 
-
-<span class="c1"># NOTE/TODO: eventually we will refactor some generally useful stuff from the</span>
-<span class="c1"># subclasses up to here</span>
 <div class="viewcode-block" id="ModelWrapper"><a class="viewcode-back" href="../../gatelfpytorchjson.modelwrapper.html#gatelfpytorchjson.modelwrapper.ModelWrapper">[docs]</a><span class="k">class</span> <span class="nc">ModelWrapper</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Common base class for all wrappers. Defines instance methods which are the same</span>
+<span class="sd">    for all subclasses plus common static utility methods.&quot;&quot;&quot;</span>
 
-    <span class="c1"># every subclass should implement these methods:</span>
+    <span class="c1"># This has been defined so that subclasses can call the superclass init function</span>
+    <span class="c1"># with parameter config. This does nothing yet, but could do some common initialization</span>
+    <span class="c1"># processing in the future.</span>
     <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">dataset</span><span class="p">,</span> <span class="n">config</span><span class="o">=</span><span class="p">{}):</span>
         <span class="k">pass</span>
 
-    <span class="nd">@classmethod</span>
-    <span class="k">def</span> <span class="nf">load</span><span class="p">(</span><span class="n">cls</span><span class="p">,</span> <span class="n">filenameprefix</span><span class="p">):</span>
-        <span class="c1"># return an instance of the wrapper ready for application</span>
-        <span class="c1"># or maybe continuing training</span>
-        <span class="k">pass</span>
 
 <div class="viewcode-block" id="ModelWrapper.load"><a class="viewcode-back" href="../../gatelfpytorchjson.modelwrapper.html#gatelfpytorchjson.modelwrapper.ModelWrapper.load">[docs]</a>    <span class="nd">@classmethod</span>
     <span class="k">def</span> <span class="nf">load</span><span class="p">(</span><span class="n">cls</span><span class="p">,</span> <span class="n">filenameprefix</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Load a saved wrapper instance and return it. The file name is made of the</span>
+<span class="sd">        filenameprefix with &#39;.wrapper.pickle&#39; appended.&quot;&quot;&quot;</span>
         <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">filenameprefix</span><span class="o">+</span><span class="s2">&quot;.wrapper.pickle&quot;</span><span class="p">,</span> <span class="s2">&quot;rb&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">inf</span><span class="p">:</span>
             <span class="n">w</span> <span class="o">=</span> <span class="n">pickle</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">inf</span><span class="p">)</span>
-        <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;DEBUG: restored instance keys=&quot;</span><span class="p">,</span> <span class="n">w</span><span class="o">.</span><span class="n">__dict__</span><span class="o">.</span><span class="n">keys</span><span class="p">(),</span> <span class="n">file</span><span class="o">=</span><span class="n">sys</span><span class="o">.</span><span class="n">stderr</span><span class="p">)</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s2">&quot;Restored instance keys=</span><span class="si">%s</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">w</span><span class="o">.</span><span class="n">__dict__</span><span class="o">.</span><span class="n">keys</span><span class="p">(),))</span>
         <span class="k">assert</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">w</span><span class="p">,</span> <span class="s1">&#39;metafile&#39;</span><span class="p">)</span>
         <span class="n">w</span><span class="o">.</span><span class="n">init_after_load</span><span class="p">(</span><span class="n">filenameprefix</span><span class="p">)</span>
         <span class="k">return</span> <span class="n">w</span></div>
 
-    <span class="c1"># Additional useful methods</span>
+    <span class="c1"># Useful utility methods below this line</span>
+
 <div class="viewcode-block" id="ModelWrapper.early_stopping_checker"><a class="viewcode-back" href="../../gatelfpytorchjson.modelwrapper.html#gatelfpytorchjson.modelwrapper.ModelWrapper.early_stopping_checker">[docs]</a>    <span class="nd">@staticmethod</span>
     <span class="k">def</span> <span class="nf">early_stopping_checker</span><span class="p">(</span><span class="n">losses</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">accs</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;Takes two lists of numbers, representing the losses and accuracies of all validation</span>
@@ -106,24 +105,23 @@
 
 <div class="viewcode-block" id="ModelWrapper.makeless"><a class="viewcode-back" href="../../gatelfpytorchjson.modelwrapper.html#gatelfpytorchjson.modelwrapper.ModelWrapper.makeless">[docs]</a>    <span class="nd">@staticmethod</span>
     <span class="k">def</span> <span class="nf">makeless</span><span class="p">(</span><span class="n">n</span><span class="p">,</span> <span class="n">func</span><span class="o">=</span><span class="n">math</span><span class="o">.</span><span class="n">pow</span><span class="p">,</span> <span class="n">preshift</span><span class="o">=-</span><span class="mf">1.0</span><span class="p">,</span> <span class="n">postshift</span><span class="o">=</span><span class="mf">1.0</span><span class="p">,</span> <span class="n">p1</span><span class="o">=</span><span class="mf">0.5</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Function to return logarithmic or inverse polynomial values for such tasks</span>
+<span class="sd">        as calculating number of dimensions from vocabulary size.&quot;&quot;&quot;</span>
         <span class="n">val</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">func</span><span class="p">((</span><span class="n">n</span><span class="o">+</span><span class="n">preshift</span><span class="p">),</span> <span class="n">p1</span><span class="p">)</span><span class="o">+</span><span class="n">postshift</span><span class="p">)</span>
         <span class="k">return</span> <span class="n">val</span></div>
 
 <div class="viewcode-block" id="ModelWrapper.accuracy"><a class="viewcode-back" href="../../gatelfpytorchjson.modelwrapper.html#gatelfpytorchjson.modelwrapper.ModelWrapper.accuracy">[docs]</a>    <span class="nd">@staticmethod</span>
     <span class="k">def</span> <span class="nf">accuracy</span><span class="p">(</span><span class="n">batch_predictions</span><span class="p">,</span> <span class="n">batch_targets</span><span class="p">,</span> <span class="n">pad_index</span><span class="o">=-</span><span class="mi">1</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot;Calculate accuracy for the predictions (one-hot vectors) based on the true class indices in batch_targets.</span>
-<span class="sd">        Targets are assumed to be indices. Both parameters are assumed to be torch Variables.</span>
+        <span class="sd">&quot;&quot;&quot;Calculate the accuracy from a tensor with predictions, which contains scores for each</span>
+<span class="sd">        class in the last dimension (higher scores are better) and a tensor with target indices.</span>
+<span class="sd">        Tensor elements where the target has the padding index are ignored.</span>
+<span class="sd">        If the tensors represent sequences the shape of the predictions is batchsize, maxseqlen, nclasses</span>
+<span class="sd">        and of the targets is batchsize, maxseqlen, otherwise the predictions have shape</span>
+<span class="sd">        batchsize, nclasses, targets have shape batchsize</span>
 <span class="sd">        &quot;&quot;&quot;</span>
 
-        <span class="c1"># NOTE: for classification the shapes should be:</span>
-        <span class="c1"># * batch_predictions: batch_size, n_classes</span>
-        <span class="c1"># * batch_targets: batch_size</span>
-        <span class="c1"># For sequence tagging the shapes should be:</span>
-        <span class="c1"># * batch_predictions: batch_size, max_seq_len, n_classes</span>
-        <span class="c1"># * batch_targets: batch_size, max_seq_len</span>
-
-        <span class="n">n_pred_dims</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">batch_predictions</span><span class="o">.</span><span class="n">size</span><span class="p">())</span>
-        <span class="n">pred_size</span> <span class="o">=</span> <span class="n">batch_predictions</span><span class="o">.</span><span class="n">size</span><span class="p">()[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>  <span class="c1"># the size of the predictions dimension</span>
+        <span class="c1"># n_pred_dims = len(batch_predictions.size())  # this should be 3 for sequences, otherwise 2</span>
+        <span class="n">pred_size</span> <span class="o">=</span> <span class="n">batch_predictions</span><span class="o">.</span><span class="n">size</span><span class="p">()[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>  <span class="c1"># the size of the predictions dimension = nclasses</span>
 
         <span class="c1"># first reshape so that we have the prediction scores in the last/second dimension</span>
         <span class="c1"># then find the argmax index along the last/second dimension (dimension=1)</span>

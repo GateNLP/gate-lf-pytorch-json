@@ -51,6 +51,18 @@
   <h1>Source code for gatelfpytorchjson.ngrammodule</h1><div class="highlight"><pre>
 <span></span><span class="kn">from</span> <span class="nn">.</span> <span class="n">embeddingsmodule</span> <span class="kn">import</span> <span class="nn">EmbeddingsModule</span>
 <span class="kn">import</span> <span class="nn">torch</span>
+<span class="kn">import</span> <span class="nn">sys</span>
+<span class="kn">import</span> <span class="nn">logging</span>
+
+<span class="n">logger</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">getLogger</span><span class="p">(</span><span class="n">__name__</span><span class="p">)</span>
+<span class="n">logger</span><span class="o">.</span><span class="n">setLevel</span><span class="p">(</span><span class="n">logging</span><span class="o">.</span><span class="n">INFO</span><span class="p">)</span>
+<span class="n">streamhandler</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">StreamHandler</span><span class="p">(</span><span class="n">stream</span><span class="o">=</span><span class="n">sys</span><span class="o">.</span><span class="n">stderr</span><span class="p">)</span>
+<span class="n">formatter</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">Formatter</span><span class="p">(</span>
+                <span class="s1">&#39;</span><span class="si">%(asctime)s</span><span class="s1"> </span><span class="si">%(name)-12s</span><span class="s1"> </span><span class="si">%(levelname)-8s</span><span class="s1"> </span><span class="si">%(message)s</span><span class="s1">&#39;</span><span class="p">)</span>
+<span class="n">streamhandler</span><span class="o">.</span><span class="n">setFormatter</span><span class="p">(</span><span class="n">formatter</span><span class="p">)</span>
+<span class="n">logger</span><span class="o">.</span><span class="n">addHandler</span><span class="p">(</span><span class="n">streamhandler</span><span class="p">)</span>
+
+
 
 <div class="viewcode-block" id="NgramModule"><a class="viewcode-back" href="../../gatelfpytorchjson.ngrammodule.html#gatelfpytorchjson.ngrammodule.NgramModule">[docs]</a><span class="k">class</span> <span class="nc">NgramModule</span><span class="p">(</span><span class="n">torch</span><span class="o">.</span><span class="n">nn</span><span class="o">.</span><span class="n">Module</span><span class="p">):</span>
 

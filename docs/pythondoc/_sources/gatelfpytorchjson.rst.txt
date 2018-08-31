@@ -11,7 +11,7 @@ Submodules
    gatelfpytorchjson.concat
    gatelfpytorchjson.embeddingsmodule
    gatelfpytorchjson.modelwrapper
-   gatelfpytorchjson.modelwrappersimple
+   gatelfpytorchjson.modelwrapperdefault
    gatelfpytorchjson.ngrammodule
    gatelfpytorchjson.takefromtuple
 

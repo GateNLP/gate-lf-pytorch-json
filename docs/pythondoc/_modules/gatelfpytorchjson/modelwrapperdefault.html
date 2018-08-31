@@ -1,0 +1,794 @@
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>gatelfpytorchjson.modelwrapperdefault &#8212; GATE LF Pytorch Wrapper (gatelfpytorch)  documentation</title>
+    
+    <link rel="stylesheet" href="../../_static/classic.css" type="text/css" />
+    <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../',
+        VERSION:     '',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true,
+        SOURCELINK_SUFFIX: '.txt'
+      };
+    </script>
+    <script type="text/javascript" src="../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../_static/doctools.js"></script>
+    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.0/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" /> 
+  </head>
+  <body>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../../index.html">GATE LF Pytorch Wrapper (gatelfpytorch)  documentation</a> &#187;</li>
+          <li class="nav-item nav-item-1"><a href="../index.html" accesskey="U">Module code</a> &#187;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <h1>Source code for gatelfpytorchjson.modelwrapperdefault</h1><div class="highlight"><pre>
+<span></span><span class="kn">from</span> <span class="nn">.</span> <span class="n">modelwrapper</span> <span class="kn">import</span> <span class="nn">ModelWrapper</span>
+<span class="kn">from</span> <span class="nn">.</span> <span class="n">embeddingsmodule</span> <span class="kn">import</span> <span class="nn">EmbeddingsModule</span>
+<span class="kn">from</span> <span class="nn">.</span> <span class="n">ngrammodule</span> <span class="kn">import</span> <span class="nn">NgramModule</span>
+<span class="kn">import</span> <span class="nn">os</span>
+<span class="kn">import</span> <span class="nn">torch</span>
+<span class="kn">import</span> <span class="nn">torch.nn</span>
+<span class="kn">import</span> <span class="nn">torch.optim</span>
+<span class="kn">from</span> <span class="nn">torch.autograd</span> <span class="k">import</span> <span class="n">Variable</span> <span class="k">as</span> <span class="n">V</span>
+<span class="kn">from</span> <span class="nn">.classificationmodule</span> <span class="k">import</span> <span class="n">ClassificationModule</span>
+<span class="kn">from</span> <span class="nn">.takefromtuple</span> <span class="k">import</span> <span class="n">TakeFromTuple</span>
+<span class="kn">import</span> <span class="nn">logging</span>
+<span class="kn">import</span> <span class="nn">sys</span>
+<span class="kn">import</span> <span class="nn">statistics</span>
+<span class="kn">import</span> <span class="nn">pickle</span>
+<span class="kn">from</span> <span class="nn">gatelfdata</span> <span class="k">import</span> <span class="n">Dataset</span>
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+<span class="kn">import</span> <span class="nn">pkgutil</span>
+<span class="kn">import</span> <span class="nn">timeit</span>
+<span class="kn">import</span> <span class="nn">logging</span>
+<span class="kn">import</span> <span class="nn">signal</span>
+
+
+<span class="c1"># Basic usage:</span>
+<span class="c1"># ds = Dataset(metafile)</span>
+<span class="c1"># wrapper = ModelWrapperSimple(ds) # or some other subclass</span>
+<span class="c1"># wrapper.train()</span>
+<span class="c1"># # get some data for application some where</span>
+<span class="c1"># instances = get_them()</span>
+<span class="c1"># preditions = wrapper.apply(instances)</span>
+<span class="c1"># NOTE: maybe use the same naming conventions as scikit learn here!!</span>
+
+<span class="n">logger</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">getLogger</span><span class="p">(</span><span class="n">__name__</span><span class="p">)</span>
+<span class="n">logger</span><span class="o">.</span><span class="n">setLevel</span><span class="p">(</span><span class="n">logging</span><span class="o">.</span><span class="n">INFO</span><span class="p">)</span>
+<span class="n">streamhandler</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">StreamHandler</span><span class="p">(</span><span class="n">stream</span><span class="o">=</span><span class="n">sys</span><span class="o">.</span><span class="n">stderr</span><span class="p">)</span>
+<span class="n">formatter</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">Formatter</span><span class="p">(</span>
+                <span class="s1">&#39;</span><span class="si">%(asctime)s</span><span class="s1"> </span><span class="si">%(name)-12s</span><span class="s1"> </span><span class="si">%(levelname)-8s</span><span class="s1"> </span><span class="si">%(message)s</span><span class="s1">&#39;</span><span class="p">)</span>
+<span class="n">streamhandler</span><span class="o">.</span><span class="n">setFormatter</span><span class="p">(</span><span class="n">formatter</span><span class="p">)</span>
+<span class="n">logger</span><span class="o">.</span><span class="n">addHandler</span><span class="p">(</span><span class="n">streamhandler</span><span class="p">)</span>
+
+
+<div class="viewcode-block" id="f"><a class="viewcode-back" href="../../gatelfpytorchjson.modelwrapperdefault.html#gatelfpytorchjson.modelwrapperdefault.f">[docs]</a><span class="k">def</span> <span class="nf">f</span><span class="p">(</span><span class="n">value</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Format a float value to have 3 digits after the decimal point&quot;&quot;&quot;</span>
+    <span class="k">return</span> <span class="s2">&quot;</span><span class="si">{0:.3f}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">value</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="ModelWrapperDefault"><a class="viewcode-back" href="../../gatelfpytorchjson.modelwrapperdefault.html#gatelfpytorchjson.modelwrapperdefault.ModelWrapperDefault">[docs]</a><span class="k">class</span> <span class="nc">ModelWrapperDefault</span><span class="p">(</span><span class="n">ModelWrapper</span><span class="p">):</span>
+
+<div class="viewcode-block" id="ModelWrapperDefault.init_from_dataset"><a class="viewcode-back" href="../../gatelfpytorchjson.modelwrapperdefault.html#gatelfpytorchjson.modelwrapperdefault.ModelWrapperDefault.init_from_dataset">[docs]</a>    <span class="k">def</span> <span class="nf">init_from_dataset</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Set the convenience attributes which we get from the dataset instance&quot;&quot;&quot;</span>
+        <span class="n">dataset</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">dataset</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">metafile</span> <span class="o">=</span> <span class="n">dataset</span><span class="o">.</span><span class="n">metafile</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">float_idxs</span> <span class="o">=</span> <span class="n">dataset</span><span class="o">.</span><span class="n">get_float_feature_idxs</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">index_idxs</span> <span class="o">=</span> <span class="n">dataset</span><span class="o">.</span><span class="n">get_index_feature_idxs</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">indexlist_idxs</span> <span class="o">=</span> <span class="n">dataset</span><span class="o">.</span><span class="n">get_indexlist_feature_idxs</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">float_feats</span> <span class="o">=</span> <span class="n">dataset</span><span class="o">.</span><span class="n">get_float_features</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">index_feats</span> <span class="o">=</span> <span class="n">dataset</span><span class="o">.</span><span class="n">get_index_features</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">indexlist_feats</span> <span class="o">=</span> <span class="n">dataset</span><span class="o">.</span><span class="n">get_indexlist_features</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">featureinfo</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;num_idxs&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">float_idxs</span><span class="p">,</span>
+                            <span class="s2">&quot;nom_idxs&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">index_idxs</span><span class="p">,</span>
+                            <span class="s2">&quot;ngr_idxs&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">indexlist_idxs</span><span class="p">}</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">info</span> <span class="o">=</span> <span class="n">dataset</span><span class="o">.</span><span class="n">get_info</span><span class="p">()</span></div>
+
+    <span class="c1"># This requires an initialized dataset instance</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">dataset</span><span class="p">,</span> <span class="n">config</span><span class="o">=</span><span class="p">{},</span> <span class="n">cuda</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;This requires a gatelfdata Dataset instance and can optionally take a dictionary with</span>
+<span class="sd">        configuration/initialization options (NOT SUPPORTED YET).</span>
+<span class="sd">        If cuda is None, then if cuda is available it will be used. True and False</span>
+<span class="sd">        require and prohibit the use of cuda unconditionally.</span>
+<span class="sd">        Config settings: stopfile: a file path, if found training is stopped</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="n">__init__</span><span class="p">(</span><span class="n">dataset</span><span class="p">,</span> <span class="n">config</span><span class="o">=</span><span class="n">config</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">config</span> <span class="o">=</span> <span class="n">config</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s2">&quot;Init with config=</span><span class="si">%s</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">config</span><span class="p">,))</span>
+        <span class="k">if</span> <span class="s2">&quot;cuda&quot;</span> <span class="ow">in</span> <span class="n">config</span> <span class="ow">and</span> <span class="n">config</span><span class="p">[</span><span class="s2">&quot;cuda&quot;</span><span class="p">]</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">cuda</span> <span class="o">=</span> <span class="n">config</span><span class="p">[</span><span class="s2">&quot;cuda&quot;</span><span class="p">]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">cuda</span> <span class="o">=</span> <span class="n">cuda</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">checkpointnr</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">stopfile</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">dirname</span><span class="p">(</span><span class="n">dataset</span><span class="o">.</span><span class="n">metafile</span><span class="p">),</span> <span class="s2">&quot;STOP&quot;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="s2">&quot;stopfile&quot;</span> <span class="ow">in</span> <span class="n">config</span> <span class="ow">and</span> <span class="n">config</span><span class="p">[</span><span class="s2">&quot;stopfile&quot;</span><span class="p">]</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">stopfile</span> <span class="o">=</span> <span class="n">config</span><span class="p">[</span><span class="s2">&quot;stopfile&quot;</span><span class="p">]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">stopfile</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">abspath</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">stopfile</span><span class="p">)</span>
+        <span class="n">logging</span><span class="o">.</span><span class="n">getLogger</span><span class="p">(</span><span class="n">__name__</span><span class="p">)</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s2">&quot;Set the stop file to </span><span class="si">%s</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="bp">self</span><span class="o">.</span><span class="n">stopfile</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">override_learningrate</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="k">if</span> <span class="s2">&quot;learningrate&quot;</span> <span class="ow">in</span> <span class="n">config</span> <span class="ow">and</span> <span class="n">config</span><span class="p">[</span><span class="s2">&quot;learningrate&quot;</span><span class="p">]:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">override_learningrate</span> <span class="o">=</span> <span class="n">config</span><span class="p">[</span><span class="s2">&quot;learningrate&quot;</span><span class="p">]</span>
+        <span class="n">cuda_is_available</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">cuda</span><span class="o">.</span><span class="n">is_available</span><span class="p">()</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">cuda</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">enable_cuda</span> <span class="o">=</span> <span class="n">cuda_is_available</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">enable_cuda</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">cuda</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_enable_cuda</span> <span class="o">=</span> <span class="n">enable_cuda</span>  <span class="c1"># this tells us if we should actually set cuda or not</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s2">&quot;Init cuda=</span><span class="si">%s</span><span class="s2"> enable_cuda=</span><span class="si">%s</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">cuda</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_enable_cuda</span><span class="p">,))</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">dataset</span> <span class="o">=</span> <span class="n">dataset</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">init_from_dataset</span><span class="p">()</span>
+        <span class="c1"># various configuration settings which can be set before passing on control to the</span>
+        <span class="c1"># task-speicific initialization</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">best_model_saved</span> <span class="o">=</span> <span class="kc">False</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">validate_every_batches</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">validate_every_epochs</span> <span class="o">=</span> <span class="mi">1</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">validate_every_instances</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">report_every_batches</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">report_every_instances</span> <span class="o">=</span> <span class="mi">500</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">is_data_prepared</span> <span class="o">=</span> <span class="kc">False</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">valset</span> <span class="o">=</span> <span class="kc">None</span>   <span class="c1"># Validation set created by prepare_data</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">lossfunction</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">module</span> <span class="o">=</span> <span class="kc">None</span>  <span class="c1"># the init_&lt;TASK&gt; method actually sets this!!</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">random_seed</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="c1"># if the config requires a specific module needs to get used, create it here, otherwise</span>
+        <span class="c1"># create the module needed for sequences or non-sequences</span>
+        <span class="c1"># IMPORTANT! the optimizer needs to get created after the module has been moved to a GPU</span>
+        <span class="c1"># using cuda()!!!</span>
+        <span class="k">if</span> <span class="s2">&quot;module&quot;</span> <span class="ow">in</span> <span class="n">config</span> <span class="ow">and</span> <span class="n">config</span><span class="p">[</span><span class="s2">&quot;module&quot;</span><span class="p">]</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s2">&quot;Init, modules importable: </span><span class="si">%s</span><span class="s2">&quot;</span> <span class="o">%</span>
+                         <span class="p">([</span><span class="n">x</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="n">pkgutil</span><span class="o">.</span><span class="n">iter_modules</span><span class="p">(</span><span class="n">path</span><span class="o">=</span><span class="s2">&quot;.gatelfpytorchjson&quot;</span><span class="p">)],))</span>
+            <span class="c1"># TODO: figure out how to do this right!!</span>
+            <span class="n">ptclassname</span> <span class="o">=</span> <span class="n">config</span><span class="p">[</span><span class="s2">&quot;module&quot;</span><span class="p">]</span>
+            <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s2">&quot;Init import, trying to use class/file: </span><span class="si">%s</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">ptclassname</span><span class="p">,))</span>
+            <span class="kn">import</span> <span class="nn">importlib</span>
+
+            <span class="c1"># NOTE:</span>
+            <span class="c1"># the following worked and seemed to be required on one computer ...</span>
+            <span class="c1"># parent = importlib.import_module(&quot;..&quot;+ptclassname, package=&quot;.gatelfpytorchjson.modules.&quot;+ptclassname)</span>
+            <span class="c1"># this works fine:</span>
+            <span class="n">parent</span> <span class="o">=</span> <span class="n">importlib</span><span class="o">.</span><span class="n">import_module</span><span class="p">(</span><span class="s2">&quot;gatelfpytorchjson.modules.&quot;</span><span class="o">+</span><span class="n">ptclassname</span><span class="p">)</span>
+
+            <span class="n">class_</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">parent</span><span class="p">,</span> <span class="n">ptclassname</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">module</span> <span class="o">=</span> <span class="n">class_</span><span class="p">(</span><span class="n">dataset</span><span class="p">,</span> <span class="n">config</span><span class="o">=</span><span class="n">config</span><span class="p">)</span>
+            <span class="c1"># TODO: best method to configure the loss for the module? for now we expect a static method</span>
+            <span class="c1"># in the class that returns it</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">lossfunction</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">module</span><span class="o">.</span><span class="n">get_lossfunction</span><span class="p">(</span><span class="n">config</span><span class="o">=</span><span class="n">config</span><span class="p">)</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_enable_cuda</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">module</span><span class="o">.</span><span class="n">cuda</span><span class="p">()</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">lossfunction</span><span class="o">.</span><span class="n">cuda</span><span class="p">()</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">optimizer</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">module</span><span class="o">.</span><span class="n">get_optimizer</span><span class="p">(</span><span class="n">config</span><span class="o">=</span><span class="n">config</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">info</span><span class="p">[</span><span class="s2">&quot;isSequence&quot;</span><span class="p">]:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">init_sequencetagging</span><span class="p">(</span><span class="n">dataset</span><span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">info</span><span class="p">[</span><span class="s2">&quot;targetType&quot;</span><span class="p">]</span> <span class="o">==</span> <span class="s2">&quot;nominal&quot;</span><span class="p">:</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">init_classification</span><span class="p">(</span><span class="n">dataset</span><span class="p">)</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="k">raise</span> <span class="ne">Exception</span><span class="p">(</span><span class="s2">&quot;Target type not yet implemented: </span><span class="si">%s</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="bp">self</span><span class="o">.</span><span class="n">info</span><span class="p">[</span><span class="s2">&quot;targetType&quot;</span><span class="p">])</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_enable_cuda</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">module</span><span class="o">.</span><span class="n">cuda</span><span class="p">()</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">lossfunction</span><span class="o">.</span><span class="n">cuda</span><span class="p">()</span>
+            <span class="c1"># get the parameters for the optimizer, but make sure we do not include parameters for fixed layers!</span>
+            <span class="n">params</span> <span class="o">=</span> <span class="nb">filter</span><span class="p">(</span><span class="k">lambda</span> <span class="n">p</span><span class="p">:</span> <span class="n">p</span><span class="o">.</span><span class="n">requires_grad</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">module</span><span class="o">.</span><span class="n">parameters</span><span class="p">())</span>
+            <span class="c1"># self.optimizer = torch.optim.SGD(self.module.parameters(), lr=0.001, momentum=0.9)</span>
+            <span class="c1"># self.optimizer = torch.optim.SGD(self.module.parameters(), lr=(self.override_learningrate or 0.001))</span>
+            <span class="c1"># self.optimizer = torch.optim.Adadelta(params, lr=1.0, rho=0.9, eps=1e-06, weight_decay=0)</span>
+            <span class="c1"># self.optimizer = torch.optim.Adagrad(params, lr=0.01, lr_decay=0, weight_decay=0, initial_accumulator_value=0)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">optimizer</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">optim</span><span class="o">.</span><span class="n">Adam</span><span class="p">(</span><span class="n">params</span><span class="p">,</span> <span class="n">lr</span><span class="o">=</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">override_learningrate</span> <span class="ow">or</span> <span class="mf">0.001</span><span class="p">),</span> <span class="n">betas</span><span class="o">=</span><span class="p">(</span><span class="mf">0.9</span><span class="p">,</span> <span class="mf">0.999</span><span class="p">),</span> <span class="n">eps</span><span class="o">=</span><span class="mi">1</span><span class="n">e</span><span class="o">-</span><span class="mi">08</span><span class="p">,</span> <span class="n">weight_decay</span><span class="o">=</span><span class="mi">0</span> <span class="p">)</span>
+            <span class="c1"># self.optimizer = torch.optim.Adamax(params, lr=0.002, betas=(0.9, 0.999), eps=1e-08, weight_decay=0)</span>
+            <span class="c1"># self.optimizer = torch.optim.ASGD(params, lr=0.01, lambd=0.0001, alpha=0.75, t0=1000000.0, weight_decay=0)</span>
+            <span class="c1"># self.optimizer = torch.optim.RMSprop(params, lr=0.01, alpha=0.99, eps=1e-08, weight_decay=0, momentum=0, centered=False)</span>
+            <span class="c1"># self.optimizer = torch.optim.Rprop(params, lr=0.01, etas=(0.5, 1.2), step_sizes=(1e-06, 50))</span>
+            <span class="c1"># self.optimizer = torch.optim.SGD(params, lr=0.1, momentum=0, dampening=0, weight_decay=0, nesterov=False)</span>
+            <span class="c1"># NOTE/TODO: check out how to implement a learning rate scheduler that makes the LR depend e.g. on epoch, see</span>
+            <span class="c1"># http://pytorch.org/docs/master/optim.html</span>
+            <span class="c1"># e.g. every 10 epochs, make lr half of what it was:</span>
+            <span class="c1"># self.scheduler = torch.optim.lr_scheduler.StepLR(self.optimizer, step_size=10, gamma=0.5)</span>
+            <span class="c1"># self.optimizer = torch.optim.SGD(params, lr=0.1, momentum=0.0)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">interrupted</span> <span class="o">=</span> <span class="kc">False</span>
+        <span class="n">signal</span><span class="o">.</span><span class="n">signal</span><span class="p">(</span><span class="n">signal</span><span class="o">.</span><span class="n">SIGINT</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_signal_handler</span><span class="p">)</span>
+
+
+    <span class="k">def</span> <span class="nf">_signal_handler</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">sig</span><span class="p">,</span> <span class="n">frame</span><span class="p">):</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;Received interrupt signal, setting interrupt flag&quot;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">interrupted</span> <span class="o">=</span> <span class="kc">True</span>
+
+<div class="viewcode-block" id="ModelWrapperDefault.init_classification"><a class="viewcode-back" href="../../gatelfpytorchjson.modelwrapperdefault.html#gatelfpytorchjson.modelwrapperdefault.ModelWrapperDefault.init_classification">[docs]</a>    <span class="k">def</span> <span class="nf">init_classification</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">dataset</span><span class="p">):</span>
+        <span class="n">n_classes</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">info</span><span class="p">[</span><span class="s2">&quot;nClasses&quot;</span><span class="p">]</span>
+        <span class="n">inputlayers</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="c1"># keep track of the number of input layer output dimensions</span>
+        <span class="n">inlayers_outdims</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="c1"># if we have numeric features, create the numeric input layer</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">float_idxs</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="n">n_in</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">float_idxs</span><span class="p">)</span>
+            <span class="n">n_hidden</span> <span class="o">=</span> <span class="n">ModelWrapper</span><span class="o">.</span><span class="n">makeless</span><span class="p">(</span><span class="n">n_in</span><span class="p">,</span> <span class="n">p1</span><span class="o">=</span><span class="mf">0.5</span><span class="p">)</span>
+            <span class="n">lin</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">nn</span><span class="o">.</span><span class="n">Linear</span><span class="p">(</span><span class="n">n_in</span><span class="p">,</span> <span class="n">n_hidden</span><span class="p">)</span>
+            <span class="n">act</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">nn</span><span class="o">.</span><span class="n">ELU</span><span class="p">()</span>
+            <span class="n">layer</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">nn</span><span class="o">.</span><span class="n">Sequential</span><span class="p">(</span><span class="n">lin</span><span class="p">,</span> <span class="n">act</span><span class="p">)</span>
+            <span class="n">inlayers_outdims</span> <span class="o">+=</span> <span class="n">n_hidden</span>
+            <span class="n">lname</span> <span class="o">=</span> <span class="s2">&quot;input_numeric&quot;</span>
+            <span class="n">inputlayers</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="n">layer</span><span class="p">,</span> <span class="p">{</span><span class="s2">&quot;type&quot;</span><span class="p">:</span> <span class="s2">&quot;numeric&quot;</span><span class="p">,</span> <span class="s2">&quot;name&quot;</span><span class="p">:</span> <span class="n">lname</span><span class="p">}))</span>
+            <span class="k">pass</span>
+        <span class="c1"># if we have nominal features, create all the layers for those</span>
+        <span class="c1"># TODO: may need to handle onehot features differently!!</span>
+        <span class="c1"># remember which layers we already have for an embedding id</span>
+        <span class="n">nom_layers</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">index_feats</span><span class="p">)):</span>
+            <span class="n">nom_feat</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">index_feats</span><span class="p">[</span><span class="n">i</span><span class="p">]</span>
+            <span class="n">nom_idx</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">index_idxs</span><span class="p">[</span><span class="n">i</span><span class="p">]</span>
+            <span class="n">vocab</span> <span class="o">=</span> <span class="n">nom_feat</span><span class="o">.</span><span class="n">vocab</span>
+            <span class="n">emb_id</span> <span class="o">=</span> <span class="n">vocab</span><span class="o">.</span><span class="n">emb_id</span>
+            <span class="k">if</span> <span class="n">emb_id</span> <span class="ow">in</span> <span class="n">nom_layers</span><span class="p">:</span>
+                <span class="n">emblayer</span> <span class="o">=</span> <span class="n">nom_layers</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">emb_id</span><span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">emblayer</span> <span class="o">=</span> <span class="n">EmbeddingsModule</span><span class="p">(</span><span class="n">vocab</span><span class="p">)</span>
+                <span class="n">nom_layers</span><span class="p">[</span><span class="n">emb_id</span><span class="p">]</span> <span class="o">=</span> <span class="n">emblayer</span>
+            <span class="n">lname</span> <span class="o">=</span> <span class="s2">&quot;input_emb_</span><span class="si">%s</span><span class="s2">_</span><span class="si">%s</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">i</span><span class="p">,</span> <span class="n">emb_id</span><span class="p">)</span>
+            <span class="n">inputlayers</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="n">emblayer</span><span class="p">,</span> <span class="p">{</span><span class="s2">&quot;type&quot;</span><span class="p">:</span> <span class="s2">&quot;nominal&quot;</span><span class="p">,</span> <span class="s2">&quot;name&quot;</span><span class="p">:</span> <span class="n">lname</span><span class="p">}))</span>
+            <span class="n">inlayers_outdims</span> <span class="o">+=</span> <span class="n">emblayer</span><span class="o">.</span><span class="n">emb_dims</span>
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">indexlist_feats</span><span class="p">)):</span>
+            <span class="n">ngr_feat</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">indexlist_feats</span><span class="p">[</span><span class="n">i</span><span class="p">]</span>
+            <span class="n">nom_idx</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">indexlist_idxs</span><span class="p">[</span><span class="n">i</span><span class="p">]</span>
+            <span class="n">vocab</span> <span class="o">=</span> <span class="n">ngr_feat</span><span class="o">.</span><span class="n">vocab</span>
+            <span class="n">emb_id</span> <span class="o">=</span> <span class="n">vocab</span><span class="o">.</span><span class="n">emb_id</span>
+            <span class="k">if</span> <span class="n">emb_id</span> <span class="ow">in</span> <span class="n">nom_layers</span><span class="p">:</span>
+                <span class="n">emblayer</span> <span class="o">=</span> <span class="n">nom_layers</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">emb_id</span><span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">emblayer</span> <span class="o">=</span> <span class="n">EmbeddingsModule</span><span class="p">(</span><span class="n">vocab</span><span class="p">)</span>
+                <span class="n">nom_layers</span><span class="p">[</span><span class="n">emb_id</span><span class="p">]</span> <span class="o">=</span> <span class="n">emblayer</span>
+            <span class="n">lname</span> <span class="o">=</span> <span class="s2">&quot;input_ngram_</span><span class="si">%s</span><span class="s2">_</span><span class="si">%s</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">i</span><span class="p">,</span> <span class="n">emb_id</span><span class="p">)</span>
+            <span class="n">ngramlayer</span> <span class="o">=</span> <span class="n">NgramModule</span><span class="p">(</span><span class="n">emblayer</span><span class="p">)</span>
+            <span class="n">inputlayers</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="n">ngramlayer</span><span class="p">,</span> <span class="p">{</span><span class="s2">&quot;type&quot;</span><span class="p">:</span> <span class="s2">&quot;ngram&quot;</span><span class="p">,</span> <span class="s2">&quot;name&quot;</span><span class="p">:</span> <span class="n">lname</span><span class="p">}))</span>
+            <span class="n">inlayers_outdims</span> <span class="o">+=</span> <span class="n">ngramlayer</span><span class="o">.</span><span class="n">out_dim</span>
+        <span class="c1"># Now create the hidden layers</span>
+        <span class="n">hiddenlayers</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="c1"># for now, one hidden layer for compression and another</span>
+        <span class="c1"># to map to the number of classes</span>
+        <span class="n">n_hidden1lin_out</span> <span class="o">=</span> <span class="n">ModelWrapper</span><span class="o">.</span><span class="n">makeless</span><span class="p">(</span><span class="n">inlayers_outdims</span><span class="p">)</span>
+        <span class="n">hidden1lin</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">nn</span><span class="o">.</span><span class="n">Linear</span><span class="p">(</span><span class="n">inlayers_outdims</span><span class="p">,</span> <span class="n">n_hidden1lin_out</span><span class="p">)</span>
+        <span class="n">hidden1act</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">nn</span><span class="o">.</span><span class="n">ELU</span><span class="p">()</span>
+        <span class="n">hidden2</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">nn</span><span class="o">.</span><span class="n">Linear</span><span class="p">(</span><span class="n">n_hidden1lin_out</span><span class="p">,</span> <span class="n">n_classes</span><span class="p">)</span>
+        <span class="n">hidden</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">nn</span><span class="o">.</span><span class="n">Sequential</span><span class="p">(</span><span class="n">hidden1lin</span><span class="p">,</span>
+                                     <span class="n">hidden1act</span><span class="p">,</span> <span class="n">hidden2</span><span class="p">)</span>
+        <span class="n">hiddenlayers</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="n">hidden</span><span class="p">,</span> <span class="p">{</span><span class="s2">&quot;name&quot;</span><span class="p">:</span> <span class="s2">&quot;hidden&quot;</span><span class="p">}))</span>
+        <span class="c1"># Create the output layer</span>
+        <span class="n">out</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">nn</span><span class="o">.</span><span class="n">LogSoftmax</span><span class="p">(</span><span class="n">dim</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+        <span class="n">outputlayer</span> <span class="o">=</span> <span class="p">(</span><span class="n">out</span><span class="p">,</span> <span class="p">{</span><span class="s2">&quot;name&quot;</span><span class="p">:</span> <span class="s2">&quot;output&quot;</span><span class="p">})</span>
+        <span class="c1"># create the module and store it</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">module</span> <span class="o">=</span> <span class="n">ClassificationModule</span><span class="p">(</span><span class="n">inputlayers</span><span class="p">,</span>
+                                           <span class="n">hiddenlayers</span><span class="p">,</span>
+                                           <span class="n">outputlayer</span><span class="p">,</span>
+                                           <span class="bp">self</span><span class="o">.</span><span class="n">featureinfo</span><span class="p">)</span>
+        <span class="c1"># Decide on the lossfunction function here for training later!</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">lossfunction</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">nn</span><span class="o">.</span><span class="n">NLLLoss</span><span class="p">(</span><span class="n">ignore_index</span><span class="o">=-</span><span class="mi">1</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="ModelWrapperDefault.init_sequencetagging"><a class="viewcode-back" href="../../gatelfpytorchjson.modelwrapperdefault.html#gatelfpytorchjson.modelwrapperdefault.ModelWrapperDefault.init_sequencetagging">[docs]</a>    <span class="k">def</span> <span class="nf">init_sequencetagging</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">dataset</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Build the module for sequence tagging.&quot;&quot;&quot;</span>
+        <span class="c1"># NOTE: For sequence tagging, the shape of our input is slightly different:</span>
+        <span class="c1"># - the indep is a list of features, as before</span>
+        <span class="c1"># - but for each feature, there is a (padded) list of values</span>
+        <span class="c1"># - each dep is also a padded list of values</span>
+        <span class="c1"># In theory we could combine the features before going into the LSTM, or</span>
+        <span class="c1"># we have different LSTMs for each feature and combine afterwards.</span>
+        <span class="c1"># Here we combine before, so the output of e.g. a Linear layer is not just</span>
+        <span class="c1"># a vector, but a matrix where one dimension is the batch, one dimension is the sequence</span>
+        <span class="c1"># and one dimension is the value(vector). If we have batch size b, max sequence length s</span>
+        <span class="c1"># and value dimension d, we should get shape b,s,d if batch_first is True, otherwise s,b,d</span>
+        <span class="n">n_classes</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">info</span><span class="p">[</span><span class="s2">&quot;nClasses&quot;</span><span class="p">]</span>
+        <span class="n">inputlayers</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="c1"># keep track of the number of input layer output dimensions</span>
+        <span class="n">inlayers_outdims</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="c1"># if we have numeric features, create the numeric input layer</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">float_idxs</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="n">n_in</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">float_idxs</span><span class="p">)</span>
+            <span class="n">n_hidden</span> <span class="o">=</span> <span class="n">ModelWrapper</span><span class="o">.</span><span class="n">makeless</span><span class="p">(</span><span class="n">n_in</span><span class="p">,</span> <span class="n">p1</span><span class="o">=</span><span class="mf">0.5</span><span class="p">)</span>
+            <span class="n">lin</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">nn</span><span class="o">.</span><span class="n">Linear</span><span class="p">(</span><span class="n">n_in</span><span class="p">,</span> <span class="n">n_hidden</span><span class="p">)</span>
+            <span class="n">act</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">nn</span><span class="o">.</span><span class="n">ELU</span><span class="p">()</span>
+            <span class="n">layer</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">nn</span><span class="o">.</span><span class="n">Sequential</span><span class="p">(</span><span class="n">lin</span><span class="p">,</span> <span class="n">act</span><span class="p">)</span>
+            <span class="n">inlayers_outdims</span> <span class="o">+=</span> <span class="n">n_hidden</span>
+            <span class="n">lname</span> <span class="o">=</span> <span class="s2">&quot;input_numeric&quot;</span>
+            <span class="n">inputlayers</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="n">layer</span><span class="p">,</span> <span class="p">{</span><span class="s2">&quot;type&quot;</span><span class="p">:</span> <span class="s2">&quot;numeric&quot;</span><span class="p">,</span> <span class="s2">&quot;name&quot;</span><span class="p">:</span> <span class="n">lname</span><span class="p">}))</span>
+            <span class="k">pass</span>
+        <span class="c1"># if we have nominal features, create all the layers for those</span>
+        <span class="c1"># TODO: may need to handle onehot features differently!!</span>
+        <span class="c1"># remember which layers we already have for an embedding id</span>
+        <span class="n">nom_layers</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">index_feats</span><span class="p">)):</span>
+            <span class="n">nom_feat</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">index_feats</span><span class="p">[</span><span class="n">i</span><span class="p">]</span>
+            <span class="n">nom_idx</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">index_idxs</span><span class="p">[</span><span class="n">i</span><span class="p">]</span>
+            <span class="n">vocab</span> <span class="o">=</span> <span class="n">nom_feat</span><span class="o">.</span><span class="n">vocab</span>
+            <span class="n">emb_id</span> <span class="o">=</span> <span class="n">vocab</span><span class="o">.</span><span class="n">emb_id</span>
+            <span class="k">if</span> <span class="n">emb_id</span> <span class="ow">in</span> <span class="n">nom_layers</span><span class="p">:</span>
+                <span class="n">emblayer</span> <span class="o">=</span> <span class="n">nom_layers</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">emb_id</span><span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">emblayer</span> <span class="o">=</span> <span class="n">EmbeddingsModule</span><span class="p">(</span><span class="n">vocab</span><span class="p">)</span>
+                <span class="n">nom_layers</span><span class="p">[</span><span class="n">emb_id</span><span class="p">]</span> <span class="o">=</span> <span class="n">emblayer</span>
+            <span class="n">lname</span> <span class="o">=</span> <span class="s2">&quot;input_emb_</span><span class="si">%s</span><span class="s2">_</span><span class="si">%s</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">i</span><span class="p">,</span> <span class="n">emb_id</span><span class="p">)</span>
+            <span class="n">inputlayers</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="n">emblayer</span><span class="p">,</span> <span class="p">{</span><span class="s2">&quot;type&quot;</span><span class="p">:</span> <span class="s2">&quot;nominal&quot;</span><span class="p">,</span> <span class="s2">&quot;name&quot;</span><span class="p">:</span> <span class="n">lname</span><span class="p">}))</span>
+            <span class="n">inlayers_outdims</span> <span class="o">+=</span> <span class="n">emblayer</span><span class="o">.</span><span class="n">emb_dims</span>
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">indexlist_feats</span><span class="p">)):</span>
+            <span class="n">ngr_feat</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">indexlist_feats</span><span class="p">[</span><span class="n">i</span><span class="p">]</span>
+            <span class="n">nom_idx</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">indexlist_idxs</span><span class="p">[</span><span class="n">i</span><span class="p">]</span>
+            <span class="n">vocab</span> <span class="o">=</span> <span class="n">ngr_feat</span><span class="o">.</span><span class="n">vocab</span>
+            <span class="n">emb_id</span> <span class="o">=</span> <span class="n">vocab</span><span class="o">.</span><span class="n">emb_id</span>
+            <span class="k">if</span> <span class="n">emb_id</span> <span class="ow">in</span> <span class="n">nom_layers</span><span class="p">:</span>
+                <span class="n">emblayer</span> <span class="o">=</span> <span class="n">nom_layers</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">emb_id</span><span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">emblayer</span> <span class="o">=</span> <span class="n">EmbeddingsModule</span><span class="p">(</span><span class="n">vocab</span><span class="p">)</span>
+                <span class="n">nom_layers</span><span class="p">[</span><span class="n">emb_id</span><span class="p">]</span> <span class="o">=</span> <span class="n">emblayer</span>
+            <span class="n">lname</span> <span class="o">=</span> <span class="s2">&quot;input_ngram_</span><span class="si">%s</span><span class="s2">_</span><span class="si">%s</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">i</span><span class="p">,</span> <span class="n">emb_id</span><span class="p">)</span>
+            <span class="n">ngramlayer</span> <span class="o">=</span> <span class="n">NgramModule</span><span class="p">(</span><span class="n">emblayer</span><span class="p">)</span>
+            <span class="n">inputlayers</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="n">ngramlayer</span><span class="p">,</span> <span class="p">{</span><span class="s2">&quot;type&quot;</span><span class="p">:</span> <span class="s2">&quot;ngram&quot;</span><span class="p">,</span> <span class="s2">&quot;name&quot;</span><span class="p">:</span> <span class="n">lname</span><span class="p">}))</span>
+            <span class="n">inlayers_outdims</span> <span class="o">+=</span> <span class="n">ngramlayer</span><span class="o">.</span><span class="n">out_dim</span>
+        <span class="c1"># Now create the hidden layers</span>
+        <span class="n">hiddenlayers</span> <span class="o">=</span> <span class="p">[]</span>
+
+
+        <span class="c1"># TODO: originally we always had this layer between the inputs and the LSTM, but</span>
+        <span class="c1"># it may be better to just use a NOOP instead and just use the concatenated inputs.</span>
+        <span class="k">if</span> <span class="kc">False</span><span class="p">:</span>
+            <span class="n">n_hidden1lin_out</span> <span class="o">=</span> <span class="n">ModelWrapper</span><span class="o">.</span><span class="n">makeless</span><span class="p">(</span><span class="n">inlayers_outdims</span><span class="p">)</span>
+            <span class="n">hidden1lin</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">nn</span><span class="o">.</span><span class="n">Linear</span><span class="p">(</span><span class="n">inlayers_outdims</span><span class="p">,</span> <span class="n">n_hidden1lin_out</span><span class="p">)</span>
+            <span class="n">hidden1act</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">nn</span><span class="o">.</span><span class="n">ELU</span><span class="p">()</span>
+            <span class="n">hidden1layer</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">nn</span><span class="o">.</span><span class="n">Sequential</span><span class="p">(</span><span class="n">hidden1lin</span><span class="p">,</span> <span class="n">hidden1act</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">n_hidden1lin_out</span> <span class="o">=</span> <span class="n">inlayers_outdims</span>
+            <span class="n">hidden1layer</span> <span class="o">=</span> <span class="kc">None</span>
+
+        <span class="c1"># for now, the size of the hidden layer is identical to the input size, up to </span>
+        <span class="c1"># a maximum of 200</span>
+        <span class="n">lstm_hidden_size</span> <span class="o">=</span> <span class="nb">min</span><span class="p">(</span><span class="mi">200</span><span class="p">,</span> <span class="n">n_hidden1lin_out</span><span class="p">)</span>
+        <span class="n">lstm_bidirectional</span> <span class="o">=</span> <span class="kc">False</span>
+        <span class="c1">## Now that we have combined the features, we create the lstm</span>
+        <span class="n">hidden2</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">nn</span><span class="o">.</span><span class="n">LSTM</span><span class="p">(</span><span class="n">input_size</span><span class="o">=</span><span class="n">n_hidden1lin_out</span><span class="p">,</span>
+                                  <span class="n">hidden_size</span><span class="o">=</span><span class="n">lstm_hidden_size</span><span class="p">,</span>
+                                  <span class="n">num_layers</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span>
+                                  <span class="c1"># dropout=0.1,</span>
+                                  <span class="n">bidirectional</span><span class="o">=</span><span class="n">lstm_bidirectional</span><span class="p">,</span>
+                                  <span class="n">batch_first</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+        <span class="c1"># the outputs of the LSTM are of shape b, seq, hidden</span>
+        <span class="c1"># We want to get softmax outputs for each, so we need to get this to</span>
+        <span class="c1"># b, seq, nclasses</span>
+
+        <span class="c1"># NOTE: we cannot use sequential here since the LSTM returns a tuple and</span>
+        <span class="c1"># Sequential does not properly deal with this. So instead of adding the LSTM directly</span>
+        <span class="c1"># we wrap it in a tiny custom wrapper that just returns the first element of the</span>
+        <span class="c1"># tuple in the forward step</span>
+        <span class="n">hidden2</span> <span class="o">=</span> <span class="n">TakeFromTuple</span><span class="p">(</span><span class="n">hidden2</span><span class="p">,</span> <span class="n">which</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+
+        <span class="c1"># NOTE: if the LSTM is bidirectional, we need to double the size</span>
+        <span class="n">hidden3_size</span> <span class="o">=</span> <span class="n">lstm_hidden_size</span>
+        <span class="k">if</span> <span class="n">lstm_bidirectional</span><span class="p">:</span>
+            <span class="n">hidden3_size</span> <span class="o">*=</span> <span class="mi">2</span>
+        <span class="n">hidden3</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">nn</span><span class="o">.</span><span class="n">Linear</span><span class="p">(</span><span class="n">hidden3_size</span><span class="p">,</span> <span class="n">n_classes</span><span class="p">)</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">hidden1layer</span><span class="p">:</span>
+            <span class="n">hidden</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">nn</span><span class="o">.</span><span class="n">Sequential</span><span class="p">(</span><span class="n">hidden2</span><span class="p">,</span> <span class="n">hidden3</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">hidden</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">nn</span><span class="o">.</span><span class="n">Sequential</span><span class="p">(</span><span class="n">hidden1layer</span><span class="p">,</span> <span class="n">hidden2</span><span class="p">,</span> <span class="n">hidden3</span><span class="p">)</span>
+        <span class="n">hiddenlayers</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="n">hidden</span><span class="p">,</span> <span class="p">{</span><span class="s2">&quot;name&quot;</span><span class="p">:</span> <span class="s2">&quot;hidden&quot;</span><span class="p">}))</span>
+        <span class="c1"># Create the output layer</span>
+        <span class="n">out</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">nn</span><span class="o">.</span><span class="n">LogSoftmax</span><span class="p">(</span><span class="n">dim</span><span class="o">=</span><span class="mi">2</span><span class="p">)</span>
+        <span class="n">outputlayer</span> <span class="o">=</span> <span class="p">(</span><span class="n">out</span><span class="p">,</span> <span class="p">{</span><span class="s2">&quot;name&quot;</span><span class="p">:</span> <span class="s2">&quot;output&quot;</span><span class="p">})</span>
+        <span class="c1"># create the module and store it</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">module</span> <span class="o">=</span> <span class="n">ClassificationModule</span><span class="p">(</span><span class="n">inputlayers</span><span class="p">,</span>
+                                           <span class="n">hiddenlayers</span><span class="p">,</span>
+                                           <span class="n">outputlayer</span><span class="p">,</span>
+                                           <span class="bp">self</span><span class="o">.</span><span class="n">featureinfo</span><span class="p">)</span>
+        <span class="c1"># For sequence tagging we cannot use CrossEntropyLoss</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">lossfunction</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">nn</span><span class="o">.</span><span class="n">NLLLoss</span><span class="p">(</span><span class="n">ignore_index</span><span class="o">=-</span><span class="mi">1</span><span class="p">)</span></div>
+
+
+
+<div class="viewcode-block" id="ModelWrapperDefault.get_module"><a class="viewcode-back" href="../../gatelfpytorchjson.modelwrapperdefault.html#gatelfpytorchjson.modelwrapperdefault.ModelWrapperDefault.get_module">[docs]</a>    <span class="k">def</span> <span class="nf">get_module</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Return the PyTorch module that has been built and is used by this wrapper.&quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">module</span></div>
+
+<div class="viewcode-block" id="ModelWrapperDefault.prepare_data"><a class="viewcode-back" href="../../gatelfpytorchjson.modelwrapperdefault.html#gatelfpytorchjson.modelwrapperdefault.ModelWrapperDefault.prepare_data">[docs]</a>    <span class="k">def</span> <span class="nf">prepare_data</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">validationsize</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">file</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;If file is not None, use the content of  the file, ignore the size.</span>
+<span class="sd">        If validationsize is &gt; 1, it is the absolute size, if &lt; 1 it is the portion e.g. 0.01 to use.&quot;&quot;&quot;</span>
+        <span class="c1"># get the validation set</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">is_data_prepared</span><span class="p">:</span>
+            <span class="n">logger</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span><span class="s2">&quot;Called prepare_data after it was already called, doing nothing&quot;</span><span class="p">)</span>
+            <span class="k">return</span>
+        <span class="k">if</span> <span class="n">file</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="c1"># use the file for validation</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">dataset</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="n">convert</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">validation_file</span><span class="o">=</span><span class="n">file</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">validationsize</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="n">validationsize</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">validationsize</span><span class="p">)</span>
+            <span class="n">valsize</span> <span class="o">=</span> <span class="kc">None</span>
+            <span class="n">valpart</span> <span class="o">=</span> <span class="kc">None</span>
+            <span class="c1"># TODO: allow not using a validation set at all!</span>
+            <span class="k">if</span> <span class="n">validationsize</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="k">if</span> <span class="n">validationsize</span> <span class="o">&gt;</span> <span class="mi">1</span> <span class="ow">or</span> <span class="n">validationsize</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+                    <span class="n">valsize</span> <span class="o">=</span> <span class="n">validationsize</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="n">valpart</span> <span class="o">=</span> <span class="n">validationsize</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">valpart</span> <span class="o">=</span> <span class="mf">0.1</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">dataset</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="n">convert</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">validation_part</span><span class="o">=</span><span class="n">valpart</span><span class="p">,</span> <span class="n">validation_size</span><span class="o">=</span><span class="n">valsize</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">valset</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">dataset</span><span class="o">.</span><span class="n">validation_set_converted</span><span class="p">(</span><span class="n">as_batch</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">is_data_prepared</span> <span class="o">=</span> <span class="kc">True</span></div>
+        <span class="c1"># TODO if we have a validation set, calculate the class distribution here</span>
+        <span class="c1"># this should be shown before training starts so the validation accuracy makes more sense</span>
+        <span class="c1"># this can also be used to use a loss function that re-weights classes in case of class imbalance!</span>
+
+        <span class="c1"># deps = self.valset[1]</span>
+        <span class="c1"># TODO: calculate the class distribution but if sequences, ONLY for the non-padded parts of the sequences!!!!</span>
+
+<div class="viewcode-block" id="ModelWrapperDefault.apply"><a class="viewcode-back" href="../../gatelfpytorchjson.modelwrapperdefault.html#gatelfpytorchjson.modelwrapperdefault.ModelWrapperDefault.apply">[docs]</a>    <span class="k">def</span> <span class="nf">apply</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">instancelist</span><span class="p">,</span> <span class="n">converted</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">reshaped</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Given a list of instances in original format (or converted if converted=True), applies</span>
+<span class="sd">        the model to them in evaluation mode and returns the predictions in the following format as a list</span>
+<span class="sd">        with the following elements:</span>
+<span class="sd">        First, a list of the predicted labels, label sequences or values, as many elements as there are instances.</span>
+<span class="sd">        Second, a list of additional values for each of the labels, whith a list of values corresponding</span>
+<span class="sd">        to each of the labels or values in the first list. For labels, this is the probablity distribution</span>
+<span class="sd">        over all labels (TODO: how to index this??)</span>
+<span class="sd">        for values this could be confidence intervals, variances etc. That second element is optional.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">batchsize</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">instancelist</span><span class="p">)</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">converted</span><span class="p">:</span>
+            <span class="c1"># TODO: check if and when to do instance normalization here!</span>
+            <span class="n">instancelist</span> <span class="o">=</span> <span class="p">[</span> <span class="bp">self</span><span class="o">.</span><span class="n">dataset</span><span class="o">.</span><span class="n">convert_indep</span><span class="p">(</span><span class="n">x</span><span class="p">)</span> <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="n">instancelist</span><span class="p">]</span>
+            <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;</span><span class="se">\n</span><span class="s2">DEBUG: instances after conversion: &quot;</span><span class="p">,</span> <span class="n">instancelist</span><span class="p">,</span> <span class="n">file</span><span class="o">=</span><span class="n">sys</span><span class="o">.</span><span class="n">stderr</span><span class="p">)</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">reshaped</span><span class="p">:</span>
+            <span class="n">instancelist</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">dataset</span><span class="o">.</span><span class="n">reshape_batch</span><span class="p">(</span><span class="n">instancelist</span><span class="p">,</span> <span class="n">indep_only</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+            <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;</span><span class="se">\n</span><span class="s2">DEBUG: instances after reshaping: &quot;</span><span class="p">,</span> <span class="n">instancelist</span><span class="p">,</span> <span class="n">file</span><span class="o">=</span><span class="n">sys</span><span class="o">.</span><span class="n">stderr</span><span class="p">)</span>
+        <span class="c1"># TODO: check if using the tensor here as is is correct (previously we used variable.data)</span>
+        <span class="n">preds</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_apply_model</span><span class="p">(</span><span class="n">instancelist</span><span class="p">,</span> <span class="n">train_mode</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+        <span class="c1"># for now we only have classification (sequence/non-sequence) so</span>
+        <span class="c1"># for this, we first use the torch max to find the most likely label index,</span>
+        <span class="c1"># then convert back to the label itself. We also convert the torch probability vector</span>
+        <span class="c1"># into a simple list of values</span>
+        <span class="n">ret</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="n">nrClasses</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">dataset</span><span class="o">.</span><span class="n">nClasses</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">dataset</span><span class="o">.</span><span class="n">isSequence</span><span class="p">:</span>
+            <span class="c1"># TODO: the whole apply thing should just expect a single instance or sequence, always!</span>
+            <span class="n">dims</span> <span class="o">=</span> <span class="n">preds</span><span class="o">.</span><span class="n">size</span><span class="p">()[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+            <span class="n">reshaped</span> <span class="o">=</span> <span class="n">preds</span><span class="o">.</span><span class="n">view</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="n">dims</span><span class="p">)</span>
+            <span class="n">probs</span> <span class="o">=</span> <span class="p">[</span><span class="nb">list</span><span class="p">(</span><span class="n">x</span><span class="p">)</span> <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="n">reshaped</span><span class="p">]</span>
+            <span class="n">_</span><span class="p">,</span> <span class="n">out_idxs</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">max</span><span class="p">(</span><span class="n">reshaped</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+            <span class="n">predictions</span> <span class="o">=</span> <span class="n">out_idxs</span><span class="o">.</span><span class="n">cpu</span><span class="p">()</span><span class="o">.</span><span class="n">numpy</span><span class="p">()</span>
+            <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;DEBUG: predictions: &quot;</span><span class="p">,</span> <span class="n">predictions</span><span class="p">,</span> <span class="n">file</span><span class="o">=</span><span class="n">sys</span><span class="o">.</span><span class="n">stderr</span><span class="p">)</span>
+            <span class="c1"># create the list of corresponding labels</span>
+            <span class="n">labels</span> <span class="o">=</span> <span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">dataset</span><span class="o">.</span><span class="n">target</span><span class="o">.</span><span class="n">idx2label</span><span class="p">(</span><span class="n">x</span><span class="o">+</span><span class="mi">1</span><span class="p">)</span> <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="n">predictions</span><span class="p">]</span>
+            <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;DEBUG: labels: &quot;</span><span class="p">,</span> <span class="n">labels</span><span class="p">,</span> <span class="n">file</span><span class="o">=</span><span class="n">sys</span><span class="o">.</span><span class="n">stderr</span><span class="p">)</span>
+            <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;DEBUG: probs: &quot;</span><span class="p">,</span> <span class="n">probs</span><span class="p">,</span> <span class="n">file</span><span class="o">=</span><span class="n">sys</span><span class="o">.</span><span class="n">stderr</span><span class="p">)</span>
+            <span class="k">return</span> <span class="p">[[</span><span class="n">labels</span><span class="p">],</span> <span class="p">[</span><span class="n">probs</span><span class="p">]]</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="c1"># preds should be a 2d tensor of size batchsize x numberClasses</span>
+            <span class="k">assert</span> <span class="nb">len</span><span class="p">(</span><span class="n">preds</span><span class="o">.</span><span class="n">size</span><span class="p">())</span> <span class="o">==</span> <span class="mi">2</span>
+            <span class="k">assert</span> <span class="n">preds</span><span class="o">.</span><span class="n">size</span><span class="p">()[</span><span class="mi">0</span><span class="p">]</span> <span class="o">==</span> <span class="n">batchsize</span>
+            <span class="k">assert</span> <span class="n">preds</span><span class="o">.</span><span class="n">size</span><span class="p">()[</span><span class="mi">1</span><span class="p">]</span> <span class="o">==</span> <span class="n">nrClasses</span>
+            <span class="n">_</span><span class="p">,</span> <span class="n">out_idxs</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">max</span><span class="p">(</span><span class="n">preds</span><span class="p">,</span> <span class="n">dim</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+            <span class="c1"># out_idxs contains the class indices, need to convert back to labels</span>
+            <span class="n">getlabel</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">dataset</span><span class="o">.</span><span class="n">target</span><span class="o">.</span><span class="n">idx2label</span>
+            <span class="c1"># NOTE/IMPORTANT: we retrieve the label using index+1 because ALL targets use 0 as the pad index,</span>
+            <span class="c1"># even if we do not have sequences (for simplicity)</span>
+            <span class="n">labels</span> <span class="o">=</span> <span class="p">[</span><span class="n">getlabel</span><span class="p">(</span><span class="n">x</span><span class="o">+</span><span class="mi">1</span><span class="p">)</span> <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="n">out_idxs</span><span class="p">]</span>
+            <span class="n">probs</span> <span class="o">=</span> <span class="p">[</span><span class="nb">list</span><span class="p">(</span><span class="n">x</span><span class="p">)</span> <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="n">preds</span><span class="p">]</span>
+            <span class="n">ret</span> <span class="o">=</span> <span class="p">[</span><span class="n">labels</span><span class="p">,</span> <span class="n">probs</span><span class="p">]</span>
+        <span class="k">return</span> <span class="n">ret</span></div>
+
+    <span class="k">def</span> <span class="nf">_apply_model</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">indeps</span><span class="p">,</span> <span class="n">train_mode</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Apply the model to the list of indeps in the correct format for our Pytorch module</span>
+<span class="sd">         and returns a list of predictions as Pytorch variables.</span>
+<span class="sd">        train_mode influences if the underlying model is used in training mode or not.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="n">train_mode</span> <span class="ow">and</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">is_data_prepared</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">Exception</span><span class="p">(</span><span class="s2">&quot;Must call train or prepare_data first&quot;</span><span class="p">)</span>
+        <span class="n">curmodeistrain</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">module</span><span class="o">.</span><span class="n">training</span>
+        <span class="k">if</span> <span class="n">train_mode</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">curmodeistrain</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">module</span><span class="o">.</span><span class="n">train</span><span class="p">()</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">module</span><span class="o">.</span><span class="n">zero_grad</span><span class="p">()</span>
+        <span class="k">elif</span> <span class="ow">not</span> <span class="n">train_mode</span> <span class="ow">and</span> <span class="n">curmodeistrain</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">module</span><span class="o">.</span><span class="n">eval</span><span class="p">()</span>
+
+        <span class="n">output</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">module</span><span class="p">(</span><span class="n">indeps</span><span class="p">)</span>
+        <span class="c1"># logger.debug(&quot;Output of model is of size %s: %s&quot; % (output.size(), output, ))</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">module</span><span class="o">.</span><span class="n">training</span> <span class="o">==</span> <span class="n">curmodeistrain</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">module</span><span class="o">.</span><span class="n">train</span><span class="p">(</span><span class="n">curmodeistrain</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">output</span>
+
+<div class="viewcode-block" id="ModelWrapperDefault.evaluate"><a class="viewcode-back" href="../../gatelfpytorchjson.modelwrapperdefault.html#gatelfpytorchjson.modelwrapperdefault.ModelWrapperDefault.evaluate">[docs]</a>    <span class="k">def</span> <span class="nf">evaluate</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">validationinstances</span><span class="p">,</span> <span class="n">train_mode</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">as_pytorch</span><span class="o">=</span><span class="kc">True</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Apply the model to the independent part of the validationset instances and use the dependent part</span>
+<span class="sd">        to evaluate the predictions. The validationinstances must be in batch format.</span>
+<span class="sd">        Returns a tuple of loss and accuracy. By default this returns the loss as a</span>
+<span class="sd">        pyTorch variable and accuracy as a pytorch tensor, if as_pytorch is set to False,</span>
+<span class="sd">        returns floats instead.</span>
+<span class="sd">        If prepared=True then validationinstances already contains everything as properly prepared PyTorch</span>
+<span class="sd">        Variables.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">is_data_prepared</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">Exception</span><span class="p">(</span><span class="s2">&quot;Must call train or prepare_data first&quot;</span><span class="p">)</span>
+        <span class="c1"># NOTE!!! the targets are what we get minus 1, which shifts the padding index to be -1</span>
+        <span class="c1"># TODO: IF we use padded targets, we need to subtract 1 here, otherwise we have to leave this</span>
+        <span class="c1"># as is!!</span>
+        <span class="n">targets</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">validationinstances</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span>
+        <span class="c1"># v_deps = V(torch.LongTensor(targets), requires_grad=False)</span>
+        <span class="n">v_deps</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">LongTensor</span><span class="p">(</span><span class="n">targets</span><span class="p">)</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_enable_cuda</span><span class="p">:</span>
+            <span class="n">v_deps</span> <span class="o">=</span> <span class="n">v_deps</span><span class="o">.</span><span class="n">cuda</span><span class="p">()</span>
+        <span class="n">v_preds</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_apply_model</span><span class="p">(</span><span class="n">validationinstances</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">train_mode</span><span class="o">=</span><span class="n">train_mode</span><span class="p">)</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s2">&quot;Got v_preds of size </span><span class="si">%s</span><span class="s2">: </span><span class="si">%s</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">v_preds</span><span class="o">.</span><span class="n">size</span><span class="p">(),</span> <span class="n">v_preds</span><span class="p">,))</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s2">&quot;Evaluating against targets of size </span><span class="si">%s</span><span class="s2">: </span><span class="si">%s</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">v_deps</span><span class="o">.</span><span class="n">size</span><span class="p">(),</span> <span class="n">v_deps</span><span class="p">))</span>
+        <span class="c1"># TODO: not sure if and when to zero the grads for the loss function if we use it</span>
+        <span class="c1"># in between training steps?</span>
+        <span class="c1"># NOTE: the v_preds may or may not be sequences, if sequences we get the wrong shape here</span>
+        <span class="c1"># so for now we simply put all the items (sequences and batch items) in the first dimension</span>
+        <span class="n">valuedim</span> <span class="o">=</span> <span class="n">v_preds</span><span class="o">.</span><span class="n">size</span><span class="p">()[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+        <span class="c1"># ORIG: loss = self.lossfunction(v_preds.view(-1, valuedim), v_deps.view(-1))</span>
+        <span class="c1"># TODO: the reduction should be configurable!</span>
+        <span class="n">loss_function</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">nn</span><span class="o">.</span><span class="n">NLLLoss</span><span class="p">(</span><span class="n">ignore_index</span><span class="o">=-</span><span class="mi">1</span><span class="p">,</span> <span class="n">reduction</span><span class="o">=</span><span class="s1">&#39;elementwise_mean&#39;</span><span class="p">)</span>
+        <span class="n">v_preds_reshape</span> <span class="o">=</span> <span class="n">v_preds</span><span class="o">.</span><span class="n">view</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="n">valuedim</span><span class="p">)</span>
+        <span class="c1"># !!DEBUG print(&quot;Predictions, reshaped, size=&quot;, v_preds_reshape.size(), &quot;is&quot;, v_preds_reshape, file=sys.stderr)</span>
+        <span class="n">v_deps_reshape</span> <span class="o">=</span> <span class="n">v_deps</span><span class="o">.</span><span class="n">view</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">)</span>
+        <span class="c1"># !!DEBUG print(&quot;Targets, reshaped, size=&quot;, v_deps_reshape.size(), &quot;is&quot;, v_deps_reshape, file=sys.stderr)</span>
+        <span class="n">loss</span> <span class="o">=</span> <span class="n">loss_function</span><span class="p">(</span><span class="n">v_preds_reshape</span><span class="p">,</span> <span class="n">v_deps_reshape</span><span class="p">)</span>
+        <span class="c1"># calculate the accuracy as well, since we know we have a classification problem</span>
+        <span class="n">acc</span><span class="p">,</span> <span class="n">correct</span><span class="p">,</span> <span class="n">total</span> <span class="o">=</span> <span class="n">ModelWrapper</span><span class="o">.</span><span class="n">accuracy</span><span class="p">(</span><span class="n">v_preds</span><span class="p">,</span> <span class="n">v_deps</span><span class="p">)</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s2">&quot;got loss </span><span class="si">%s</span><span class="s2"> accuracy </span><span class="si">%s</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">loss</span><span class="p">,</span> <span class="n">acc</span><span class="p">,</span> <span class="p">))</span>
+        <span class="c1"># print(&quot;loss=&quot;, loss, &quot;preds=&quot;, v_preds, &quot;targets=&quot;, v_deps, file=sys.stderr)</span>
+        <span class="c1"># !!DEBUG sys.exit()</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">as_pytorch</span><span class="p">:</span>
+            <span class="n">loss</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">loss</span><span class="p">)</span>
+            <span class="n">acc</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">acc</span><span class="p">)</span>
+        <span class="k">return</span> <span class="nb">tuple</span><span class="p">((</span><span class="n">loss</span><span class="p">,</span> <span class="n">acc</span><span class="p">,</span> <span class="n">correct</span><span class="p">,</span> <span class="n">total</span><span class="p">))</span></div>
+
+
+    <span class="c1"># the implementation should figure out best values if parameter</span>
+    <span class="c1"># is set to None</span>
+    <span class="c1"># Also, by default, the method should decide which format</span>
+    <span class="c1"># to use for reading the data (original or converted)</span>
+<div class="viewcode-block" id="ModelWrapperDefault.train"><a class="viewcode-back" href="../../gatelfpytorchjson.modelwrapperdefault.html#gatelfpytorchjson.modelwrapperdefault.ModelWrapperDefault.train">[docs]</a>    <span class="k">def</span> <span class="nf">train</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">max_epochs</span><span class="o">=</span><span class="mi">20</span><span class="p">,</span> <span class="n">batch_size</span><span class="o">=</span><span class="mi">20</span><span class="p">,</span> <span class="n">early_stopping</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">filenameprefix</span><span class="o">=</span><span class="kc">None</span>
+              <span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Train the model on the dataset. max_epochs is the maximum number of</span>
+<span class="sd">        epochs to train, but if early_stopping is enabled, it could be fewer.</span>
+<span class="sd">        If early_stopping is True, then a default strategy is used where training</span>
+<span class="sd">        stops after the validation accuracy did not improve for 2 epochs.</span>
+<span class="sd">        If set to a function that function (which must accept a standard set of parameters</span>
+<span class="sd">        and return a boolean) is used.</span>
+<span class="sd">        TODO: check if config should be used by default for the batch_size etc here!</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="c1"># if this get set to True we bail out of all loops, save the model if necessary and stop training</span>
+        <span class="n">stop_it_already</span> <span class="o">=</span> <span class="kc">False</span>
+        <span class="c1"># this gets set by the signal handler and has the same effect as stop_it_already</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">interrupted</span> <span class="o">=</span> <span class="kc">False</span>
+
+        <span class="k">if</span> <span class="n">early_stopping</span><span class="p">:</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">filenameprefix</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="ne">Exception</span><span class="p">(</span><span class="s2">&quot;If early stopping is specified, filenameprefix is needed&quot;</span><span class="p">)</span>
+            <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">early_stopping</span><span class="p">,</span> <span class="nb">bool</span><span class="p">):</span>
+                <span class="k">if</span> <span class="n">early_stopping</span><span class="p">:</span>
+                    <span class="n">early_stopping_function</span> <span class="o">=</span> <span class="n">ModelWrapper</span><span class="o">.</span><span class="n">early_stopping_checker</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="n">early_stopping</span> <span class="o">=</span> <span class="k">lambda</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span> <span class="p">:</span> <span class="kc">False</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">early_stopping_function</span> <span class="o">=</span> <span class="n">early_stopping</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">is_data_prepared</span><span class="p">:</span>
+            <span class="n">logger</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span><span class="s2">&quot;Invoked train without calling prepare_data first, running default&quot;</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">prepare_data</span><span class="p">()</span>
+        <span class="c1"># make sure we are in training mode</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">module</span><span class="o">.</span><span class="n">train</span><span class="p">(</span><span class="n">mode</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+        <span class="c1"># set the random seed, every module must know how to handle this</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">module</span><span class="o">.</span><span class="n">set_seed</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">random_seed</span><span class="p">)</span>
+        <span class="c1"># the list of all validation losses so far</span>
+        <span class="n">validation_losses</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="c1"># list of all validation accuracies so far</span>
+        <span class="n">validation_accs</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="c1"># total number of batches processed over all epochs</span>
+        <span class="n">totalbatches</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="c1"># for calculating loss and acc over a number of batches or instances for reporting</span>
+        <span class="n">report_correct</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="n">report_total</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="n">report_loss</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="c1"># best validation accuracy so far</span>
+        <span class="n">best_acc</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="c1"># initialize the last epoch number for validation to 1 so we do not validate right away</span>
+        <span class="n">last_epoch</span> <span class="o">=</span> <span class="mi">1</span>
+        <span class="k">for</span> <span class="n">epoch</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="n">max_epochs</span><span class="o">+</span><span class="mi">1</span><span class="p">):</span>
+            <span class="c1"># batch number within an epoch</span>
+            <span class="n">batch_nr</span> <span class="o">=</span> <span class="mi">0</span>
+            <span class="c1"># number of instances already used for training during this epoch</span>
+            <span class="n">nr_instances</span> <span class="o">=</span> <span class="mi">0</span>
+            <span class="c1"># for calculating loss and acc over the whole epoch / training set</span>
+            <span class="n">epoch_correct</span> <span class="o">=</span> <span class="mi">0</span>
+            <span class="n">epoch_total</span> <span class="o">=</span> <span class="mi">0</span>
+            <span class="n">epoch_loss</span> <span class="o">=</span> <span class="mi">0</span>
+            <span class="k">for</span> <span class="n">batch</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">dataset</span><span class="o">.</span><span class="n">batches_converted</span><span class="p">(</span><span class="n">train</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">batch_size</span><span class="o">=</span><span class="n">batch_size</span><span class="p">):</span>
+                <span class="n">batch_nr</span> <span class="o">+=</span> <span class="mi">1</span>
+                <span class="n">totalbatches</span> <span class="o">+=</span> <span class="mi">1</span>
+                <span class="n">nr_instances</span> <span class="o">+=</span> <span class="n">batch_size</span>  <span class="c1"># we should use the actual batch size which could be less</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">module</span><span class="o">.</span><span class="n">zero_grad</span><span class="p">()</span>
+                <span class="c1"># import ipdb</span>
+                <span class="c1"># ipdb.set_trace()</span>
+                <span class="p">(</span><span class="n">loss</span><span class="p">,</span> <span class="n">acc</span><span class="p">,</span> <span class="n">correct</span><span class="p">,</span> <span class="n">total</span><span class="p">)</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">evaluate</span><span class="p">(</span><span class="n">batch</span><span class="p">,</span> <span class="n">train_mode</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+                <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s2">&quot;Epoch=</span><span class="si">%s</span><span class="s2">, batch=</span><span class="si">%s</span><span class="s2">: loss=</span><span class="si">%s</span><span class="s2"> acc=</span><span class="si">%s</span><span class="s2">&quot;</span> <span class="o">%</span>
+                             <span class="p">(</span><span class="n">epoch</span><span class="p">,</span> <span class="n">batch_nr</span><span class="p">,</span> <span class="n">f</span><span class="p">(</span><span class="n">loss</span><span class="p">),</span> <span class="n">f</span><span class="p">(</span><span class="n">acc</span><span class="p">)))</span>
+                <span class="n">loss</span><span class="o">.</span><span class="n">backward</span><span class="p">()</span>
+                <span class="n">report_loss</span> <span class="o">+=</span> <span class="nb">float</span><span class="p">(</span><span class="n">loss</span><span class="p">)</span>
+                <span class="n">report_correct</span> <span class="o">+=</span> <span class="nb">float</span><span class="p">(</span><span class="n">correct</span><span class="p">)</span>
+                <span class="n">report_total</span> <span class="o">+=</span> <span class="nb">float</span><span class="p">(</span><span class="n">total</span><span class="p">)</span>
+                <span class="n">epoch_loss</span> <span class="o">+=</span> <span class="nb">float</span><span class="p">(</span><span class="n">loss</span><span class="p">)</span>
+                <span class="n">epoch_correct</span> <span class="o">+=</span> <span class="nb">float</span><span class="p">(</span><span class="n">correct</span><span class="p">)</span>
+                <span class="n">epoch_total</span> <span class="o">+=</span> <span class="nb">float</span><span class="p">(</span><span class="n">total</span><span class="p">)</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">optimizer</span><span class="o">.</span><span class="n">step</span><span class="p">()</span>
+                <span class="c1"># evaluation on the training set only for reporting</span>
+                <span class="k">if</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">report_every_batches</span> <span class="ow">and</span> <span class="p">((</span><span class="n">totalbatches</span> <span class="o">%</span> <span class="bp">self</span><span class="o">.</span><span class="n">report_every_batches</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">))</span> <span class="ow">or</span> \
+                        <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">report_every_instances</span> <span class="ow">and</span> <span class="p">((</span><span class="n">nr_instances</span> <span class="o">%</span> <span class="bp">self</span><span class="o">.</span><span class="n">report_every_instances</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">)):</span>
+                    <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;Epoch=</span><span class="si">%s</span><span class="s2">, batch=</span><span class="si">%s</span><span class="s2">, insts=</span><span class="si">%s</span><span class="s2">: loss=</span><span class="si">%s</span><span class="s2"> acc=</span><span class="si">%s</span><span class="s2"> / epoch_loss=</span><span class="si">%s</span><span class="s2"> epoch_acc=</span><span class="si">%s</span><span class="s2">&quot;</span> <span class="o">%</span>
+                                <span class="p">(</span><span class="n">epoch</span><span class="p">,</span> <span class="n">batch_nr</span><span class="p">,</span> <span class="n">nr_instances</span><span class="p">,</span>
+                                 <span class="n">f</span><span class="p">(</span><span class="n">report_loss</span><span class="p">),</span> <span class="n">f</span><span class="p">(</span><span class="n">report_correct</span> <span class="o">/</span> <span class="n">report_total</span><span class="p">),</span>
+                                 <span class="n">f</span><span class="p">(</span><span class="n">epoch_loss</span><span class="p">),</span> <span class="n">f</span><span class="p">(</span><span class="n">epoch_correct</span> <span class="o">/</span> <span class="n">epoch_total</span><span class="p">)))</span>
+                    <span class="n">report_loss</span> <span class="o">=</span> <span class="mi">0</span>
+                    <span class="n">report_correct</span> <span class="o">=</span> <span class="mi">0</span>
+                    <span class="n">report_total</span> <span class="o">=</span> <span class="mi">0</span>
+                <span class="c1"># this is for validating against the validation set and possibly early stopping</span>
+                <span class="k">if</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">validate_every_batches</span> <span class="ow">and</span> <span class="p">((</span><span class="n">totalbatches</span> <span class="o">%</span> <span class="bp">self</span><span class="o">.</span><span class="n">validate_every_batches</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">))</span> <span class="ow">or</span>\
+                        <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">validate_every_epochs</span> <span class="ow">and</span> <span class="p">((</span><span class="n">epoch</span> <span class="o">-</span> <span class="n">last_epoch</span><span class="p">)</span> <span class="o">==</span> <span class="bp">self</span><span class="o">.</span><span class="n">validate_every_epochs</span><span class="p">))</span> <span class="ow">or</span> \
+                        <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">validate_every_instances</span> <span class="ow">and</span> <span class="p">((</span><span class="n">nr_instances</span> <span class="o">%</span> <span class="bp">self</span><span class="o">.</span><span class="n">validate_every_instances</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">)):</span>
+                    <span class="c1"># evaluate on validation set</span>
+                    <span class="n">last_epoch</span> <span class="o">=</span> <span class="n">epoch</span>
+                    <span class="p">(</span><span class="n">loss_val</span><span class="p">,</span> <span class="n">acc_val</span><span class="p">,</span> <span class="n">correct</span><span class="p">,</span> <span class="n">total</span><span class="p">)</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">evaluate</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">valset</span><span class="p">,</span> <span class="n">train_mode</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+                    <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;Epoch=</span><span class="si">%s</span><span class="s2">, VALIDATION: loss=</span><span class="si">%s</span><span class="s2"> acc=</span><span class="si">%s</span><span class="s2">&quot;</span> <span class="o">%</span>
+                                <span class="p">(</span><span class="n">epoch</span><span class="p">,</span> <span class="n">f</span><span class="p">(</span><span class="n">loss_val</span><span class="p">),</span> <span class="n">f</span><span class="p">(</span><span class="n">acc_val</span><span class="p">)))</span>
+                    <span class="n">validation_losses</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="nb">float</span><span class="p">(</span><span class="n">loss_val</span><span class="p">))</span>
+                    <span class="n">validation_accs</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="nb">float</span><span class="p">(</span><span class="n">acc_val</span><span class="p">))</span>
+                    <span class="c1"># if we have early stopping, check if we should stop</span>
+                    <span class="k">if</span> <span class="n">early_stopping</span><span class="p">:</span>
+                        <span class="n">stop_it_already</span> <span class="o">=</span> <span class="n">early_stopping_function</span><span class="p">(</span>
+                            <span class="n">losses</span><span class="o">=</span><span class="n">validation_losses</span><span class="p">,</span> <span class="n">accs</span><span class="o">=</span><span class="n">validation_accs</span><span class="p">)</span>
+                        <span class="k">if</span> <span class="n">stop_it_already</span><span class="p">:</span>
+                            <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;Early stopping criterion reached, stopping training&quot;</span><span class="p">)</span>
+                    <span class="c1"># if the current validation accuracy is better than what we had so far, save</span>
+                    <span class="c1"># the model</span>
+                    <span class="k">if</span> <span class="n">acc_val</span> <span class="o">&gt;</span> <span class="n">best_acc</span><span class="p">:</span>
+                        <span class="n">best_acc</span> <span class="o">=</span> <span class="n">acc_val</span>
+                        <span class="bp">self</span><span class="o">.</span><span class="n">save_model</span><span class="p">(</span><span class="n">filenameprefix</span><span class="p">)</span>
+                        <span class="bp">self</span><span class="o">.</span><span class="n">best_model_saved</span> <span class="o">=</span> <span class="kc">True</span>
+
+                <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">stopfile</span> <span class="ow">and</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">exists</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">stopfile</span><span class="p">):</span>
+                    <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Stop file found, removing and terminating training...&quot;</span><span class="p">,</span> <span class="n">file</span><span class="o">=</span><span class="n">sys</span><span class="o">.</span><span class="n">stderr</span><span class="p">)</span>
+                    <span class="n">os</span><span class="o">.</span><span class="n">remove</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">stopfile</span><span class="p">)</span>
+                    <span class="n">stop_it_already</span> <span class="o">=</span> <span class="kc">True</span>
+                <span class="k">if</span> <span class="n">stop_it_already</span> <span class="ow">or</span> <span class="bp">self</span><span class="o">.</span><span class="n">interrupted</span><span class="p">:</span>
+                    <span class="k">break</span>
+            <span class="k">if</span> <span class="n">stop_it_already</span> <span class="ow">or</span> <span class="bp">self</span><span class="o">.</span><span class="n">interrupted</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">interrupted</span> <span class="o">=</span> <span class="kc">False</span>
+                <span class="k">break</span></div>
+
+<div class="viewcode-block" id="ModelWrapperDefault.checkpoint"><a class="viewcode-back" href="../../gatelfpytorchjson.modelwrapperdefault.html#gatelfpytorchjson.modelwrapperdefault.ModelWrapperDefault.checkpoint">[docs]</a>    <span class="k">def</span> <span class="nf">checkpoint</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">filenameprefix</span><span class="p">,</span> <span class="n">checkpointnr</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Save the module, adding a checkpoint number in the name.&quot;&quot;&quot;</span>
+        <span class="c1"># TODO: eventually this should get moved into the module?</span>
+        <span class="n">cp</span> <span class="o">=</span> <span class="n">checkpointnr</span>
+        <span class="k">if</span> <span class="n">cp</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">cp</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">checkpointnr</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">checkpointnr</span> <span class="o">+=</span> <span class="mi">1</span>
+        <span class="n">torch</span><span class="o">.</span><span class="n">save</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">module</span><span class="p">,</span> <span class="n">filenameprefix</span> <span class="o">+</span> <span class="s2">&quot;.module.pytorch&quot;</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="ModelWrapperDefault.save_model"><a class="viewcode-back" href="../../gatelfpytorchjson.modelwrapperdefault.html#gatelfpytorchjson.modelwrapperdefault.ModelWrapperDefault.save_model">[docs]</a>    <span class="k">def</span> <span class="nf">save_model</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">filenameprefix</span><span class="p">):</span>
+        <span class="n">start</span> <span class="o">=</span> <span class="n">timeit</span><span class="o">.</span><span class="n">timeit</span><span class="p">()</span>
+        <span class="n">filename</span> <span class="o">=</span> <span class="n">filenameprefix</span> <span class="o">+</span> <span class="s2">&quot;.module.pytorch&quot;</span>
+        <span class="n">torch</span><span class="o">.</span><span class="n">save</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">module</span><span class="p">,</span> <span class="n">filename</span><span class="p">)</span>
+        <span class="n">end</span> <span class="o">=</span> <span class="n">timeit</span><span class="o">.</span><span class="n">timeit</span><span class="p">()</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;Saved model to </span><span class="si">%s</span><span class="s2"> in </span><span class="si">%s</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">filename</span><span class="p">,</span> <span class="n">f</span><span class="p">(</span><span class="nb">abs</span><span class="p">(</span><span class="n">end</span> <span class="o">-</span> <span class="n">start</span><span class="p">))))</span></div>
+
+<div class="viewcode-block" id="ModelWrapperDefault.save"><a class="viewcode-back" href="../../gatelfpytorchjson.modelwrapperdefault.html#gatelfpytorchjson.modelwrapperdefault.ModelWrapperDefault.save">[docs]</a>    <span class="k">def</span> <span class="nf">save</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">filenameprefix</span><span class="p">):</span>
+        <span class="c1"># store everything using pickle, but we do not store the module or the dataset</span>
+        <span class="c1"># the dataset will simply get recreated when loading, but the module needs to get saved</span>
+        <span class="c1"># separately</span>
+
+        <span class="c1"># only if we did not already save the best model during training for some reason</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">best_model_saved</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">save_model</span><span class="p">(</span><span class="n">filenameprefix</span><span class="p">)</span>
+        <span class="k">assert</span> <span class="nb">hasattr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="s1">&#39;metafile&#39;</span><span class="p">)</span>
+        <span class="n">filename</span> <span class="o">=</span> <span class="n">filenameprefix</span><span class="o">+</span><span class="s2">&quot;.wrapper.pickle&quot;</span>
+        <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">filename</span><span class="p">,</span> <span class="s2">&quot;wb&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">outf</span><span class="p">:</span>
+            <span class="n">start</span> <span class="o">=</span> <span class="n">timeit</span><span class="o">.</span><span class="n">timeit</span><span class="p">()</span>
+            <span class="n">pickle</span><span class="o">.</span><span class="n">dump</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">outf</span><span class="p">)</span>
+            <span class="n">end</span> <span class="o">=</span> <span class="n">timeit</span><span class="o">.</span><span class="n">timeit</span><span class="p">()</span>
+            <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;Saved wrapper to </span><span class="si">%s</span><span class="s2"> in </span><span class="si">%s</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">filename</span><span class="p">,</span> <span class="n">f</span><span class="p">(</span><span class="nb">abs</span><span class="p">((</span><span class="n">end</span><span class="o">-</span><span class="n">start</span><span class="p">)))))</span></div>
+
+
+<div class="viewcode-block" id="ModelWrapperDefault.init_after_load"><a class="viewcode-back" href="../../gatelfpytorchjson.modelwrapperdefault.html#gatelfpytorchjson.modelwrapperdefault.ModelWrapperDefault.init_after_load">[docs]</a>    <span class="k">def</span> <span class="nf">init_after_load</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">filenameprefix</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">dataset</span> <span class="o">=</span> <span class="n">Dataset</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">metafile</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">init_from_dataset</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">module</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">filenameprefix</span><span class="o">+</span><span class="s2">&quot;.module.pytorch&quot;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">is_data_prepared</span> <span class="o">=</span> <span class="kc">False</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">valset</span> <span class="o">=</span> <span class="kc">None</span></div>
+
+    <span class="k">def</span> <span class="nf">__getstate__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Currently we do not pickle the dataset instance but rather re-create it when loading,</span>
+<span class="sd">        and we do not pickle the actual pytorch module but rather use the pytorch-specific saving</span>
+<span class="sd">        and loading mechanism.&quot;&quot;&quot;</span>
+        <span class="c1"># print(&quot;DEBUG: self keys=&quot;, self.__dict__.keys(), file=sys.stderr)</span>
+        <span class="k">assert</span> <span class="nb">hasattr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="s1">&#39;metafile&#39;</span><span class="p">)</span>
+        <span class="n">state</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">__dict__</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>  <span class="c1"># this creates a shallow copy</span>
+        <span class="c1"># print(&quot;DEBUG: copy keys=&quot;, state.keys(), file=sys.stderr)</span>
+        <span class="k">assert</span> <span class="s1">&#39;metafile&#39;</span> <span class="ow">in</span> <span class="n">state</span>
+        <span class="c1"># do not save these transient variables:</span>
+        <span class="k">del</span> <span class="n">state</span><span class="p">[</span><span class="s1">&#39;dataset&#39;</span><span class="p">]</span>
+        <span class="k">del</span> <span class="n">state</span><span class="p">[</span><span class="s1">&#39;module&#39;</span><span class="p">]</span>
+        <span class="k">del</span> <span class="n">state</span><span class="p">[</span><span class="s1">&#39;valset&#39;</span><span class="p">]</span>
+        <span class="k">del</span> <span class="n">state</span><span class="p">[</span><span class="s1">&#39;is_data_prepared&#39;</span><span class="p">]</span>
+        <span class="k">return</span> <span class="n">state</span>
+
+    <span class="k">def</span> <span class="nf">__setstate__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">state</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;We simply restore everything that was pickled earlier, the missing fields</span>
+<span class="sd">        then need to get restored using the _init_after_load method (called from load)&quot;&quot;&quot;</span>
+        <span class="k">assert</span> <span class="s1">&#39;metafile&#39;</span> <span class="ow">in</span> <span class="n">state</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">__dict__</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">state</span><span class="p">)</span>
+        <span class="k">assert</span> <span class="nb">hasattr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="s1">&#39;metafile&#39;</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">__repr__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="nb">repr</span> <span class="o">=</span> <span class="s2">&quot;ModelWrapperSimple(config=</span><span class="si">%r</span><span class="s2">, cuda=</span><span class="si">%s</span><span class="s2">):</span><span class="se">\n</span><span class="s2">module=</span><span class="si">%s</span><span class="se">\n</span><span class="s2">optimizer=</span><span class="si">%s</span><span class="se">\n</span><span class="s2">lossfun=</span><span class="si">%s</span><span class="s2">&quot;</span> <span class="o">%</span> \
+             <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_enable_cuda</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">module</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">optimizer</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">lossfunction</span><span class="p">)</span>
+        <span class="k">return</span> <span class="nb">repr</span></div>
+</pre></div>
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <form class="search" action="../../search.html" method="get">
+      <div><input type="text" name="q" /></div>
+      <div><input type="submit" value="Go" /></div>
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../../index.html">GATE LF Pytorch Wrapper (gatelfpytorch)  documentation</a> &#187;</li>
+          <li class="nav-item nav-item-1"><a href="../index.html" >Module code</a> &#187;</li> 
+      </ul>
+    </div>
+    <div class="footer" role="contentinfo">
+        &#169; Copyright 2018, University of Sheffield.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.6.2.
+    </div>
+  </body>
+</html>

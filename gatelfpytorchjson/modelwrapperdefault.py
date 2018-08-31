@@ -164,6 +164,20 @@ class ModelWrapperDefault(ModelWrapper):
         signal.signal(signal.SIGINT, self._signal_handler)
 
 
+    # This is mainly used at application time, for training, the same thing happens in init.
+    # TODO: this should get moved into a common superclass for all modelwrappers!
+    def set_cuda(self, flag):
+        """Advise to use CUDA if flag is True, or CPU if false. True is ignored if cuda is not available"""
+        if flag and torch.cuda.is_available():
+            self.module.cuda()
+            self.lossfunction.cuda()
+            self._enable_cuda = True
+        else:
+            self.module.cpu()
+            self.lossfunction.cpu()
+            self._enable_cuda = False
+
+
     def _signal_handler(self, sig, frame):
         logger.info("Received interrupt signal, setting interrupt flag")
         self.interrupted = True

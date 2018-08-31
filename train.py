@@ -9,6 +9,7 @@ if filepath:
 sys.path.append(gatelfdatapath)
 from gatelfdata import Dataset
 from gatelfpytorchjson import ModelWrapperDefault
+from gatelfpytorchjson import utils
 import argparse
 from pathlib import Path
 
@@ -22,19 +23,10 @@ streamhandler.setFormatter(formatter)
 logger.addHandler(streamhandler)
 
 
-# The way how argparse treats boolean arguments sucks, so we need to do this
-def str2bool(val):
-    if val.lower() in ["yes", "true", "y", "t", "1"]:
-        return True
-    elif val.lower() in ["no", "false", "n", "f", "0"]:
-        return False
-    else:
-        raise argparse.ArgumentTypeError("Boolean value expected, not %s" % (val,))
-
 def main(sysargs):
 
+    logger.debug("Called with args=%s" % (sysargs,))
     parser = argparse.ArgumentParser()
-    # Parameter for checkpointing the module
     parser.add_argument("--embs", type=str, help="Override embedding settings, specify as embid:embdims:embtrain:embminfreq,embid:embdims ..")
     parser.add_argument("--valsize", type=float, help="Set the validation set size (>1) or proportion (<1)")
     parser.add_argument("--valeverybatches", type=int, default=None, help="Evaluate on validation set and log every that many batches (None)")
@@ -48,10 +40,10 @@ def main(sysargs):
     parser.add_argument("--module", type=str, help="The class/file name to use for the pytorch module (within modelzoo)")
     parser.add_argument("--wrapper", type=str, help="The class/file name to use as the model wrapper")
     parser.add_argument("--learningrate", type=float, help="Override default learning rate for the optimizer")
-    parser.add_argument("--cuda", type=str2bool, help="True/False to use CUDA or not, omit to determine automatically")
+    parser.add_argument("--cuda", type=utils.str2bool, help="True/False to use CUDA or not, omit to determine automatically")
+    parser.add_argument("--seed", type=int, help="Random seed to make experiments repeatable/explore randomness (default 0=random random seed)")
     # NOTE: resume currently does not make sure that the original metafile info is used (but maybe new data):
     # This should work once the metadata is actually stored as part of the model!
-    parser.add_argument("--seed", type=int, help="Random seed to make experiments repeatable/explore randomness (default 0=random random seed)")
     parser.add_argument("--resume", action='store_true', help="Resume training from the specified model")
     parser.add_argument("--notrain", action='store_true', help="Do not actually run training, but show generated model")
     parser.add_argument("--nocreate", action='store_true', help="Do not actually even create module (do nothing)")

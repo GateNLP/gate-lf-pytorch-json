@@ -494,7 +494,8 @@ class ModelWrapperDefault(ModelWrapper):
         # so for now we simply put all the items (sequences and batch items) in the first dimension
         valuedim = v_preds.size()[-1]
         # ORIG: loss = self.lossfunction(v_preds.view(-1, valuedim), v_deps.view(-1))
-        loss_function = torch.nn.NLLLoss(ignore_index=-1, size_average=True)
+        # TODO: the reduction should be configurable!
+        loss_function = torch.nn.NLLLoss(ignore_index=-1, reduction='elementwise_mean')
         v_preds_reshape = v_preds.view(-1, valuedim)
         # !!DEBUG print("Predictions, reshaped, size=", v_preds_reshape.size(), "is", v_preds_reshape, file=sys.stderr)
         v_deps_reshape = v_deps.view(-1)

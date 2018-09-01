@@ -422,7 +422,7 @@ class ModelWrapperDefault(ModelWrapper):
         This may return additional data in the future or the format of what is returned may change.
         """
         oldlevel = logger.level
-        logger.setLevel(logging.DEBUG)
+        # logger.setLevel(logging.DEBUG)
         batchsize = len(instancelist)
         if not converted:
             # TODO: check if and when to do instance normalization here!
@@ -448,20 +448,33 @@ class ModelWrapperDefault(ModelWrapper):
             logger.debug("apply, reshaped=%s" % (reshaped,))
             reshaped = torch.exp(reshaped)
             logger.debug("apply, reshaped-exp=%s" % (reshaped,))
-            probdists = [list(x.numpy()) for x in reshaped]
-            logger.debug("apply, probdists=%s" % (probdists,))
             _, out_idxs = torch.max(reshaped, 1)
-            predictions = out_idxs.cpu().numpy()
+            # NOTE/IMPORTANT: we convert all numpy to list since numpy values (even just floats)
+            # cannot get JSON serialized
+            reshaped = reshaped.tolist()
+            # predictions = out_idxs.cpu().numpy().tolist()
+            predictions = out_idxs.tolist()
+            probdists = [list(x) for x in reshaped]
+            logger.debug("apply, probdists=%s" % (probdists,))
             logger.debug("apply, predictions=%s" % (predictions,))
+            logger.debug("apply, predictions type=%s" % (type(predictions),))
             # create the list of corresponding labels
             # TODO: again, this is a shortcut that only works if the batch has only one sequence
+            logger.debug("len(predictions) %s" % (len(predictions),))
+            #for i in range(len(predictions)):
+            #    logger.debug("probdists[%s] %s" % (i, probdists[i],))
+            #    logger.debug("predictions[%s] %s" % (i, predictions[i],))
+            #    logger.debug("probdists[%s][predictions[%s]] %s" % (i, i, probdists[predictions[i]],))
+            probs = [probdists[i][predictions[i]] for i in range(len(predictions))]
             labels = [self.dataset.target.idx2label(x) for x in predictions]
-            probs = [probdists[x] for x in predictions]
             logger.debug("apply, labels=%s" % (labels,))
             logger.debug("apply, probdists=%s" % (probdists,))
             logger.debug("apply, probs=%s" % (probs,))
             logger.setLevel(oldlevel)
-            return labels, probs, probdists
+            # NOTE: currently the above code only works for a single instance and the
+            # variables labels, probs, probdists are all for a single instance, not the batch.
+            # So in order to make the result a batch, enclose each in a list as its single element
+            return [labels], [probs], [probdists]
         else:
             # preds should be a 2d tensor of size batchsize x numberClasses
             assert len(preds.size()) == 2

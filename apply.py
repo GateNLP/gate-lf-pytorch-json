@@ -45,7 +45,7 @@ def main(sysargs):
     wrapper.set_cuda(args.cuda)
 
     # get the target vocab
-    vocab_target = wrapper.dataset.vocabs.vocabs.get_vocab("<<TARGET>>")
+    vocab_target = wrapper.dataset.vocabs.get_vocab("<<TARGET>>")
     labels = vocab_target.itos
 
     with sys.stdin as infile:
@@ -69,12 +69,13 @@ def main(sysargs):
                 # NOTE: we put this into an extra list because the apply method expects a batch,
                 # not a single instance
                 # NOTE: the apply method also returns result for a whole batch!
+
                 batchof_labels, batchof_probs, batchof_probdists = wrapper.apply([instancedata])
                 # NOTE: batchof_labels contains values for classification, but lists for
                 # sequence tagging, so we check this first
                 if not isinstance(batchof_labels, list):
                     raise Exception("Expected a list of predictions from apply but got %s" % (type(batchof_labels)))
-                if len(batchof_labels) != 1
+                if len(batchof_labels) != 1:
                     raise Exception("Expected a list of length 1 (batchsize) but got %s" % (len(batchof_labels)))
                 if isinstance(batchof_labels[0], list):
                     # we have a sequence tagging result
@@ -93,8 +94,10 @@ def main(sysargs):
                     dist = None
                 ret = {"status": "ok", "output": output, "labels": labels, "conf": prob, "dist": dist}
             except Exception as e:
+                logging.exception("Exception during processing of application result")
                 ret = {"status": "error", "error": str(e)}
             logger.debug("Application result=%s" % (ret,))
+            logger.debug("Ret=%r" % (ret,))
             print(json.dumps(ret))
             sys.stdout.flush()
     logger.debug("Application program terminating")

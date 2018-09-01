@@ -59,8 +59,6 @@ def main(sysargs):
             # However we need to always apply to a set of instances, so wrap into another array here
             instancedata = json.loads(line)
 
-            # TODO: better error handling: put the apply call into a try block and catch any error, also
-            # check returned data. If there is a problem send back in the map we return!!
             # NOTE: the  LF expects to get a map with the following elements:
             # status: must be "ok", anything else is interpreted as an error
             # output: the actual prediction: gets extracted from the returned data here
@@ -68,19 +66,34 @@ def main(sysargs):
             # from our returned data here
             # confidences: a map with confidences for all labels, may be null: this is NOT SUPPORTED in the LF yet!
             try:
-                preds = wrapper.apply([instancedata])
-                # preds are a list of one or two lists, where the first list contains all the labels and the second
-                # list contains all the confidences in the order used by the model.
-                # For now we just extract the label or for a sequence, the list of labels,
-                # knowing that for now we always process only one instance/sequence!
-                output = preds[0][0]  # this must always exist
-                if len(preds[0]) > 1:
-                    scores = preds[0][1]
+                # NOTE: we put this into an extra list because the apply method expects a batch,
+                # not a single instance
+                # NOTE: the apply method also returns result for a whole batch!
+                batchof_labels, batchof_probs, batchof_probdists = wrapper.apply([instancedata])
+                # NOTE: batchof_labels contains values for classification, but lists for
+                # sequence tagging, so we check this first
+                if not isinstance(batchof_labels, list):
+                    raise Exception("Expected a list of predictions from apply but got %s" % (type(batchof_labels)))
+                if len(batchof_labels) != 1
+                    raise Exception("Expected a list of length 1 (batchsize) but got %s" % (len(batchof_labels)))
+                if isinstance(batchof_labels[0], list):
+                    # we have a sequence tagging result
+                    is_sequence = True
                 else:
-                    scores = [0.0] * len(labels)  # return a fake list of all zeroes
-                ret = {"status": "ok", "output": output, "labels": labels, "scores": scores}
+                    # we have a classification result
+                    is_sequence = False
+                output = batchof_labels[0]
+                if isinstance(batchof_probs, list) and len(batchof_probs) == 1:
+                    prob = batchof_probs[0]
+                else:
+                    prob = None
+                if isinstance(batchof_probdists, list) and len(batchof_probdists) == 1:
+                    dist = batchof_probdists[0]
+                else:
+                    dist = None
+                ret = {"status": "ok", "output": output, "labels": labels, "conf": prob, "dist": dist}
             except Exception as e:
-                ret = {"status": "error", "error": str(e), "output":None}
+                ret = {"status": "error", "error": str(e)}
             logger.debug("Application result=%s" % (ret,))
             print(json.dumps(ret))
             sys.stdout.flush()

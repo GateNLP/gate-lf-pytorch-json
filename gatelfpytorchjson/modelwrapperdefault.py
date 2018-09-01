@@ -405,15 +405,21 @@ class ModelWrapperDefault(ModelWrapper):
         # deps = self.valset[1]
         # TODO: calculate the class distribution but if sequences, ONLY for the non-padded parts of the sequences!!!!
 
+    # TODO: this needs to use masking to undo the padding in the results!
     def apply(self, instancelist, converted=False, reshaped=False):
         """Given a list of instances in original format (or converted if converted=True), applies
-        the model to them in evaluation mode and returns the predictions in the following format as a list
-        with the following elements:
-        First, a list of the predicted labels, label sequences or values, as many elements as there are instances.
-        Second, a list of additional values for each of the labels, whith a list of values corresponding
-        to each of the labels or values in the first list. For labels, this is the probablity distribution
-        over all labels (TODO: how to index this??)
-        for values this could be confidence intervals, variances etc. That second element is optional.
+        the model to them in evaluation mode and returns the following:
+        As the first return value, the batch of predictions. This is a list of values (1 value for
+        each instance in the batch) for classification and a list of lists (1 list representing a
+        sequence for each instance in the batch) for sequence tagging.
+        As the second value, returns the score/s for the returned predictions. This has the same
+        shape as the first return value, but returns a score instead of each label.
+        As the third value, returns a batch of confidence/scoring values. For classification,
+        this is a list of lists, where the inner list is the label distribution. For sequence
+        tagging, this is a list of list of lists, again with the label distribution as the inner-most
+        list. Not that the mapping between the index of a value in the label distribution and
+        the label itself can be figured out by the caller by retrieving the target vocab first.
+        This may return additional data in the future or the format of what is returned may change.
         """
         oldlevel = logger.level
         logger.setLevel(logging.DEBUG)
@@ -434,19 +440,28 @@ class ModelWrapperDefault(ModelWrapper):
         ret = []
         nrClasses = self.dataset.nClasses
         if self.dataset.isSequence:
-            # TODO: the whole apply thing should just expect a single instance or sequence, always!
+            # TODO: create a mask and return actual length sequences, not paddings from the tensor!
+            # (not relevant in cases where the batchsize is only 1)
+            # TODO: make it work for batchsize > 1!!!!!
             dims = preds.size()[-1]
-            reshaped = preds.view(-1, dims)
-            probs = [list(x) for x in reshaped]
+            reshaped = preds.view(-1, dims).detach()
+            logger.debug("apply, reshaped=%s" % (reshaped,))
+            reshaped = torch.exp(reshaped)
+            logger.debug("apply, reshaped-exp=%s" % (reshaped,))
+            probdists = [list(x.numpy()) for x in reshaped]
+            logger.debug("apply, probdists=%s" % (probdists,))
             _, out_idxs = torch.max(reshaped, 1)
             predictions = out_idxs.cpu().numpy()
             logger.debug("apply, predictions=%s" % (predictions,))
             # create the list of corresponding labels
+            # TODO: again, this is a shortcut that only works if the batch has only one sequence
             labels = [self.dataset.target.idx2label(x) for x in predictions]
+            probs = [probdists[x] for x in predictions]
             logger.debug("apply, labels=%s" % (labels,))
+            logger.debug("apply, probdists=%s" % (probdists,))
             logger.debug("apply, probs=%s" % (probs,))
             logger.setLevel(oldlevel)
-            return [[labels], [probs]]
+            return labels, probs, probdists
         else:
             # preds should be a 2d tensor of size batchsize x numberClasses
             assert len(preds.size()) == 2

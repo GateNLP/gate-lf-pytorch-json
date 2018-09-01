@@ -415,16 +415,18 @@ class ModelWrapperDefault(ModelWrapper):
         over all labels (TODO: how to index this??)
         for values this could be confidence intervals, variances etc. That second element is optional.
         """
+        oldlevel = logger.level
+        logger.setLevel(logging.DEBUG)
         batchsize = len(instancelist)
         if not converted:
             # TODO: check if and when to do instance normalization here!
             instancelist = [self.dataset.convert_indep(x) for x in instancelist]
-            print("\nDEBUG: instances after conversion: ", instancelist, file=sys.stderr)
+            logger.debug("apply: instances after conversion: %s" % (instancelist,))
         if not reshaped:
             instancelist = self.dataset.reshape_batch(instancelist, indep_only=True)
-            print("\nDEBUG: instances after reshaping: ", instancelist, file=sys.stderr)
-        # TODO: check if using the tensor here as is is correct (previously we used variable.data)
+            logger.debug("apply: instances after reshaping: %s" % (instancelist,))
         preds = self._apply_model(instancelist, train_mode=False)
+        logger.debug("apply: predictions result (shape %s): %s" % (preds.size(), preds,))
         # for now we only have classification (sequence/non-sequence) so
         # for this, we first use the torch max to find the most likely label index,
         # then convert back to the label itself. We also convert the torch probability vector
@@ -443,6 +445,7 @@ class ModelWrapperDefault(ModelWrapper):
             labels = [self.dataset.target.idx2label(x) for x in predictions]
             logger.debug("apply, labels=%s" % (labels,))
             logger.debug("apply, probs=%s" % (probs,))
+            logger.setLevel(oldlevel)
             return [[labels], [probs]]
         else:
             # preds should be a 2d tensor of size batchsize x numberClasses
@@ -454,6 +457,7 @@ class ModelWrapperDefault(ModelWrapper):
             getlabel = self.dataset.target.idx2label
             labels = [getlabel(x) for x in out_idxs]
             probs = [list(x) for x in preds]
+            logger.setLevel(oldlevel)
             ret = [labels, probs]
         return ret
 

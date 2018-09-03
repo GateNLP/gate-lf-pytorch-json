@@ -44,7 +44,7 @@ class SentClassCNN(CustomModule):
         # * (to replicate kim we would need to combine several different channels ...)
 
         n_features = 100
-        dropout_prob = 0.5
+        self.dropout_prob = 0.2
         self.layer_cnn_k3 = torch.nn.Conv1d(
                 in_channels=emb_dims,
                 out_channels=n_features,
@@ -68,6 +68,7 @@ class SentClassCNN(CustomModule):
         # the kernel dynamically!
         # We also use the relu function instead of a layer
         # we also use the dropout function isntead of a Dropout layer
+        self.nonlin = F.relu  # or leaky_relu or whatever
 
         # each convolution layer gives us n_features and we have 3 such layers,
         # so eventually we will get, for each sequence, 3*n_features values
@@ -79,7 +80,7 @@ class SentClassCNN(CustomModule):
     def through_cnn(self, embs, cnn_layer):
         """Run through the CNN, ReLU, Maxpooling and then squeeze. Expects embs to be already transposed."""
         tmp = cnn_layer(embs)
-        return F.max_pool1d(F.relu(tmp),tmp.size()[-1]).squeeze(2)
+        return F.dropout(F.max_pool1d(self.nonlin(tmp), tmp.size()[-1]).squeeze(2), self.dropout_prob)
 
     def forward(self, batch):
         # we need only the first feature:

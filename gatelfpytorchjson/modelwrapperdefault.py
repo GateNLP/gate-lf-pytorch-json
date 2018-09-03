@@ -660,7 +660,8 @@ class ModelWrapperDefault(ModelWrapper):
                         stop_it_already = early_stopping_function(
                             losses=validation_losses, accs=validation_accs)
                         if stop_it_already:
-                            logger.info("Early stopping criterion reached, stopping training")
+                            logger.info("Early stopping criterion reached, stopping training, best validation acc: %s" %
+                                        (best_acc,))
                     # if the current validation accuracy is better than what we had so far, save
                     # the model
                     if acc_val > best_acc:
@@ -669,7 +670,8 @@ class ModelWrapperDefault(ModelWrapper):
                         self.best_model_saved = True
 
                 if self.stopfile and os.path.exists(self.stopfile):
-                    print("Stop file found, removing and terminating training...", file=sys.stderr)
+                    logger.info("Stop file found, removing and terminating training, best validation acc: %s" %
+                                (best_acc,))
                     os.remove(self.stopfile)
                     stop_it_already = True
                 if stop_it_already or self.interrupted:

@@ -39,18 +39,23 @@ class ModelWrapper(object):
     # Useful utility methods below this line
 
     @staticmethod
-    def early_stopping_checker(losses=None, accs=None):
+    def early_stopping_checker(losses=None, accs=None, lastn=4):
         """Takes two lists of numbers, representing the losses and accuracies of all validation
         steps. If the accs are not null, early stopping is initiated if the accuracy of the last
-        2 validations are not better then the one before. If accuracies are not specified
+        lastn validations are not better then the one before. If accuracies are not specified
         then this method always returns false, meaning no early stopping. The losses are ignored
         by this method"""
         if not accs:
             return False
-        if len(accs) < 3:
+        if len(accs) < lastn+1:
             return False
-        if accs[-1] < accs[-3] and accs[-2] < accs[-3]:
-            return True
+        havebetter = False
+        j = -lastn - 1
+        for i in range(-lastn, 0, 1):
+            if accs[i] > accs[j]:
+                isbetter = True
+        return not havebetter
+
 
     @staticmethod
     def makeless(n, func=math.pow, preshift=-1.0, postshift=1.0, p1=0.5):

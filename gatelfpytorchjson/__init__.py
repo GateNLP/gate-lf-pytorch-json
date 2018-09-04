@@ -1,6 +1,7 @@
 # check minimum requirements: python 3 and minimum torch version
 import sys
 import torch
+__version__ = '0.1'
 if sys.version_info[0] < 3:
     raise Exception("This only works with Python 3 or higher")
 try:
@@ -17,3 +18,4 @@ from .modelwrapper import ModelWrapper
 from .embeddingsmodule import EmbeddingsModule
 from .takefromtuple import TakeFromTuple
 from .CustomModule import CustomModule
+

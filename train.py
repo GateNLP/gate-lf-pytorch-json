@@ -7,6 +7,8 @@ filepath = os.path.dirname(__file__)
 if filepath:
     gatelfdatapath = os.path.join(filepath, gatelfdatapath)
 sys.path.append(gatelfdatapath)
+import gatelfdata
+import gatelfpytorchjson
 from gatelfdata import Dataset
 from gatelfpytorchjson import ModelWrapperDefault
 from gatelfpytorchjson import utils
@@ -48,6 +50,7 @@ def main(sysargs):
     parser.add_argument("--notrain", action='store_true', help="Do not actually run training, but show generated model")
     parser.add_argument("--nocreate", action='store_true', help="Do not actually even create module (do nothing)")
     parser.add_argument("--valfile", type=str, default=None, help="Use this file for validation")
+    parser.add_argument("--version", action='version', version=gatelfpytorchjson.__version__)
     parser.add_argument("metafile", help="Path to metafile (REQUIRED)")
     parser.add_argument("modelname", help="Model path prefix (full path and beginning of model file name) (REQUIRED)")
 

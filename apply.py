@@ -43,7 +43,7 @@ def main(sysargs):
     # TODO: set cuda depending on the parameter, if necessary
     # ??? Should we actually ever use the GPU for application?
     wrapper.set_cuda(args.cuda)
-
+    logger.info("DEBUG: model loaded:\n{}".format(wrapper.module))
     # get the target vocab
     vocab_target = wrapper.dataset.vocabs.get_vocab("<<TARGET>>")
     labels = vocab_target.itos
@@ -69,7 +69,7 @@ def main(sysargs):
                 # NOTE: we put this into an extra list because the apply method expects a batch,
                 # not a single instance
                 # NOTE: the apply method also returns result for a whole batch!
-
+                # print("DEBUG: calling wrapper.apply with instancedata=", instancedata, file=sys.stderr)
                 batchof_labels, batchof_probs, batchof_probdists = wrapper.apply([instancedata])
                 # NOTE: batchof_labels contains values for classification, but lists for
                 # sequence tagging, so we check this first
@@ -84,8 +84,11 @@ def main(sysargs):
                     # we have a classification result
                     is_sequence = False
                 output = batchof_labels[0]
+                # print("DEBUG: output is", output, file=sys.stderr)
                 if isinstance(batchof_probs, list) and len(batchof_probs) == 1:
                     prob = batchof_probs[0]
+                    # NOTE: we still need to change the LF to handle this correctly!!!
+                    # for now, just return prob as dist and prob[0] as prob/conf
                 else:
                     prob = None
                 if isinstance(batchof_probdists, list) and len(batchof_probdists) == 1:
@@ -98,7 +101,9 @@ def main(sysargs):
                 ret = {"status": "error", "error": str(e)}
             logger.debug("Application result=%s" % (ret,))
             logger.debug("Ret=%r" % (ret,))
-            print(json.dumps(ret))
+            retjson = json.dumps(ret)
+            # print("DEBUG: returned JSON=", retjson, file=sys.stderr)
+            print(retjson)
             sys.stdout.flush()
     logger.debug("Application program terminating")
 

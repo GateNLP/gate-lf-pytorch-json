@@ -480,13 +480,16 @@ class ModelWrapperDefault(ModelWrapper):
             assert len(preds.size()) == 2
             assert preds.size()[0] == batchsize
             assert preds.size()[1] == nrClasses
-            _, out_idxs = torch.max(preds, dim=1)
+            probs, out_idxs = torch.max(preds, dim=1)
+            probs = probs.detach().cpu().tolist()
             # out_idxs contains the class indices, need to convert back to labels
             getlabel = self.dataset.target.idx2label
             labels = [getlabel(x) for x in out_idxs]
-            probs = [list(x) for x in preds]
+            # for each instance in the batch return a list 
+            # probs = [list(x) for x in preds]
+            probdists = preds.detach().cpu().tolist()
             logger.setLevel(oldlevel)
-            ret = [labels, probs]
+            ret = labels, probs, probdists
         return ret
 
     def _apply_model(self, indeps, train_mode=False):

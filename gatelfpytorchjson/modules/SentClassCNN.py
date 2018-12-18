@@ -57,8 +57,8 @@ class SentClassCNN(CustomModule):
             )
         self.layer_cnn_k5 = torch.nn.Conv1d(
                 in_channels=emb_dims,
-                out_channels=100,
-                kernel_size=4
+                out_channels=n_features,
+                kernel_size=5
             )
         # NOTE: we could use a MaxPool1d layer for each convolution layer,
         # but the kernel size would need to match the output length that

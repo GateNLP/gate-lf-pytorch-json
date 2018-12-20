@@ -4,7 +4,6 @@ from gatelfpytorchjson import EmbeddingsModule
 import sys
 import logging
 import torch.nn.functional as F
-from torch.nn.utils.rnn import pack_padded_sequence, pad_packed_sequence
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
@@ -15,72 +14,129 @@ streamhandler.setFormatter(formatter)
 logger.addHandler(streamhandler)
 
 
+class MaxFrom1d(torch.nn.Module):
+    """
+    Simple maxpool module that takes the maximum from one dimension of a tensor and
+    reduces the tensor dimensions by 1.
+    Essentially the same as torch.max(x, dim=thedimension)
+    """
+    def __init__(self, dim=-1):
+        super(MaxFrom1d, self).__init__()
+        self.dim = dim
+
+    def forward(self, x):
+        return torch.max(x, dim=self.dim)[0]
+
+
+class Concat(torch.nn.Module):
+    """
+    Simple module that will concatenate a list of inputs across a dimension
+    """
+    def __init__(self, dim=-1):
+        super(Concat, self).__init__()
+        self.dim = dim
+
+    def forward(self, listofx):
+        return torch.cat(listofx, self.dim)
+
+
+class Transpose4CNN(torch.nn.Module):
+    """
+    Does the transposing for CNN
+    """
+    def __init__(self, dim=-1):
+        super(Transpose4CNN, self).__init__()
+
+    def forward(self, x):
+        return x.transpose(1,2)
+
+
+class ListModule(torch.nn.Module):
+    """
+    Simple module that runs the same input through all modules in a modulelist
+    and returns a list of outputs
+    """
+    def __init__(self, modulelist):
+        super(ListModule, self).__init__()
+        self.modulelist = modulelist
+
+    def forward(self, x):
+        return [l(x) for l in self.modulelist]
+
+
 class SentClassCNN(CustomModule):
 
-    def __init__(self, dataset, config={}):
-        # !!! See our working notes!!!!
-        super().__init__(config=config)
+    def __init__(self, dataset, config={}, **kwargs):
+        super(SentClassCNN, self).__init__(config=config)
         logger.debug("Building SentClassCNN network, config=%s" % (config, ))
-        # if we should use packed sequences or not for the LSTM
-        self.use_packed = True
 
         # TODO This should get removed and the set_seed() method inherited should
         # get used instead
         torch.manual_seed(1)
-        self.n_classes = dataset.get_info()["nClasses"]
-        logger.debug("Initializing module SentClassCNN for classes: %s" % (self.n_classes,))
 
+        # First get the parameters dictated by the data.
+        # NOTE/TODO: eventually this should be done outside the module and config parameters!
+        self.n_classes = dataset.get_info()["nClasses"]
+        # For now, this modules always uses one feature, the first one if there are several
         feature = dataset.get_indexlist_features()[0]
         vocab = feature.vocab
         logger.debug("Initializing module SentClassCNN for classes: %s and vocab %s" %
                      (self.n_classes, vocab, ))
-        # these layers replace the NgramModule default
-        self.layer_emb = EmbeddingsModule(vocab)
-        emb_dims = self.layer_emb.emb_dims
+        # If we want to factor this in a separate CNNLayer module, the input should
+        # probably already be proper embedding tensors, so this would need to get moved out
+        layer_emb = EmbeddingsModule(vocab)
+        self.emb_dims = layer_emb.emb_dims
+
+        # other parameters, not dictated by the dataset but the defaults could
+        # be adapted to the dataset. For now we used fixed defaults, similar to
+        # what was used in the Kim paper
+        self.channels_out = 100
+        self.kernel_sizes = [3, 4, 5, 6, 7]
+        self.dropout_prob = 0.5
+        self.use_batchnorm = True
+        nonlin = torch.nn.ReLU()
 
         # Architecture:
-        # * have k conv layers, for kernel sizes ksize=3,4,5 and features nfeatures= 100,100,100
-        # * input is a single embedding with random initialization channel for now
-        # * (to replicate kim we would need to combine several different channels ...)
+        # for each kernel size we create a separate CNN
+        # Note: batchnormalization will be applied before  the nonlinearity for now!
 
-        n_features = 100
-        self.dropout_prob = 0.2
-        self.layer_cnn_k3 = torch.nn.Conv1d(
-                in_channels=emb_dims,
-                out_channels=n_features,
-                kernel_size=3
+        layers_cnn = torch.nn.ModuleList()
+        for K in self.kernel_sizes:
+            layer_cnn = torch.nn.Sequential()
+            layername = "conv1d_K{}".format(K)
+            layer_cnn.add_module(layername,
+                torch.nn.Conv1d(in_channels=self.emb_dims,
+                                out_channels=self.channels_out,
+                                kernel_size=K,
+                                stride=1,
+                                padding=int(K/2),
+                                dilation=1,
+                                groups=1,
+                                bias=True)
             )
-        self.layer_cnn_k4 = torch.nn.Conv1d(
-                in_channels=emb_dims,
-                out_channels=n_features,
-                kernel_size=4
-            )
-        self.layer_cnn_k5 = torch.nn.Conv1d(
-                in_channels=emb_dims,
-                out_channels=n_features,
-                kernel_size=5
-            )
-        # NOTE: we could use a MaxPool1d layer for each convolution layer,
-        # but the kernel size would need to match the output length that
-        # we get, depending on the kernel size. So we would have to have
-        # a different maxpooling layer for each convolution layer.
-        # Instead we use the max_pool1d function in forward and choose
-        # the kernel dynamically!
-        # We also use the relu function instead of a layer
-        # we also use the dropout function isntead of a Dropout layer
-        self.nonlin = F.relu  # or leaky_relu or whatever
+            if self.use_batchnorm:
+                layername = "batchnorm1d_K{}".format(K)
+                layer_cnn.add_module(layername, torch.nn.BatchNorm1d(self.channels_out))
+            layer_cnn.add_module("nonlin_K{}".format(K), nonlin)
+            layer_cnn.add_module("maxpool_K{}".format(K), MaxFrom1d(dim=-1))
+            layer_cnn.add_module("dropout_K{}".format(K), torch.nn.Dropout(self.dropout_prob))
+            layers_cnn.append(layer_cnn)
 
-        # each convolution layer gives us n_features and we have 3 such layers,
-        # so eventually we will get, for each sequence, 3*n_features values
-        self.lin_inputs = 3*n_features
-        self.layer_lin = torch.nn.Linear(self.lin_inputs, self.n_classes)
+        # each convolution layer gives us channels_out outputs, and we have as many of
+        # of those as we have kernel sizes
+        self.lin_inputs = len(self.kernel_sizes)*self.channels_out
+        layer_lin = torch.nn.Linear(self.lin_inputs, self.n_classes)
+
+        self.layers = torch.nn.Sequential()
+        self.layers.add_module("embs", layer_emb)
+        self.layers.add_module("transpose", Transpose4CNN())
+        self.layers.add_module("CNNs", ListModule(layers_cnn))
+        self.layers.add_module("concat", Concat(dim=1))
+        self.layers.add_module("linear", layer_lin)
+        self.layers.add_module("logsoftmax", torch.nn.LogSoftmax(dim=1))
+
         # Note: the log-softmax function is used directly in forward, we do not define a layer for that
         logger.info("Network created: %s" % (self, ))
-
-    def through_cnn(self, embs, cnn_layer):
-        """Run through the CNN, ReLU, Maxpooling and then squeeze. Expects embs to be already transposed."""
-        tmp = cnn_layer(embs)
-        return F.dropout(F.max_pool1d(self.nonlin(tmp), tmp.size()[-1]).squeeze(2), self.dropout_prob)
 
     def forward(self, batch):
         # we need only the first feature:
@@ -91,21 +147,7 @@ class SentClassCNN(CustomModule):
         # logger.debug("forward called with batch of size %s: %s" % (batch.size(), batch,))
         if self.on_cuda():
             batch.cuda()
-        tmp_embs = self.layer_emb(batch)
-
-        # for the convolution layers we need the exchange the length and "channel" dimensions
-        tmp_embs_t = tmp_embs.transpose(1,2)
-
-        # run the embeddings tensor through each of the convolution layers, then through a relu
-        # then through a maxpooling then squeeze the last dimension.
-        c1 = self.through_cnn(tmp_embs_t, self.layer_cnn_k3)
-        c2 = self.through_cnn(tmp_embs_t, self.layer_cnn_k4)
-        c3 = self.through_cnn(tmp_embs_t, self.layer_cnn_k5)
-        tmp_conv = torch.cat([c1,c2,c3],1)
-
-        tmp_lin = self.layer_lin(tmp_conv)
-        # out = self.layer_out(tmp_lin)
-        out = F.log_softmax(tmp_lin, 1)
+        out = self.layers(batch)
         # logger.debug("output tensor is if size %s: %s" % (out.size(), out, ))
         return out
 

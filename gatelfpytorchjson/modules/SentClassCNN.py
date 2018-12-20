@@ -44,7 +44,7 @@ class Transpose4CNN(torch.nn.Module):
     """
     Does the transposing for CNN
     """
-    def __init__(self, dim=-1):
+    def __init__(self):
         super(Transpose4CNN, self).__init__()
 
     def forward(self, x):

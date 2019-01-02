@@ -21,7 +21,7 @@ setup(
     # keywords="",
     packages=['gatelfpytorchjson'],
     long_description=readme,
-    install_requires=['torch>=0.4', 'numpy'],
+    install_requires=['torch>=0.4.1', 'numpy'],
     python_requires=">=3",
     # scripts=['some.py'],
     # entry_points = {'console_scripts': ['some=some:main']},

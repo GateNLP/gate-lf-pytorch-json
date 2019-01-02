@@ -69,36 +69,25 @@ class LayerCNN(CustomModule):
     LayerCNN handles a single input of shape (batchsize, maxseqlen, embdims)
     and creates everything to get a final output of hidden units
     (including batch normalization, dropout and non-linearity)
+    The number of output units is in self.dim_outputs after initialisation.
     """
-    def __init__(self, dataset, config={}, **kwargs):
+    def __init__(self, emb_dims, config={}, **kwargs):
         super(LayerCNN, self).__init__(config=config)
-        logger.debug("Building SentClassCNN network, config=%s" % (config, ))
+        logger.debug("Building LayerCNN module, config=%s" % (config, ))
+
+        self.rand_seed = kwargs.get("seed") or 1
+        self.emb_dims = emb_dims
+        self.channels_out = kwargs.get("channels_out") or 100
+        self.kernel_sizes = kwargs.get("kernel_sizes") or [3, 4, 5, 6, 7]
+        self.dropout_prob = kwargs.get("dropout") or 0.5
+        self.use_batchnorm = kwargs.get("use_batchnorm") or True
+        nonlin = torch.nn.ReLU()
+
 
         # TODO This should get removed and the set_seed() method inherited should
         # get used instead
-        torch.manual_seed(1)
+        torch.manual_seed(self.rand_seed)
 
-        # First get the parameters dictated by the data.
-        # NOTE/TODO: eventually this should be done outside the module and config parameters!
-        self.n_classes = dataset.get_info()["nClasses"]
-        # For now, this modules always uses one feature, the first one if there are several
-        feature = dataset.get_indexlist_features()[0]
-        vocab = feature.vocab
-        logger.debug("Initializing module SentClassCNN for classes: %s and vocab %s" %
-                     (self.n_classes, vocab, ))
-        # If we want to factor this in a separate CNNLayer module, the input should
-        # probably already be proper embedding tensors, so this would need to get moved out
-        layer_emb = EmbeddingsModule(vocab)
-        self.emb_dims = layer_emb.emb_dims
-
-        # other parameters, not dictated by the dataset but the defaults could
-        # be adapted to the dataset. For now we used fixed defaults, similar to
-        # what was used in the Kim paper
-        self.channels_out = 100
-        self.kernel_sizes = [3, 4, 5, 6, 7]
-        self.dropout_prob = 0.5
-        self.use_batchnorm = True
-        nonlin = torch.nn.ReLU()
 
         # Architecture:
         # for each kernel size we create a separate CNN
@@ -128,40 +117,22 @@ class LayerCNN(CustomModule):
 
         # each convolution layer gives us channels_out outputs, and we have as many of
         # of those as we have kernel sizes
-        self.lin_inputs = len(self.kernel_sizes)*self.channels_out
-        layer_lin = torch.nn.Linear(self.lin_inputs, self.n_classes)
+        self.dim_outputs = len(self.kernel_sizes)*self.channels_out
 
         self.layers = torch.nn.Sequential()
-        self.layers.add_module("embs", layer_emb)
         self.layers.add_module("transpose", Transpose4CNN())
         self.layers.add_module("CNNs", ListModule(layers_cnn))
         self.layers.add_module("concat", Concat(dim=1))
-        self.layers.add_module("linear", layer_lin)
-        self.layers.add_module("logsoftmax", torch.nn.LogSoftmax(dim=1))
 
         # Note: the log-softmax function is used directly in forward, we do not define a layer for that
-        logger.info("Network created: %s" % (self, ))
+        logger.info("Layer created: %s" % (self, ))
 
     def forward(self, batch):
-        # we need only the first feature:
-        # print("DEBUG: batch=", batch, file=sys.stderr)
-        batch = torch.LongTensor(batch[0])
-        batchsize = batch.size()[0]
-
-        # logger.debug("forward called with batch of size %s: %s" % (batch.size(), batch,))
+        # batch is assumed to already be a tensor of the correct shape
+        # batchsize, maxseq, embdims
         if self.on_cuda():
             batch.cuda()
         out = self.layers(batch)
         # logger.debug("output tensor is if size %s: %s" % (out.size(), out, ))
         return out
 
-    def get_lossfunction(self, config={}):
-        # IMPORTANT: for the target indices, we use -1 for padding by default!
-        return torch.nn.NLLLoss(ignore_index=-1)
-
-    def get_optimizer(self, config={}):
-        parms = filter(lambda p: p.requires_grad, self.parameters())
-        # optimizer = torch.optim.SGD(parms, lr=0.01, momentum=0.9)
-        # optimizer = torch.optim.SGD(parms, lr=0.01, momentum=0.9, weight_decay=0.05)
-        optimizer = torch.optim.Adam(parms, lr=0.015, betas=(0.9, 0.999), eps=1e-08, weight_decay=0)
-        return optimizer

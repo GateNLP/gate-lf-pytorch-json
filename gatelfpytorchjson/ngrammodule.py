@@ -2,6 +2,7 @@ from . embeddingsmodule import EmbeddingsModule
 import torch
 import sys
 import logging
+from . LayerCNN import LayerCNN
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
@@ -18,13 +19,17 @@ class NgramModule(torch.nn.Module):
     def __init__(self, embeddingsmodule, method="lstm"):
         """Create a module for processing ngram sequences for the given EmbeddingsModule embeddingsmodule.
         How eventually will be one of  lstm, gru, conv, mean, sum.
-        TODO: currently only lstm is supported!"""
+        """
         super().__init__()
         # since we directly assign, this should get registered!
         self.embeddingsmodule = embeddingsmodule
-        # TODO: this will later select and configure the method
-        self.forward_method = self.forward_method_lstm
-        self.init_method = self.init_method_lstm
+        self.emb_dims = self.embeddingsmodule.emb_dims
+        if method == "lstm":
+            self.forward_method = self.forward_method_lstm
+            self.init_method = self.init_method_lstm
+        elif method == "cnn":
+            self.forward_method = self.forward_method_cnn
+            self.init_method = self.init_method_cnn
         # now use the configured init method
         self.init_method()
 
@@ -51,6 +56,10 @@ class NgramModule(torch.nn.Module):
             num_directions = 1
         self.out_dim = hidden_size * num_layers * num_directions
 
+    def init_method_cnn(self):
+        self.cnn = LayerCNN(self.emb_dims)
+        self.out_dim = self.cnn.dim_outputs
+
     def forward_method_lstm(self, batchofsequences):
         batchsize = len(batchofsequences)
         # NOTE: we already expect batchofsequences to be a variable with batch_first zero-padded sequences!
@@ -61,6 +70,11 @@ class NgramModule(torch.nn.Module):
         out, (h0, c0) = self.lstm(tmp1)  # TODO: for now we use zero vectors for initialization
         # we only need the final hidden state
         return h0.view(batchsize, -1)
+
+    def forward_method_cnn(self, batchofsequences):
+        tmp1 = self.embeddingsmodule.forward(batchofsequences)
+        out = self.cnn(tmp1)
+        return out
 
     def forward(self, batchofsequences):
         # just delegate to the forward method for the method chosen

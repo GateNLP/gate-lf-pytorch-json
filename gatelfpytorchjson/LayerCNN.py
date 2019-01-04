@@ -1,6 +1,6 @@
 import torch.nn
-from gatelfpytorchjson import CustomModule
-from gatelfpytorchjson import EmbeddingsModule
+from . CustomModule import CustomModule
+from . embeddingsmodule import EmbeddingsModule
 import sys
 import logging
 import torch.nn.functional as F

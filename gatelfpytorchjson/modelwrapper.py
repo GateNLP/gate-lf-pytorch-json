@@ -4,6 +4,7 @@ import torch
 import logging
 import sys
 import pickle
+import operator
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
@@ -39,22 +40,39 @@ class ModelWrapper(object):
     # Useful utility methods below this line
 
     @staticmethod
-    def early_stopping_checker(losses=None, accs=None, lastn=4):
-        """Takes two lists of numbers, representing the losses and accuracies of all validation
-        steps. If the accs are not null, early stopping is initiated if the accuracy of the last
-        lastn validations are not better then the one before. If accuracies are not specified
-        then this method always returns false, meaning no early stopping. The losses are ignored
-        by this method"""
+    def early_stopping_checker(losses=None, accs=None, patience=1, mindelta=0.0):
+        """Takes two lists of numbers, representing the losses and/or accuracies of all validation
+        steps.
+        If accs is not None, it is used, otherwise losses is used if not None, otherwise always
+        returns False (do not stop).
+        If accuracies are used, at most patience number of the last validation accuracies can
+        NOT be at least mindelta larger than the previous ones or stopping is initiated.
+        If losses are used, at most patience number of last validation losses can NOT be
+        at least mindelta smaller then the previous ones or stopping is initiated.
+        In other words this stops if more that patience of the last metrics are not an improvement
+        of at least mindelta over the one before.
+        """
+
+        values = accs
         if not accs:
+            if not losses:
+                return False
+            values = [-x for x in losses]   # so we can always check for increase
+        if len(values) < patience+2:
             return False
-        if len(accs) < lastn+1:
-            return False
-        havebetter = False
-        j = -lastn - 1
-        for i in range(-lastn, 0, 1):
-            if accs[i] > accs[j]:
-                isbetter = True
-        return not havebetter
+        # ok, now we start with the current value (the last in values)
+        # and check if it is better than the one before that, if yes good
+        # if no, go back as many as patience allows and check if we got an improvement there
+        # if we do not find an improvement return True
+
+        # check from the very last value to the nth-last value where n corresponds to the
+        # patience
+        for i in range(len(values), len(values)-patience-1, -1):
+            curidx = i-1
+            previdx = i-2
+            if values[curidx] > (values[previdx]+mindelta):
+                return False
+        return True
 
 
     @staticmethod

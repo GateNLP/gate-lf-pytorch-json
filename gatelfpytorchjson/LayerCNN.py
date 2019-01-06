@@ -78,8 +78,8 @@ class LayerCNN(CustomModule):
         self.rand_seed = kwargs.get("seed") or 1
         self.emb_dims = emb_dims
         self.channels_out = kwargs.get("channels_out") or 100
-        self.kernel_sizes = kwargs.get("kernel_sizes") or [3, 4, 5, 6, 7]
-        self.dropout_prob = kwargs.get("dropout") or 0.5
+        self.kernel_sizes = kwargs.get("kernel_sizes") or [3, 4, 5]
+        self.dropout_prob = kwargs.get("dropout") or 0.6
         self.use_batchnorm = kwargs.get("use_batchnorm") or True
         nonlin = torch.nn.ReLU()
 
@@ -125,7 +125,7 @@ class LayerCNN(CustomModule):
         self.layers.add_module("concat", Concat(dim=1))
 
         # Note: the log-softmax function is used directly in forward, we do not define a layer for that
-        logger.info("Layer created: %s" % (self, ))
+        # logger.info("Layer created: %s" % (self, ))
 
     def forward(self, batch):
         # batch is assumed to already be a tensor of the correct shape

@@ -231,14 +231,20 @@ class ModelWrapperDefault(ModelWrapper):
             inlayers_outdims += ngramlayer.out_dim
         # Now create the hidden layers
         hiddenlayers = []
+
+        # THIS WAS THE OLD APPROACH, using TWO linear layers, separated by ELU
         # for now, one hidden layer for compression and another
         # to map to the number of classes
-        n_hidden1lin_out = ModelWrapper.makeless(inlayers_outdims)
-        hidden1lin = torch.nn.Linear(inlayers_outdims, n_hidden1lin_out)
-        hidden1act = torch.nn.ELU()
-        hidden2 = torch.nn.Linear(n_hidden1lin_out, n_classes)
-        hidden = torch.nn.Sequential(hidden1lin,
-                                     hidden1act, hidden2)
+        #n_hidden1lin_out = ModelWrapper.makeless(inlayers_outdims)
+        #hidden1lin = torch.nn.Linear(inlayers_outdims, n_hidden1lin_out)
+        #hidden1act = torch.nn.ELU()
+        #hidden2 = torch.nn.Linear(n_hidden1lin_out, n_classes)
+        #hidden = torch.nn.Sequential(hidden1lin,
+        #                             hidden1act, hidden2)
+
+        # INSTEAD we just use a single linear layer, no nonlinearity
+        hidden = torch.nn.Linear(inlayers_outdims, n_classes)
+
         hiddenlayers.append((hidden, {"name": "hidden"}))
         # Create the output layer
         out = torch.nn.LogSoftmax(dim=1)
@@ -607,9 +613,10 @@ class ModelWrapperDefault(ModelWrapper):
         report_total = 0
         report_loss = 0
         # best validation accuracy so far
-        best_acc = 0
         # initialize the last epoch number for validation to 1 so we do not validate right away
         last_epoch = 1
+        best_acc = 0.0
+        saved_model_name = None
         for epoch in range(1, max_epochs+1):
             # batch number within an epoch
             batch_nr = 0
@@ -669,7 +676,7 @@ class ModelWrapperDefault(ModelWrapper):
                     # the model
                     if acc_val > best_acc:
                         best_acc = acc_val
-                        self.save_model(filenameprefix)
+                        saved_model_name = self.save_model(filenameprefix)
                         self.best_model_saved = True
 
                 if self.stopfile and os.path.exists(self.stopfile):
@@ -682,6 +689,7 @@ class ModelWrapperDefault(ModelWrapper):
             if stop_it_already or self.interrupted:
                 self.interrupted = False
                 break
+        logger.info("Training completed, best validation acc={}, model saved to {}".format(best_acc, saved_model_name))
 
     def checkpoint(self, filenameprefix, checkpointnr=None):
         """Save the module, adding a checkpoint number in the name."""
@@ -698,6 +706,7 @@ class ModelWrapperDefault(ModelWrapper):
         torch.save(self.module, filename)
         end = timeit.timeit()
         logger.info("Saved model to %s in %s" % (filename, f(abs(end - start))))
+        return filename
 
     def save(self, filenameprefix):
         # store everything using pickle, but we do not store the module or the dataset

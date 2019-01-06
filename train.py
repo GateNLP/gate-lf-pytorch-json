@@ -29,7 +29,7 @@ def main(sysargs):
 
     logger.debug("Called with args=%s" % (sysargs,))
     parser = argparse.ArgumentParser()
-    parser.add_argument("--embs", type=str, help="Override embedding settings, specify as embid:embdims:embtrain:embminfreq,embid:embdims ..")
+    parser.add_argument("--embs", type=str, help="Override embedding settings, specify as embid:embdims:embtrain:embminfreq:embfile,embid:embdims ..")
     parser.add_argument("--valsize", type=float, help="Set the validation set size (>1) or proportion (<1)")
     parser.add_argument("--valeverybatches", type=int, default=None, help="Evaluate on validation set and log every that many batches (None)")
     parser.add_argument("--valeveryepochs", type=int, default=1, help="Evaluate on validation set and log every that many epochs (1)")

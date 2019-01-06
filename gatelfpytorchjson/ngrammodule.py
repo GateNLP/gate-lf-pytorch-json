@@ -45,7 +45,7 @@ class NgramModule(torch.nn.Module):
         self.lstm = torch.nn.LSTM(input_size=self.embeddingsmodule.emb_dims,
                                   hidden_size=hidden_size,
                                   num_layers=num_layers,
-                                  # dropout=0.1,
+                                  dropout=0.4,
                                   bidirectional=bidirectional,
                                   batch_first=True)
         # TODO: create a better lstm initialisation vector here for repeated
@@ -55,6 +55,7 @@ class NgramModule(torch.nn.Module):
         else:
             num_directions = 1
         self.out_dim = hidden_size * num_layers * num_directions
+        logger.info("Created LSTM with out_dim {}".format(self.out_dim))
 
     def init_method_cnn(self):
         self.cnn = LayerCNN(self.emb_dims)
@@ -69,7 +70,11 @@ class NgramModule(torch.nn.Module):
         tmp1 = self.embeddingsmodule.forward(batchofsequences)
         out, (h0, c0) = self.lstm(tmp1)  # TODO: for now we use zero vectors for initialization
         # we only need the final hidden state
-        return h0.view(batchsize, -1)
+        # logger.info("out is of shape {}, batchsize={}".format(out.size(), batchsize))
+        ret = out[:, -1, :]
+        # logger.info("ret is of shape {}".format(ret.size()))
+        ret = ret.view(batchsize, -1)
+        return ret
 
     def forward_method_cnn(self, batchofsequences):
         tmp1 = self.embeddingsmodule.forward(batchofsequences)

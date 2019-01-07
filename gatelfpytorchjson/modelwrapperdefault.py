@@ -226,7 +226,10 @@ class ModelWrapperDefault(ModelWrapper):
                 emblayer = EmbeddingsModule(vocab)
                 nom_layers[emb_id] = emblayer
             lname = "input_ngram_%s_%s" % (i, emb_id)
-            ngramlayer = NgramModule(emblayer, method="cnn")  # lstm or cnn
+            ngram_layer = self.config.get("ngram_layer")
+            if ngram_layer is None:
+                ngram_layer = "cnn"
+            ngramlayer = NgramModule(emblayer, method=ngram_layer)  # lstm or cnn
             inputlayers.append((ngramlayer, {"type": "ngram", "name": lname}))
             inlayers_outdims += ngramlayer.out_dim
         # Now create the hidden layers

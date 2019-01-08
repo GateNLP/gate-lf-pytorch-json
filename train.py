@@ -63,7 +63,7 @@ def main(sysargs):
     modelname = args.modelname
 
     if not metafile or not modelname:
-        raise Exception("Metafile or modelfile not specified, use --help parameter for help")
+        raise Exception("Metafile or modelfile not specified, use --help parameter for help\nLearningFramework defaults are: crvd.meta.json FileJsonPyTorch.model")
 
     datadir = str(Path(metafile).parent)
 

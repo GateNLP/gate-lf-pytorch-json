@@ -740,12 +740,13 @@ class ModelWrapperDefault(ModelWrapper):
             self.module = torch.load(filenameprefix+".module.pytorch")
         else:
             if cuda:
-                dest = 'cuda'
+                device = torch.device("cuda")
             else:
-                dest = 'cpu'
-            mapper = lambda storage, location: dest
-            self.module = torch.load(filenameprefix + ".module.pytorch", map_location=mapper)
+                device = torch.device("cpu")
+            self.module = torch.load(filenameprefix + ".module.pytorch", map_location=str(device))
             # make doubly sure
+            self.module.to(device)
+            self.set_cuda(cuda)
         self.is_data_prepared = False
         self.valset = None
 

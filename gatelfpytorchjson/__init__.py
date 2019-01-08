@@ -1,7 +1,7 @@
 # check minimum requirements: python 3 and minimum torch version
 import sys
 import torch
-__version__ = '0.2.1'
+__version__ = '0.2.2'
 if sys.version_info[0] < 3:
     raise Exception("This only works with Python 3.5 or higher")
     if sys.version_info[1] < 5:

@@ -33,7 +33,7 @@ class ModelWrapper(object):
             w = pickle.load(inf)
         logger.debug("Restored instance keys=%s" % (w.__dict__.keys(),))
         assert hasattr(w, 'metafile')
-        w.init_after_load(filenameprefix, cuda=None)
+        w.init_after_load(filenameprefix, cuda=cuda)
         return w
 
     # Useful utility methods below this line

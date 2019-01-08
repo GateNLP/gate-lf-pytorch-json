@@ -729,10 +729,23 @@ class ModelWrapperDefault(ModelWrapper):
             logger.info("Saved wrapper to %s in %s" % (filename, f(abs((end-start)))))
 
 
-    def init_after_load(self, filenameprefix):
+    def init_after_load(self, filenameprefix, cuda=None):
+        """
+        If cuda is not None, try to load the module directly to cpu or cuda, as requested.
+        If cuda is None, let pytorch decide what to do.
+        """
         self.dataset = Dataset(self.metafile)
         self.init_from_dataset()
-        self.module = torch.load(filenameprefix+".module.pytorch")
+        if cuda is None:
+            self.module = torch.load(filenameprefix+".module.pytorch")
+        else:
+            if cuda:
+                dest = 'cuda'
+            else:
+                dest = 'cpu'
+            mapper = lambda storage, location: dest
+            self.module = torch.load(filenameprefix + ".module.pytorch", map_location=mapper)
+            # make doubly sure
         self.is_data_prepared = False
         self.valset = None
 

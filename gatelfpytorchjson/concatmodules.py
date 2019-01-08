@@ -11,17 +11,16 @@ streamhandler.setFormatter(formatter)
 logger.addHandler(streamhandler)
 
 
+class ConcatModules(torch.nn.Module):
 
-class Concat(torch.nn.Module):
-
-    def __init__(self, inputs, name="concat", dim=None):
+    def __init__(self, inputs, name="ConcatModules", dim=None, config={}):
         """Concatenates the outputs of the given layers to a single output.
         The default axis for concatenating is the last dimension of the tensor.
         This can be overriden by setting dim to the axis.
         """
         super().__init__()
         self.inputs = inputs
-        for i,input in enumerate(inputs):
+        for i, input in enumerate(inputs):
             self.add_module(name+("-%s" % i), input)
         self.name = name
         self.dim = dim

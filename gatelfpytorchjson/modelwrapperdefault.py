@@ -1,16 +1,13 @@
-from . modelwrapper import ModelWrapper
-from . embeddingsmodule import EmbeddingsModule
-from . ngrammodule import NgramModule
+from gatelfpytorchjson.modelwrapper import ModelWrapper
+from gatelfpytorchjson.embeddingsmodule import EmbeddingsModule
+from gatelfpytorchjson.ngrammodule import NgramModule
 import os
 import torch
 import torch.nn
 import torch.optim
-from torch.autograd import Variable as V
 from .classificationmodule import ClassificationModule
 from .takefromtuple import TakeFromTuple
-import logging
 import sys
-import statistics
 import pickle
 from gatelfdata import Dataset
 import numpy as np
@@ -104,7 +101,11 @@ class ModelWrapperDefault(ModelWrapper):
         self.valset = None   # Validation set created by prepare_data
         self.lossfunction = None
         self.module = None  # the init_<TASK> method actually sets this!!
-        self.random_seed = 0
+        self.random_seed = config.get("seed", 0)
+        torch.manual_seed(self.random_seed)
+        # make sure it is set on all GPUs as well, we can always do this as torch ignores
+        # this if no CUDA is available
+        torch.cuda.manual_seed_all(self.random_seed)
         # if the config requires a specific module needs to get used, create it here, otherwise
         # create the module needed for sequences or non-sequences
         # IMPORTANT! the optimizer needs to get created after the module has been moved to a GPU

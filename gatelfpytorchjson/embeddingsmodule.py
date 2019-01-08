@@ -1,6 +1,5 @@
 import torch
 from torch.autograd import Variable as V
-from collections import defaultdict
 import sys
 import logging
 
@@ -11,7 +10,6 @@ formatter = logging.Formatter(
                 '%(asctime)s %(name)-12s %(levelname)-8s %(message)s')
 streamhandler.setFormatter(formatter)
 logger.addHandler(streamhandler)
-
 
 
 class EmbeddingsModule(torch.nn.Module):

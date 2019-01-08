@@ -4,7 +4,6 @@ import torch
 import logging
 import sys
 import pickle
-import operator
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)

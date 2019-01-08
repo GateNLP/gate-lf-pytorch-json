@@ -146,7 +146,6 @@ def main(sysargs):
     wrapper.validate_every_instances = config["valeveryinstances"]
     wrapper.report_every_instances = config["repeveryinstances"]
     wrapper.report_every_batches = config["repeverybatches"]
-    wrapper.random_seed = config["seed"]
 
     # TODO: figure out what good defaults are here and what we want to set here rather than
     # in the constructor. Maybe allow to set everything in the constructor for simplicity?

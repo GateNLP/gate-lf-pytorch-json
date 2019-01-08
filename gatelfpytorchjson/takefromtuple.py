@@ -12,7 +12,6 @@ streamhandler.setFormatter(formatter)
 logger.addHandler(streamhandler)
 
 
-
 class TakeFromTuple(torch.nn.Module):
 
     def __init__(self, moduletowrap, which=0):

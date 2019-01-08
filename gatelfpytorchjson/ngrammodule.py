@@ -1,8 +1,7 @@
-from . embeddingsmodule import EmbeddingsModule
 import torch
 import sys
 import logging
-from . LayerCNN import LayerCNN
+from gatelfpytorchjson.LayerCNN import LayerCNN
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)

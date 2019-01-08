@@ -1,7 +1,6 @@
 import torch.nn
 from gatelfpytorchjson import CustomModule
 from torch.autograd import Variable as V
-import torch.nn.functional as F
 import sys
 import logging
 
@@ -12,7 +11,6 @@ formatter = logging.Formatter(
                 '%(asctime)s %(name)-12s %(levelname)-8s %(message)s')
 streamhandler.setFormatter(formatter)
 logger.addHandler(streamhandler)
-
 
 
 class ExampleClFf1(CustomModule):

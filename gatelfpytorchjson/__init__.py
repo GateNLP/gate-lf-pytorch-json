@@ -3,19 +3,21 @@ import sys
 import torch
 __version__ = '0.1'
 if sys.version_info[0] < 3:
-    raise Exception("This only works with Python 3 or higher")
+    raise Exception("This only works with Python 3.5 or higher")
+    if sys.version_info[1] < 5:
+        raise Exception("This only works with Python 3.5 or higher")
 try:
     from pkg_resources import parse_version
-    if parse_version(torch.__version__) < parse_version("0.3.0"):
-        raise Exception("PyTorch version should at least be 0.3.0")
+    if parse_version(torch.__version__) < parse_version("0.4.1"):
+        raise Exception("PyTorch version should at least be 0.4.1")
 except ImportError:
     # we silently ignore this and let the user run into problems later rather
     # than insist that setuptools must be installed
     pass
 
-from .modelwrapperdefault import ModelWrapperDefault
-from .modelwrapper import ModelWrapper
-from .embeddingsmodule import EmbeddingsModule
-from .takefromtuple import TakeFromTuple
-from .CustomModule import CustomModule
+from gatelfpytorchjson.modelwrapperdefault import ModelWrapperDefault
+from gatelfpytorchjson.modelwrapper import ModelWrapper
+from gatelfpytorchjson.embeddingsmodule import EmbeddingsModule
+from gatelfpytorchjson.takefromtuple import TakeFromTuple
+from gatelfpytorchjson.CustomModule import CustomModule
 

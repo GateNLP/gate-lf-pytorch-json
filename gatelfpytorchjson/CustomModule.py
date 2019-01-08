@@ -1,9 +1,8 @@
 import torch
 import torch.nn
-from torch.autograd import Variable as V
-import torch.nn.functional as F
 import sys
 import logging
+from abc import abstractmethod
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
@@ -44,3 +43,7 @@ class CustomModule(torch.nn.Module):
         if self._on_cuda is None:
             self._on_cuda = next(self.parameters()).is_cuda
         return self._on_cuda
+
+    @abstractmethod
+    def forward(self, *input):
+        pass

@@ -3,7 +3,6 @@ from gatelfpytorchjson import CustomModule
 from gatelfpytorchjson import EmbeddingsModule
 import sys
 import logging
-import torch.nn.functional as F
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)

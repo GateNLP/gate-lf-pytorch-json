@@ -53,8 +53,9 @@
 <span class="kn">import</span> <span class="nn">torch</span>
 <span class="kn">import</span> <span class="nn">sys</span>
 <span class="kn">import</span> <span class="nn">logging</span>
+<span class="kn">from</span> <span class="nn">.</span> <span class="n">LayerCNN</span> <span class="kn">import</span> <span class="nn">LayerCNN</span>
 
-<span class="n">logger</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">getLogger</span><span class="p">(</span><span class="n">__name__</span><span class="p">)</span>
+<span class="n">logger</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">getLogger</span><span class="p">(</span><span class="vm">__name__</span><span class="p">)</span>
 <span class="n">logger</span><span class="o">.</span><span class="n">setLevel</span><span class="p">(</span><span class="n">logging</span><span class="o">.</span><span class="n">INFO</span><span class="p">)</span>
 <span class="n">streamhandler</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">StreamHandler</span><span class="p">(</span><span class="n">stream</span><span class="o">=</span><span class="n">sys</span><span class="o">.</span><span class="n">stderr</span><span class="p">)</span>
 <span class="n">formatter</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">Formatter</span><span class="p">(</span>
@@ -69,13 +70,17 @@
     <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">embeddingsmodule</span><span class="p">,</span> <span class="n">method</span><span class="o">=</span><span class="s2">&quot;lstm&quot;</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;Create a module for processing ngram sequences for the given EmbeddingsModule embeddingsmodule.</span>
 <span class="sd">        How eventually will be one of  lstm, gru, conv, mean, sum.</span>
-<span class="sd">        TODO: currently only lstm is supported!&quot;&quot;&quot;</span>
-        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="n">__init__</span><span class="p">()</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">()</span>
         <span class="c1"># since we directly assign, this should get registered!</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">embeddingsmodule</span> <span class="o">=</span> <span class="n">embeddingsmodule</span>
-        <span class="c1"># TODO: this will later select and configure the method</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">forward_method</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">forward_method_lstm</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">init_method</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">init_method_lstm</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">emb_dims</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">embeddingsmodule</span><span class="o">.</span><span class="n">emb_dims</span>
+        <span class="k">if</span> <span class="n">method</span> <span class="o">==</span> <span class="s2">&quot;lstm&quot;</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">forward_method</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">forward_method_lstm</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">init_method</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">init_method_lstm</span>
+        <span class="k">elif</span> <span class="n">method</span> <span class="o">==</span> <span class="s2">&quot;cnn&quot;</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">forward_method</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">forward_method_cnn</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">init_method</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">init_method_cnn</span>
         <span class="c1"># now use the configured init method</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">init_method</span><span class="p">()</span>
 
@@ -91,7 +96,7 @@
         <span class="bp">self</span><span class="o">.</span><span class="n">lstm</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">nn</span><span class="o">.</span><span class="n">LSTM</span><span class="p">(</span><span class="n">input_size</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">embeddingsmodule</span><span class="o">.</span><span class="n">emb_dims</span><span class="p">,</span>
                                   <span class="n">hidden_size</span><span class="o">=</span><span class="n">hidden_size</span><span class="p">,</span>
                                   <span class="n">num_layers</span><span class="o">=</span><span class="n">num_layers</span><span class="p">,</span>
-                                  <span class="c1"># dropout=0.1,</span>
+                                  <span class="n">dropout</span><span class="o">=</span><span class="mf">0.4</span><span class="p">,</span>
                                   <span class="n">bidirectional</span><span class="o">=</span><span class="n">bidirectional</span><span class="p">,</span>
                                   <span class="n">batch_first</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
         <span class="c1"># TODO: create a better lstm initialisation vector here for repeated</span>
@@ -100,7 +105,12 @@
             <span class="n">num_directions</span> <span class="o">=</span> <span class="mi">2</span>
         <span class="k">else</span><span class="p">:</span>
             <span class="n">num_directions</span> <span class="o">=</span> <span class="mi">1</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">out_dim</span> <span class="o">=</span> <span class="n">hidden_size</span> <span class="o">*</span> <span class="n">num_layers</span> <span class="o">*</span> <span class="n">num_directions</span></div>
+        <span class="bp">self</span><span class="o">.</span><span class="n">out_dim</span> <span class="o">=</span> <span class="n">hidden_size</span> <span class="o">*</span> <span class="n">num_layers</span> <span class="o">*</span> <span class="n">num_directions</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;Created LSTM with out_dim </span><span class="si">{}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">out_dim</span><span class="p">))</span></div>
+
+<div class="viewcode-block" id="NgramModule.init_method_cnn"><a class="viewcode-back" href="../../gatelfpytorchjson.ngrammodule.html#gatelfpytorchjson.ngrammodule.NgramModule.init_method_cnn">[docs]</a>    <span class="k">def</span> <span class="nf">init_method_cnn</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">cnn</span> <span class="o">=</span> <span class="n">LayerCNN</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">emb_dims</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">out_dim</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">cnn</span><span class="o">.</span><span class="n">dim_outputs</span></div>
 
 <div class="viewcode-block" id="NgramModule.forward_method_lstm"><a class="viewcode-back" href="../../gatelfpytorchjson.ngrammodule.html#gatelfpytorchjson.ngrammodule.NgramModule.forward_method_lstm">[docs]</a>    <span class="k">def</span> <span class="nf">forward_method_lstm</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">batchofsequences</span><span class="p">):</span>
         <span class="n">batchsize</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">batchofsequences</span><span class="p">)</span>
@@ -111,7 +121,16 @@
         <span class="n">tmp1</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">embeddingsmodule</span><span class="o">.</span><span class="n">forward</span><span class="p">(</span><span class="n">batchofsequences</span><span class="p">)</span>
         <span class="n">out</span><span class="p">,</span> <span class="p">(</span><span class="n">h0</span><span class="p">,</span> <span class="n">c0</span><span class="p">)</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">lstm</span><span class="p">(</span><span class="n">tmp1</span><span class="p">)</span>  <span class="c1"># TODO: for now we use zero vectors for initialization</span>
         <span class="c1"># we only need the final hidden state</span>
-        <span class="k">return</span> <span class="n">h0</span><span class="o">.</span><span class="n">view</span><span class="p">(</span><span class="n">batchsize</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">)</span></div>
+        <span class="c1"># logger.info(&quot;out is of shape {}, batchsize={}&quot;.format(out.size(), batchsize))</span>
+        <span class="n">ret</span> <span class="o">=</span> <span class="n">out</span><span class="p">[:,</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="p">:]</span>
+        <span class="c1"># logger.info(&quot;ret is of shape {}&quot;.format(ret.size()))</span>
+        <span class="n">ret</span> <span class="o">=</span> <span class="n">ret</span><span class="o">.</span><span class="n">view</span><span class="p">(</span><span class="n">batchsize</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">ret</span></div>
+
+<div class="viewcode-block" id="NgramModule.forward_method_cnn"><a class="viewcode-back" href="../../gatelfpytorchjson.ngrammodule.html#gatelfpytorchjson.ngrammodule.NgramModule.forward_method_cnn">[docs]</a>    <span class="k">def</span> <span class="nf">forward_method_cnn</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">batchofsequences</span><span class="p">):</span>
+        <span class="n">tmp1</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">embeddingsmodule</span><span class="o">.</span><span class="n">forward</span><span class="p">(</span><span class="n">batchofsequences</span><span class="p">)</span>
+        <span class="n">out</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">cnn</span><span class="p">(</span><span class="n">tmp1</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">out</span></div>
 
 <div class="viewcode-block" id="NgramModule.forward"><a class="viewcode-back" href="../../gatelfpytorchjson.ngrammodule.html#gatelfpytorchjson.ngrammodule.NgramModule.forward">[docs]</a>    <span class="k">def</span> <span class="nf">forward</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">batchofsequences</span><span class="p">):</span>
         <span class="c1"># just delegate to the forward method for the method chosen</span>

@@ -1,0 +1,7 @@
+gatelfpytorchjson\.LayerCNN module
+==================================
+
+.. automodule:: gatelfpytorchjson.LayerCNN
+    :members:
+    :undoc-members:
+    :show-inheritance:

@@ -1,7 +1,0 @@
-gatelfpytorchjson\.classificationmodelsimple module
-===================================================
-
-.. automodule:: gatelfpytorchjson.classificationmodelsimple
-    :members:
-    :undoc-members:
-    :show-inheritance:

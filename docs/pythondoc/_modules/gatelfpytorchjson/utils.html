@@ -6,7 +6,7 @@
   <head>
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
     
-    <title>gatelfpytorchjson.seqtaggingmodelsimple &#8212; GATE LF Pytorch Wrapper (gatelfpytorch)  documentation</title>
+    <title>gatelfpytorchjson.utils &#8212; GATE LF Pytorch Wrapper (gatelfpytorch)  documentation</title>
     
     <link rel="stylesheet" href="../../_static/classic.css" type="text/css" />
     <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
@@ -48,18 +48,20 @@
         <div class="bodywrapper">
           <div class="body" role="main">
             
-  <h1>Source code for gatelfpytorchjson.seqtaggingmodelsimple</h1><div class="highlight"><pre>
-<span></span><span class="kn">import</span> <span class="nn">torch.nn</span>
-<span class="kn">from</span> <span class="nn">torch.autograd</span> <span class="k">import</span> <span class="n">Variable</span> <span class="k">as</span> <span class="n">V</span>
-<span class="kn">import</span> <span class="nn">torch.nn.functional</span> <span class="k">as</span> <span class="nn">F</span>
+  <h1>Source code for gatelfpytorchjson.utils</h1><div class="highlight"><pre>
+<span></span><span class="sd">&quot;&quot;&quot;Various commonly used utility functions&quot;&quot;&quot;</span>
 
-<div class="viewcode-block" id="SeqTaggingModelSimple"><a class="viewcode-back" href="../../gatelfpytorchjson.seqtaggingmodelsimple.html#gatelfpytorchjson.seqtaggingmodelsimple.SeqTaggingModelSimple">[docs]</a><span class="k">class</span> <span class="nc">SeqTaggingModelSimple</span><span class="p">(</span><span class="n">torch</span><span class="o">.</span><span class="n">nn</span><span class="o">.</span><span class="n">Module</span><span class="p">):</span>
+<span class="kn">import</span> <span class="nn">argparse</span>
 
-    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">()</span>
 
-<div class="viewcode-block" id="SeqTaggingModelSimple.forward"><a class="viewcode-back" href="../../gatelfpytorchjson.seqtaggingmodelsimple.html#gatelfpytorchjson.seqtaggingmodelsimple.SeqTaggingModelSimple.forward">[docs]</a>    <span class="k">def</span> <span class="nf">forward</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-        <span class="k">pass</span></div></div>
+<span class="c1"># The way how argparse treats boolean arguments sucks, so we need to do this</span>
+<div class="viewcode-block" id="str2bool"><a class="viewcode-back" href="../../gatelfpytorchjson.utils.html#gatelfpytorchjson.utils.str2bool">[docs]</a><span class="k">def</span> <span class="nf">str2bool</span><span class="p">(</span><span class="n">val</span><span class="p">):</span>
+    <span class="k">if</span> <span class="n">val</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="ow">in</span> <span class="p">[</span><span class="s2">&quot;yes&quot;</span><span class="p">,</span> <span class="s2">&quot;true&quot;</span><span class="p">,</span> <span class="s2">&quot;y&quot;</span><span class="p">,</span> <span class="s2">&quot;t&quot;</span><span class="p">,</span> <span class="s2">&quot;1&quot;</span><span class="p">]:</span>
+        <span class="k">return</span> <span class="kc">True</span>
+    <span class="k">elif</span> <span class="n">val</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="ow">in</span> <span class="p">[</span><span class="s2">&quot;no&quot;</span><span class="p">,</span> <span class="s2">&quot;false&quot;</span><span class="p">,</span> <span class="s2">&quot;n&quot;</span><span class="p">,</span> <span class="s2">&quot;f&quot;</span><span class="p">,</span> <span class="s2">&quot;0&quot;</span><span class="p">]:</span>
+        <span class="k">return</span> <span class="kc">False</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="n">argparse</span><span class="o">.</span><span class="n">ArgumentTypeError</span><span class="p">(</span><span class="s2">&quot;Boolean value expected, not </span><span class="si">%s</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">val</span><span class="p">,))</span></div>
 </pre></div>
 
           </div>

@@ -77,12 +77,17 @@ batchsize, nclasses, targets have shape batchsize</p>
 
 <dl class="staticmethod">
 <dt id="gatelfpytorchjson.modelwrapper.ModelWrapper.early_stopping_checker">
-<em class="property">static </em><code class="descname">early_stopping_checker</code><span class="sig-paren">(</span><em>losses=None</em>, <em>accs=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/gatelfpytorchjson/modelwrapper.html#ModelWrapper.early_stopping_checker"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#gatelfpytorchjson.modelwrapper.ModelWrapper.early_stopping_checker" title="Permalink to this definition">¶</a></dt>
-<dd><p>Takes two lists of numbers, representing the losses and accuracies of all validation
-steps. If the accs are not null, early stopping is initiated if the accuracy of the last
-2 validations are not better then the one before. If accuracies are not specified
-then this method always returns false, meaning no early stopping. The losses are ignored
-by this method</p>
+<em class="property">static </em><code class="descname">early_stopping_checker</code><span class="sig-paren">(</span><em>losses=None</em>, <em>accs=None</em>, <em>patience=2</em>, <em>mindelta=0.0</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/gatelfpytorchjson/modelwrapper.html#ModelWrapper.early_stopping_checker"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#gatelfpytorchjson.modelwrapper.ModelWrapper.early_stopping_checker" title="Permalink to this definition">¶</a></dt>
+<dd><p>Takes two lists of numbers, representing the losses and/or accuracies of all validation
+steps.
+If accs is not None, it is used, otherwise losses is used if not None, otherwise always
+returns False (do not stop).
+If accuracies are used, at most patience number of the last validation accuracies can
+NOT be at least mindelta larger than the best one so far.
+If losses are used, at most patience number of last validation losses can NOT be
+at least mindelta smaller then the best one so far.
+In other words this stops if more that patience of the last metrics are not an improvement
+of at least mindelta over the current best.</p>
 </dd></dl>
 
 <dl class="classmethod">

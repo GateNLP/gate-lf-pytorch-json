@@ -66,13 +66,18 @@
 <dt id="gatelfpytorchjson.modelwrapperdefault.ModelWrapperDefault.apply">
 <code class="descname">apply</code><span class="sig-paren">(</span><em>instancelist</em>, <em>converted=False</em>, <em>reshaped=False</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/gatelfpytorchjson/modelwrapperdefault.html#ModelWrapperDefault.apply"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#gatelfpytorchjson.modelwrapperdefault.ModelWrapperDefault.apply" title="Permalink to this definition">¶</a></dt>
 <dd><p>Given a list of instances in original format (or converted if converted=True), applies
-the model to them in evaluation mode and returns the predictions in the following format as a list
-with the following elements:
-First, a list of the predicted labels, label sequences or values, as many elements as there are instances.
-Second, a list of additional values for each of the labels, whith a list of values corresponding
-to each of the labels or values in the first list. For labels, this is the probablity distribution
-over all labels (TODO: how to index this??)
-for values this could be confidence intervals, variances etc. That second element is optional.</p>
+the model to them in evaluation mode and returns the following:
+As the first return value, the batch of predictions. This is a list of values (1 value for
+each instance in the batch) for classification and a list of lists (1 list representing a
+sequence for each instance in the batch) for sequence tagging.
+As the second value, returns the score/s for the returned predictions. This has the same
+shape as the first return value, but returns a score instead of each label.
+As the third value, returns a batch of confidence/scoring values. For classification,
+this is a list of lists, where the inner list is the label distribution. For sequence
+tagging, this is a list of list of lists, again with the label distribution as the inner-most
+list. Not that the mapping between the index of a value in the label distribution and
+the label itself can be figured out by the caller by retrieving the target vocab first.
+This may return additional data in the future or the format of what is returned may change.</p>
 </dd></dl>
 
 <dl class="method">
@@ -137,6 +142,12 @@ If validationsize is &gt; 1, it is the absolute size, if &lt; 1 it is the portio
 <dt id="gatelfpytorchjson.modelwrapperdefault.ModelWrapperDefault.save_model">
 <code class="descname">save_model</code><span class="sig-paren">(</span><em>filenameprefix</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/gatelfpytorchjson/modelwrapperdefault.html#ModelWrapperDefault.save_model"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#gatelfpytorchjson.modelwrapperdefault.ModelWrapperDefault.save_model" title="Permalink to this definition">¶</a></dt>
 <dd></dd></dl>
+
+<dl class="method">
+<dt id="gatelfpytorchjson.modelwrapperdefault.ModelWrapperDefault.set_cuda">
+<code class="descname">set_cuda</code><span class="sig-paren">(</span><em>flag</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/gatelfpytorchjson/modelwrapperdefault.html#ModelWrapperDefault.set_cuda"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#gatelfpytorchjson.modelwrapperdefault.ModelWrapperDefault.set_cuda" title="Permalink to this definition">¶</a></dt>
+<dd><p>Advise to use CUDA if flag is True, or CPU if false. True is ignored if cuda is not available</p>
+</dd></dl>
 
 <dl class="method">
 <dt id="gatelfpytorchjson.modelwrapperdefault.ModelWrapperDefault.train">

@@ -1,0 +1,229 @@
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>gatelfpytorchjson.LayerCNN &#8212; GATE LF Pytorch Wrapper (gatelfpytorch)  documentation</title>
+    
+    <link rel="stylesheet" href="../../_static/classic.css" type="text/css" />
+    <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../',
+        VERSION:     '',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true,
+        SOURCELINK_SUFFIX: '.txt'
+      };
+    </script>
+    <script type="text/javascript" src="../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../_static/doctools.js"></script>
+    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.0/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" /> 
+  </head>
+  <body>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../../index.html">GATE LF Pytorch Wrapper (gatelfpytorch)  documentation</a> &#187;</li>
+          <li class="nav-item nav-item-1"><a href="../index.html" accesskey="U">Module code</a> &#187;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <h1>Source code for gatelfpytorchjson.LayerCNN</h1><div class="highlight"><pre>
+<span></span><span class="kn">import</span> <span class="nn">torch.nn</span>
+<span class="kn">from</span> <span class="nn">.</span> <span class="n">CustomModule</span> <span class="kn">import</span> <span class="nn">CustomModule</span>
+<span class="kn">from</span> <span class="nn">.</span> <span class="n">embeddingsmodule</span> <span class="kn">import</span> <span class="nn">EmbeddingsModule</span>
+<span class="kn">import</span> <span class="nn">sys</span>
+<span class="kn">import</span> <span class="nn">logging</span>
+<span class="kn">import</span> <span class="nn">torch.nn.functional</span> <span class="k">as</span> <span class="nn">F</span>
+
+<span class="n">logger</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">getLogger</span><span class="p">(</span><span class="vm">__name__</span><span class="p">)</span>
+<span class="n">logger</span><span class="o">.</span><span class="n">setLevel</span><span class="p">(</span><span class="n">logging</span><span class="o">.</span><span class="n">DEBUG</span><span class="p">)</span>
+<span class="n">streamhandler</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">StreamHandler</span><span class="p">(</span><span class="n">stream</span><span class="o">=</span><span class="n">sys</span><span class="o">.</span><span class="n">stderr</span><span class="p">)</span>
+<span class="n">formatter</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">Formatter</span><span class="p">(</span>
+                <span class="s1">&#39;</span><span class="si">%(asctime)s</span><span class="s1"> </span><span class="si">%(name)-12s</span><span class="s1"> </span><span class="si">%(levelname)-8s</span><span class="s1"> </span><span class="si">%(message)s</span><span class="s1">&#39;</span><span class="p">)</span>
+<span class="n">streamhandler</span><span class="o">.</span><span class="n">setFormatter</span><span class="p">(</span><span class="n">formatter</span><span class="p">)</span>
+<span class="n">logger</span><span class="o">.</span><span class="n">addHandler</span><span class="p">(</span><span class="n">streamhandler</span><span class="p">)</span>
+
+
+<div class="viewcode-block" id="MaxFrom1d"><a class="viewcode-back" href="../../gatelfpytorchjson.LayerCNN.html#gatelfpytorchjson.LayerCNN.MaxFrom1d">[docs]</a><span class="k">class</span> <span class="nc">MaxFrom1d</span><span class="p">(</span><span class="n">torch</span><span class="o">.</span><span class="n">nn</span><span class="o">.</span><span class="n">Module</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Simple maxpool module that takes the maximum from one dimension of a tensor and</span>
+<span class="sd">    reduces the tensor dimensions by 1.</span>
+<span class="sd">    Essentially the same as torch.max(x, dim=thedimension)</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">dim</span><span class="o">=-</span><span class="mi">1</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">(</span><span class="n">MaxFrom1d</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="fm">__init__</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">dim</span> <span class="o">=</span> <span class="n">dim</span>
+
+<div class="viewcode-block" id="MaxFrom1d.forward"><a class="viewcode-back" href="../../gatelfpytorchjson.LayerCNN.html#gatelfpytorchjson.LayerCNN.MaxFrom1d.forward">[docs]</a>    <span class="k">def</span> <span class="nf">forward</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">x</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">torch</span><span class="o">.</span><span class="n">max</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">dim</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">dim</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span></div></div>
+
+
+<div class="viewcode-block" id="Concat"><a class="viewcode-back" href="../../gatelfpytorchjson.LayerCNN.html#gatelfpytorchjson.LayerCNN.Concat">[docs]</a><span class="k">class</span> <span class="nc">Concat</span><span class="p">(</span><span class="n">torch</span><span class="o">.</span><span class="n">nn</span><span class="o">.</span><span class="n">Module</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Simple module that will concatenate a list of inputs across a dimension</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">dim</span><span class="o">=-</span><span class="mi">1</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">(</span><span class="n">Concat</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="fm">__init__</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">dim</span> <span class="o">=</span> <span class="n">dim</span>
+
+<div class="viewcode-block" id="Concat.forward"><a class="viewcode-back" href="../../gatelfpytorchjson.LayerCNN.html#gatelfpytorchjson.LayerCNN.Concat.forward">[docs]</a>    <span class="k">def</span> <span class="nf">forward</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">listofx</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">torch</span><span class="o">.</span><span class="n">cat</span><span class="p">(</span><span class="n">listofx</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">dim</span><span class="p">)</span></div></div>
+
+
+<div class="viewcode-block" id="Transpose4CNN"><a class="viewcode-back" href="../../gatelfpytorchjson.LayerCNN.html#gatelfpytorchjson.LayerCNN.Transpose4CNN">[docs]</a><span class="k">class</span> <span class="nc">Transpose4CNN</span><span class="p">(</span><span class="n">torch</span><span class="o">.</span><span class="n">nn</span><span class="o">.</span><span class="n">Module</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Does the transposing for CNN</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">(</span><span class="n">Transpose4CNN</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="fm">__init__</span><span class="p">()</span>
+
+<div class="viewcode-block" id="Transpose4CNN.forward"><a class="viewcode-back" href="../../gatelfpytorchjson.LayerCNN.html#gatelfpytorchjson.LayerCNN.Transpose4CNN.forward">[docs]</a>    <span class="k">def</span> <span class="nf">forward</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">x</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">x</span><span class="o">.</span><span class="n">transpose</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span><span class="mi">2</span><span class="p">)</span></div></div>
+
+
+<div class="viewcode-block" id="ListModule"><a class="viewcode-back" href="../../gatelfpytorchjson.LayerCNN.html#gatelfpytorchjson.LayerCNN.ListModule">[docs]</a><span class="k">class</span> <span class="nc">ListModule</span><span class="p">(</span><span class="n">torch</span><span class="o">.</span><span class="n">nn</span><span class="o">.</span><span class="n">Module</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Simple module that runs the same input through all modules in a modulelist</span>
+<span class="sd">    and returns a list of outputs</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">modulelist</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">(</span><span class="n">ListModule</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="fm">__init__</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">modulelist</span> <span class="o">=</span> <span class="n">modulelist</span>
+
+<div class="viewcode-block" id="ListModule.forward"><a class="viewcode-back" href="../../gatelfpytorchjson.LayerCNN.html#gatelfpytorchjson.LayerCNN.ListModule.forward">[docs]</a>    <span class="k">def</span> <span class="nf">forward</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">x</span><span class="p">):</span>
+        <span class="k">return</span> <span class="p">[</span><span class="n">l</span><span class="p">(</span><span class="n">x</span><span class="p">)</span> <span class="k">for</span> <span class="n">l</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">modulelist</span><span class="p">]</span></div></div>
+
+
+<div class="viewcode-block" id="LayerCNN"><a class="viewcode-back" href="../../gatelfpytorchjson.LayerCNN.html#gatelfpytorchjson.LayerCNN.LayerCNN">[docs]</a><span class="k">class</span> <span class="nc">LayerCNN</span><span class="p">(</span><span class="n">CustomModule</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    LayerCNN handles a single input of shape (batchsize, maxseqlen, embdims)</span>
+<span class="sd">    and creates everything to get a final output of hidden units</span>
+<span class="sd">    (including batch normalization, dropout and non-linearity)</span>
+<span class="sd">    The number of output units is in self.dim_outputs after initialisation.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">emb_dims</span><span class="p">,</span> <span class="n">config</span><span class="o">=</span><span class="p">{},</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">(</span><span class="n">LayerCNN</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">config</span><span class="o">=</span><span class="n">config</span><span class="p">)</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s2">&quot;Building LayerCNN module, config=</span><span class="si">%s</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">config</span><span class="p">,</span> <span class="p">))</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">rand_seed</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;seed&quot;</span><span class="p">)</span> <span class="ow">or</span> <span class="mi">1</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">emb_dims</span> <span class="o">=</span> <span class="n">emb_dims</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">channels_out</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;channels_out&quot;</span><span class="p">)</span> <span class="ow">or</span> <span class="mi">100</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">kernel_sizes</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;kernel_sizes&quot;</span><span class="p">)</span> <span class="ow">or</span> <span class="p">[</span><span class="mi">3</span><span class="p">,</span> <span class="mi">4</span><span class="p">,</span> <span class="mi">5</span><span class="p">]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">dropout_prob</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;dropout&quot;</span><span class="p">)</span> <span class="ow">or</span> <span class="mf">0.6</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">use_batchnorm</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;use_batchnorm&quot;</span><span class="p">)</span> <span class="ow">or</span> <span class="kc">True</span>
+        <span class="n">nonlin</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">nn</span><span class="o">.</span><span class="n">ReLU</span><span class="p">()</span>
+
+
+        <span class="c1"># TODO This should get removed and the set_seed() method inherited should</span>
+        <span class="c1"># get used instead</span>
+        <span class="n">torch</span><span class="o">.</span><span class="n">manual_seed</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">rand_seed</span><span class="p">)</span>
+
+
+        <span class="c1"># Architecture:</span>
+        <span class="c1"># for each kernel size we create a separate CNN</span>
+        <span class="c1"># Note: batchnormalization will be applied before  the nonlinearity for now!</span>
+
+        <span class="n">layers_cnn</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">nn</span><span class="o">.</span><span class="n">ModuleList</span><span class="p">()</span>
+        <span class="k">for</span> <span class="n">K</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">kernel_sizes</span><span class="p">:</span>
+            <span class="n">layer_cnn</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">nn</span><span class="o">.</span><span class="n">Sequential</span><span class="p">()</span>
+            <span class="n">layername</span> <span class="o">=</span> <span class="s2">&quot;conv1d_K</span><span class="si">{}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">K</span><span class="p">)</span>
+            <span class="n">layer_cnn</span><span class="o">.</span><span class="n">add_module</span><span class="p">(</span><span class="n">layername</span><span class="p">,</span>
+                <span class="n">torch</span><span class="o">.</span><span class="n">nn</span><span class="o">.</span><span class="n">Conv1d</span><span class="p">(</span><span class="n">in_channels</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">emb_dims</span><span class="p">,</span>
+                                <span class="n">out_channels</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">channels_out</span><span class="p">,</span>
+                                <span class="n">kernel_size</span><span class="o">=</span><span class="n">K</span><span class="p">,</span>
+                                <span class="n">stride</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span>
+                                <span class="n">padding</span><span class="o">=</span><span class="nb">int</span><span class="p">(</span><span class="n">K</span><span class="o">/</span><span class="mi">2</span><span class="p">),</span>
+                                <span class="n">dilation</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span>
+                                <span class="n">groups</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span>
+                                <span class="n">bias</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+            <span class="p">)</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">use_batchnorm</span><span class="p">:</span>
+                <span class="n">layername</span> <span class="o">=</span> <span class="s2">&quot;batchnorm1d_K</span><span class="si">{}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">K</span><span class="p">)</span>
+                <span class="n">layer_cnn</span><span class="o">.</span><span class="n">add_module</span><span class="p">(</span><span class="n">layername</span><span class="p">,</span> <span class="n">torch</span><span class="o">.</span><span class="n">nn</span><span class="o">.</span><span class="n">BatchNorm1d</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">channels_out</span><span class="p">))</span>
+            <span class="n">layer_cnn</span><span class="o">.</span><span class="n">add_module</span><span class="p">(</span><span class="s2">&quot;nonlin_K</span><span class="si">{}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">K</span><span class="p">),</span> <span class="n">nonlin</span><span class="p">)</span>
+            <span class="n">layer_cnn</span><span class="o">.</span><span class="n">add_module</span><span class="p">(</span><span class="s2">&quot;maxpool_K</span><span class="si">{}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">K</span><span class="p">),</span> <span class="n">MaxFrom1d</span><span class="p">(</span><span class="n">dim</span><span class="o">=-</span><span class="mi">1</span><span class="p">))</span>
+            <span class="n">layer_cnn</span><span class="o">.</span><span class="n">add_module</span><span class="p">(</span><span class="s2">&quot;dropout_K</span><span class="si">{}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">K</span><span class="p">),</span> <span class="n">torch</span><span class="o">.</span><span class="n">nn</span><span class="o">.</span><span class="n">Dropout</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">dropout_prob</span><span class="p">))</span>
+            <span class="n">layers_cnn</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">layer_cnn</span><span class="p">)</span>
+
+        <span class="c1"># each convolution layer gives us channels_out outputs, and we have as many of</span>
+        <span class="c1"># of those as we have kernel sizes</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">dim_outputs</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">kernel_sizes</span><span class="p">)</span><span class="o">*</span><span class="bp">self</span><span class="o">.</span><span class="n">channels_out</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">layers</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">nn</span><span class="o">.</span><span class="n">Sequential</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">layers</span><span class="o">.</span><span class="n">add_module</span><span class="p">(</span><span class="s2">&quot;transpose&quot;</span><span class="p">,</span> <span class="n">Transpose4CNN</span><span class="p">())</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">layers</span><span class="o">.</span><span class="n">add_module</span><span class="p">(</span><span class="s2">&quot;CNNs&quot;</span><span class="p">,</span> <span class="n">ListModule</span><span class="p">(</span><span class="n">layers_cnn</span><span class="p">))</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">layers</span><span class="o">.</span><span class="n">add_module</span><span class="p">(</span><span class="s2">&quot;concat&quot;</span><span class="p">,</span> <span class="n">Concat</span><span class="p">(</span><span class="n">dim</span><span class="o">=</span><span class="mi">1</span><span class="p">))</span>
+
+        <span class="c1"># Note: the log-softmax function is used directly in forward, we do not define a layer for that</span>
+        <span class="c1"># logger.info(&quot;Layer created: %s&quot; % (self, ))</span>
+
+<div class="viewcode-block" id="LayerCNN.forward"><a class="viewcode-back" href="../../gatelfpytorchjson.LayerCNN.html#gatelfpytorchjson.LayerCNN.LayerCNN.forward">[docs]</a>    <span class="k">def</span> <span class="nf">forward</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">batch</span><span class="p">):</span>
+        <span class="c1"># batch is assumed to already be a tensor of the correct shape</span>
+        <span class="c1"># batchsize, maxseq, embdims</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">on_cuda</span><span class="p">():</span>
+            <span class="n">batch</span><span class="o">.</span><span class="n">cuda</span><span class="p">()</span>
+        <span class="n">out</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">layers</span><span class="p">(</span><span class="n">batch</span><span class="p">)</span>
+        <span class="c1"># logger.debug(&quot;output tensor is if size %s: %s&quot; % (out.size(), out, ))</span>
+        <span class="k">return</span> <span class="n">out</span></div></div>
+
+</pre></div>
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <form class="search" action="../../search.html" method="get">
+      <div><input type="text" name="q" /></div>
+      <div><input type="submit" value="Go" /></div>
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../../index.html">GATE LF Pytorch Wrapper (gatelfpytorch)  documentation</a> &#187;</li>
+          <li class="nav-item nav-item-1"><a href="../index.html" >Module code</a> &#187;</li> 
+      </ul>
+    </div>
+    <div class="footer" role="contentinfo">
+        &#169; Copyright 2018, University of Sheffield.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.6.2.
+    </div>
+  </body>
+</html>

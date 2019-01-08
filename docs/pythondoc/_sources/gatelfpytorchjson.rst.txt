@@ -7,6 +7,7 @@ Submodules
 .. toctree::
 
    gatelfpytorchjson.CustomModule
+   gatelfpytorchjson.LayerCNN
    gatelfpytorchjson.classificationmodule
    gatelfpytorchjson.concat
    gatelfpytorchjson.embeddingsmodule
@@ -14,6 +15,7 @@ Submodules
    gatelfpytorchjson.modelwrapperdefault
    gatelfpytorchjson.ngrammodule
    gatelfpytorchjson.takefromtuple
+   gatelfpytorchjson.utils
 
 Module contents
 ---------------

@@ -1,0 +1,186 @@
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>gatelfpytorchjson.LayerCNN module &#8212; GATE LF Pytorch Wrapper (gatelfpytorch)  documentation</title>
+    
+    <link rel="stylesheet" href="_static/classic.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    './',
+        VERSION:     '',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true,
+        SOURCELINK_SUFFIX: '.txt'
+      };
+    </script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.0/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="gatelfpytorchjson.classificationmodule module" href="gatelfpytorchjson.classificationmodule.html" />
+    <link rel="prev" title="gatelfpytorchjson.CustomModule module" href="gatelfpytorchjson.CustomModule.html" /> 
+  </head>
+  <body>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="gatelfpytorchjson.classificationmodule.html" title="gatelfpytorchjson.classificationmodule module"
+             accesskey="N">next</a> |</li>
+        <li class="right" >
+          <a href="gatelfpytorchjson.CustomModule.html" title="gatelfpytorchjson.CustomModule module"
+             accesskey="P">previous</a> |</li>
+        <li class="nav-item nav-item-0"><a href="index.html">GATE LF Pytorch Wrapper (gatelfpytorch)  documentation</a> &#187;</li>
+          <li class="nav-item nav-item-1"><a href="gatelfpytorchjson.html" accesskey="U">gatelfpytorchjson package</a> &#187;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <div class="section" id="module-gatelfpytorchjson.LayerCNN">
+<span id="gatelfpytorchjson-layercnn-module"></span><h1>gatelfpytorchjson.LayerCNN module<a class="headerlink" href="#module-gatelfpytorchjson.LayerCNN" title="Permalink to this headline">¶</a></h1>
+<dl class="class">
+<dt id="gatelfpytorchjson.LayerCNN.Concat">
+<em class="property">class </em><code class="descclassname">gatelfpytorchjson.LayerCNN.</code><code class="descname">Concat</code><span class="sig-paren">(</span><em>dim=-1</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/gatelfpytorchjson/LayerCNN.html#Concat"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#gatelfpytorchjson.LayerCNN.Concat" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal"><span class="pre">torch.nn.modules.module.Module</span></code></p>
+<p>Simple module that will concatenate a list of inputs across a dimension</p>
+<dl class="method">
+<dt id="gatelfpytorchjson.LayerCNN.Concat.forward">
+<code class="descname">forward</code><span class="sig-paren">(</span><em>listofx</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/gatelfpytorchjson/LayerCNN.html#Concat.forward"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#gatelfpytorchjson.LayerCNN.Concat.forward" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="gatelfpytorchjson.LayerCNN.LayerCNN">
+<em class="property">class </em><code class="descclassname">gatelfpytorchjson.LayerCNN.</code><code class="descname">LayerCNN</code><span class="sig-paren">(</span><em>emb_dims</em>, <em>config={}</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/gatelfpytorchjson/LayerCNN.html#LayerCNN"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#gatelfpytorchjson.LayerCNN.LayerCNN" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="gatelfpytorchjson.CustomModule.html#gatelfpytorchjson.CustomModule.CustomModule" title="gatelfpytorchjson.CustomModule.CustomModule"><code class="xref py py-class docutils literal"><span class="pre">gatelfpytorchjson.CustomModule.CustomModule</span></code></a></p>
+<p>LayerCNN handles a single input of shape (batchsize, maxseqlen, embdims)
+and creates everything to get a final output of hidden units
+(including batch normalization, dropout and non-linearity)
+The number of output units is in self.dim_outputs after initialisation.</p>
+<dl class="method">
+<dt id="gatelfpytorchjson.LayerCNN.LayerCNN.forward">
+<code class="descname">forward</code><span class="sig-paren">(</span><em>batch</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/gatelfpytorchjson/LayerCNN.html#LayerCNN.forward"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#gatelfpytorchjson.LayerCNN.LayerCNN.forward" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="gatelfpytorchjson.LayerCNN.ListModule">
+<em class="property">class </em><code class="descclassname">gatelfpytorchjson.LayerCNN.</code><code class="descname">ListModule</code><span class="sig-paren">(</span><em>modulelist</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/gatelfpytorchjson/LayerCNN.html#ListModule"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#gatelfpytorchjson.LayerCNN.ListModule" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal"><span class="pre">torch.nn.modules.module.Module</span></code></p>
+<p>Simple module that runs the same input through all modules in a modulelist
+and returns a list of outputs</p>
+<dl class="method">
+<dt id="gatelfpytorchjson.LayerCNN.ListModule.forward">
+<code class="descname">forward</code><span class="sig-paren">(</span><em>x</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/gatelfpytorchjson/LayerCNN.html#ListModule.forward"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#gatelfpytorchjson.LayerCNN.ListModule.forward" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="gatelfpytorchjson.LayerCNN.MaxFrom1d">
+<em class="property">class </em><code class="descclassname">gatelfpytorchjson.LayerCNN.</code><code class="descname">MaxFrom1d</code><span class="sig-paren">(</span><em>dim=-1</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/gatelfpytorchjson/LayerCNN.html#MaxFrom1d"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#gatelfpytorchjson.LayerCNN.MaxFrom1d" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal"><span class="pre">torch.nn.modules.module.Module</span></code></p>
+<p>Simple maxpool module that takes the maximum from one dimension of a tensor and
+reduces the tensor dimensions by 1.
+Essentially the same as torch.max(x, dim=thedimension)</p>
+<dl class="method">
+<dt id="gatelfpytorchjson.LayerCNN.MaxFrom1d.forward">
+<code class="descname">forward</code><span class="sig-paren">(</span><em>x</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/gatelfpytorchjson/LayerCNN.html#MaxFrom1d.forward"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#gatelfpytorchjson.LayerCNN.MaxFrom1d.forward" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="gatelfpytorchjson.LayerCNN.Transpose4CNN">
+<em class="property">class </em><code class="descclassname">gatelfpytorchjson.LayerCNN.</code><code class="descname">Transpose4CNN</code><a class="reference internal" href="_modules/gatelfpytorchjson/LayerCNN.html#Transpose4CNN"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#gatelfpytorchjson.LayerCNN.Transpose4CNN" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal"><span class="pre">torch.nn.modules.module.Module</span></code></p>
+<p>Does the transposing for CNN</p>
+<dl class="method">
+<dt id="gatelfpytorchjson.LayerCNN.Transpose4CNN.forward">
+<code class="descname">forward</code><span class="sig-paren">(</span><em>x</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/gatelfpytorchjson/LayerCNN.html#Transpose4CNN.forward"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#gatelfpytorchjson.LayerCNN.Transpose4CNN.forward" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+  <h4>Previous topic</h4>
+  <p class="topless"><a href="gatelfpytorchjson.CustomModule.html"
+                        title="previous chapter">gatelfpytorchjson.CustomModule module</a></p>
+  <h4>Next topic</h4>
+  <p class="topless"><a href="gatelfpytorchjson.classificationmodule.html"
+                        title="next chapter">gatelfpytorchjson.classificationmodule module</a></p>
+  <div role="note" aria-label="source link">
+    <h3>This Page</h3>
+    <ul class="this-page-menu">
+      <li><a href="_sources/gatelfpytorchjson.LayerCNN.rst.txt"
+            rel="nofollow">Show Source</a></li>
+    </ul>
+   </div>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <form class="search" action="search.html" method="get">
+      <div><input type="text" name="q" /></div>
+      <div><input type="submit" value="Go" /></div>
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="gatelfpytorchjson.classificationmodule.html" title="gatelfpytorchjson.classificationmodule module"
+             >next</a> |</li>
+        <li class="right" >
+          <a href="gatelfpytorchjson.CustomModule.html" title="gatelfpytorchjson.CustomModule module"
+             >previous</a> |</li>
+        <li class="nav-item nav-item-0"><a href="index.html">GATE LF Pytorch Wrapper (gatelfpytorch)  documentation</a> &#187;</li>
+          <li class="nav-item nav-item-1"><a href="gatelfpytorchjson.html" >gatelfpytorchjson package</a> &#187;</li> 
+      </ul>
+    </div>
+    <div class="footer" role="contentinfo">
+        &#169; Copyright 2018, University of Sheffield.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.6.2.
+    </div>
+  </body>
+</html>

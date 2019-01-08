@@ -92,5 +92,5 @@ class EmbeddingsModule(torch.nn.Module):
         return state
 
     def __setstate__(self, state):
-        self.__dict__.update(state)
         state["_on_cuda"] = None
+        self.__dict__.update(state)

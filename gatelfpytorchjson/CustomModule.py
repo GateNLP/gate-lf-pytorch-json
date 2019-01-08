@@ -47,3 +47,12 @@ class CustomModule(torch.nn.Module):
     @abstractmethod
     def forward(self, *input):
         pass
+
+    def __getstate__(self):
+        state = dict(self.__dict__)
+        del state["_on_cuda"]
+        return state
+
+    def __setstate(self, state):
+        state["_on_cuda"] = None
+        self.__dict__ = state

@@ -103,3 +103,13 @@ class ClassificationModule(torch.nn.Module):
         outputlayer, outputlayerconfig = self.outputlayerinfo
         out = outputlayer(hidden_vals)
         return out
+
+
+    def __getstate__(self):
+        state = dict(self.__dict__)
+        del state["_on_cuda"]
+        return state
+
+    def __setstate(self, state):
+        state["_on_cuda"] = None
+        self.__dict__ = state

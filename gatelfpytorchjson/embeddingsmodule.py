@@ -85,3 +85,12 @@ class EmbeddingsModule(torch.nn.Module):
             batch_var = batch_var.cuda()
         out = self.modules[0](batch_var)
         return out
+
+    def __getstate__(self):
+        state = dict(self.__dict__)
+        del state["_on_cuda"]
+        return state
+
+    def __setstate(self, state):
+        state["_on_cuda"] = None
+        self.__dict__ = state

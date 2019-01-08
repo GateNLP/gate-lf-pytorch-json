@@ -39,10 +39,7 @@ def main(sysargs):
     # If we need the datadir
     # datadir = str(Path(modelprefix).parent)
 
-    wrapper = ModelWrapperDefault.load(modelprefix)
-    # TODO: set cuda depending on the parameter, if necessary
-    # ??? Should we actually ever use the GPU for application?
-    wrapper.set_cuda(args.cuda)
+    wrapper = ModelWrapperDefault.load(modelprefix, cuda=args.cuda)
     logger.info("DEBUG: model loaded:\n{}".format(wrapper.module))
     # get the target vocab
     vocab_target = wrapper.dataset.vocabs.get_vocab("<<TARGET>>")

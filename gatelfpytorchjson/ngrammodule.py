@@ -15,14 +15,16 @@ logger.addHandler(streamhandler)
 
 class NgramModule(torch.nn.Module):
 
-    def __init__(self, embeddingsmodule, method="lstm"):
+    def __init__(self, embeddingsmodule, config={}):
         """Create a module for processing ngram sequences for the given EmbeddingsModule embeddingsmodule.
         How eventually will be one of  lstm, gru, conv, mean, sum.
         """
         super().__init__()
+        self.config = config
         # since we directly assign, this should get registered!
         self.embeddingsmodule = embeddingsmodule
         self.emb_dims = self.embeddingsmodule.emb_dims
+        method = config.get("ngram_layer", "cnn")
         if method == "lstm":
             self.forward_method = self.forward_method_lstm
             self.init_method = self.init_method_lstm
@@ -38,26 +40,27 @@ class NgramModule(torch.nn.Module):
         # num_layers
         # dropout
         # bidirectional
-        num_layers = 1
-        bidirectional = True
-        hidden_size = self.embeddingsmodule.emb_dims
+        dropout_prob = self.config.get("dropout", 0.4)
+        hidden_size = self.config.get("lstm_hidden", self.embeddingsmodule.emb_dims)
+        is_bidir = self.config.get("lstm_bidir", True)
+        nr_layers = self.config.get("lstm_nlayers", 1)
         self.lstm = torch.nn.LSTM(input_size=self.embeddingsmodule.emb_dims,
                                   hidden_size=hidden_size,
-                                  num_layers=num_layers,
-                                  dropout=0.4,
-                                  bidirectional=bidirectional,
+                                  num_layers=nr_layers,
+                                  dropout=dropout_prob,
+                                  bidirectional=is_bidir,
                                   batch_first=True)
         # TODO: create a better lstm initialisation vector here for repeated
         # use doring forward, if needed!
-        if bidirectional:
+        if is_bidir:
             num_directions = 2
         else:
             num_directions = 1
-        self.out_dim = hidden_size * num_layers * num_directions
+        self.out_dim = hidden_size * nr_layers * num_directions
         logger.info("Created LSTM with out_dim {}".format(self.out_dim))
 
     def init_method_cnn(self):
-        self.cnn = LayerCNN(self.emb_dims)
+        self.cnn = LayerCNN(self.emb_dims, config=self.config)
         self.out_dim = self.cnn.dim_outputs
 
     def forward_method_lstm(self, batchofsequences):

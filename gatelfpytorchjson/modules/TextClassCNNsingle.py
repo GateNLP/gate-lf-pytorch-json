@@ -1,6 +1,7 @@
 import torch.nn
 from gatelfpytorchjson import CustomModule
 from gatelfpytorchjson import EmbeddingsModule
+from gatelfpytorchjson import NgramModule
 import sys
 import logging
 
@@ -63,15 +64,11 @@ class ListModule(torch.nn.Module):
         return [l(x) for l in self.modulelist]
 
 
-class SentClassCNN(CustomModule):
+class TextClassCNNsingle(CustomModule):
 
-    def __init__(self, dataset, config={}, **kwargs):
-        super(SentClassCNN, self).__init__(config=config)
-        logger.debug("Building SentClassCNN network, config=%s" % (config, ))
-
-        # TODO This should get removed and the set_seed() method inherited should
-        # get used instead
-        torch.manual_seed(1)
+    def __init__(self, dataset, config={}):
+        super().__init__(config=config)
+        logger.debug("Building single feature TextClassCNNsingle network, config=%s" % (config, ))
 
         # First get the parameters dictated by the data.
         # NOTE/TODO: eventually this should be done outside the module and config parameters!
@@ -79,60 +76,26 @@ class SentClassCNN(CustomModule):
         # For now, this modules always uses one feature, the first one if there are several
         feature = dataset.get_indexlist_features()[0]
         vocab = feature.vocab
-        logger.debug("Initializing module SentClassCNN for classes: %s and vocab %s" %
+        logger.debug("Initializing module TextClassCNNsingle for classes: %s and vocab %s" %
                      (self.n_classes, vocab, ))
-        # If we want to factor this in a separate CNNLayer module, the input should
-        # probably already be proper embedding tensors, so this would need to get moved out
+
+        # create the layers: input embeddings layer, ngrammodule for the CNN, linear output and logsoftmax
+
         layer_emb = EmbeddingsModule(vocab)
-        self.emb_dims = layer_emb.emb_dims
-
-        # other parameters, not dictated by the dataset but the defaults could
-        # be adapted to the dataset. For now we used fixed defaults, similar to
-        # what was used in the Kim paper
-        self.channels_out = 100
-        self.kernel_sizes = [3, 4, 5, 6, 7]
-        self.dropout_prob = 0.5
-        self.use_batchnorm = True
-        nonlin = torch.nn.ReLU()
-
-        # Architecture:
-        # for each kernel size we create a separate CNN
-        # Note: batchnormalization will be applied before  the nonlinearity for now!
-
-        layers_cnn = torch.nn.ModuleList()
-        for K in self.kernel_sizes:
-            layer_cnn = torch.nn.Sequential()
-            layername = "conv1d_K{}".format(K)
-            layer_cnn.add_module(layername,
-                torch.nn.Conv1d(in_channels=self.emb_dims,
-                                out_channels=self.channels_out,
-                                kernel_size=K,
-                                stride=1,
-                                padding=int(K/2),
-                                dilation=1,
-                                groups=1,
-                                bias=True)
-            )
-            if self.use_batchnorm:
-                layername = "batchnorm1d_K{}".format(K)
-                layer_cnn.add_module(layername, torch.nn.BatchNorm1d(self.channels_out))
-            layer_cnn.add_module("nonlin_K{}".format(K), nonlin)
-            layer_cnn.add_module("maxpool_K{}".format(K), MaxFrom1d(dim=-1))
-            layer_cnn.add_module("dropout_K{}".format(K), torch.nn.Dropout(self.dropout_prob))
-            layers_cnn.append(layer_cnn)
-
-        # each convolution layer gives us channels_out outputs, and we have as many of
-        # of those as we have kernel sizes
-        self.lin_inputs = len(self.kernel_sizes)*self.channels_out
-        layer_lin = torch.nn.Linear(self.lin_inputs, self.n_classes)
+        config["ngram_layer"] = "cnn"
+        config["dropout"] = 0.6
+        config["channels_out"] = 100
+        config["kernel_sizes"] = "3,4,5,6,7"  # or [3, 4, 5, 6]
+        config["use_batchnorm"] = True
+        config["nonlin"] = "ReLU"  # or ELU or Tanh
+        ngrammodule = NgramModule(layer_emb, config=config)
+        layer_lin = torch.nn.Linear(ngrammodule.out_dim, self.n_classes)
+        logsoftmax = torch.nn.LogSoftmax(dim=1)
 
         self.layers = torch.nn.Sequential()
-        self.layers.add_module("embs", layer_emb)
-        self.layers.add_module("transpose", Transpose4CNN())
-        self.layers.add_module("CNNs", ListModule(layers_cnn))
-        self.layers.add_module("concat", Concat(dim=1))
+        self.layers.add_module("ngram-cnn", ngrammodule)
         self.layers.add_module("linear", layer_lin)
-        self.layers.add_module("logsoftmax", torch.nn.LogSoftmax(dim=1))
+        self.layers.add_module("logsoftmax", logsoftmax)
 
         # Note: the log-softmax function is used directly in forward, we do not define a layer for that
         logger.info("Network created: %s" % (self, ))

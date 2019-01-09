@@ -18,6 +18,9 @@ class CustomModule(torch.nn.Module):
     def __init__(self, config={}):
         super().__init__()
         # for caching the cuda status, is set when on_cuda() is called the first time
+        seed = config.get("seed", None)
+        if seed is not None:
+            self.set_seed(seed)
         self._on_cuda = None
 
     def get_lossfunction(self, config={}):

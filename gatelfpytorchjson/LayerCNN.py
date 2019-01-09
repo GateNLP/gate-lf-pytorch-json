@@ -20,16 +20,24 @@ class LayerCNN(CustomModule):
     (including batch normalization, dropout and non-linearity)
     The number of output units is in self.dim_outputs after initialisation.
     """
-    def __init__(self, emb_dims, config={}, **kwargs):
+    def __init__(self, emb_dims, config={}):
         super(LayerCNN, self).__init__(config=config)
         logger.debug("Building LayerCNN module, config=%s" % (config, ))
 
         self.emb_dims = emb_dims
-        self.channels_out = kwargs.get("channels_out", 100)
-        self.kernel_sizes = kwargs.get("kernel_sizes", [3, 4, 5])
-        self.dropout_prob = kwargs.get("dropout", 0.6)
-        self.use_batchnorm = kwargs.get("use_batchnorm", True)
-        nonlin = torch.nn.ReLU()
+        self.channels_out = config.get("channels_out", 100)
+        self.kernel_sizes = config.get("kernel_sizes", [3, 4, 5])
+        if  isinstance(self.kernel_sizes, str):
+            self.kernel_sizes = [int(x) for x in self.kernel_sizes.split(",")]
+        self.dropout_prob = config.get("dropout", 0.6)
+        self.use_batchnorm = config.get("use_batchnorm", True)
+        nonlin_name = config.get("nonlin", "ReLU")
+        if nonlin_name == "ReLU":
+            nonlin = torch.nn.ReLU()
+        elif nonlin_name == "ELU":
+            nonlin = torch.nn.ELU()
+        elif nonlin_name == "Tanh":
+            nonlin = torch.nn.Tanh()
 
         # Architecture:
         # for each kernel size we create a separate CNN

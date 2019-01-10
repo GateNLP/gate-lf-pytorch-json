@@ -39,7 +39,7 @@ class ModelWrapper(object):
     # Useful utility methods below this line
 
     @staticmethod
-    def early_stopping_checker(losses=None, accs=None, patience=2, mindelta=0.0):
+    def early_stopping_checker(losses=None, accs=None, patience=2, mindelta=0.0, use_accs=False):
         """Takes two lists of numbers, representing the losses and/or accuracies of all validation
         steps.
         If accs is not None, it is used, otherwise losses is used if not None, otherwise always
@@ -52,9 +52,13 @@ class ModelWrapper(object):
         of at least mindelta over the current best.
         """
 
-        values = accs
-        if not accs:
-            if not losses:
+        if use_accs == True:
+            values = accs
+            if not values:
+                return False
+        else:
+            values = losses
+            if not values:
                 return False
             values = [-x for x in losses]   # so we can always check for increase
         if len(values) < patience+2:

@@ -194,6 +194,7 @@ class ModelWrapperDefault(ModelWrapper):
             n_hidden = ModelWrapper.makeless(n_in, p1=0.5)
             lin = torch.nn.Linear(n_in, n_hidden)
             act = torch.nn.ELU()
+            # act = torch.nn.Softmax(dim=1)
             layer = torch.nn.Sequential(lin, act)
             inlayers_outdims += n_hidden
             lname = "input_numeric"

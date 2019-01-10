@@ -1,17 +1,19 @@
 import sys
 import json
 import logging
-from gatelfpytorchjson import ModelWrapperDefault
 import argparse
 from pathlib import Path
-from gatelfpytorchjson import utils
 import os
 # make sure we can import the gatelfdata library from the default location
 gatelfdatapath = os.path.join("..", "gate-lf-python-data")
 filepath = os.path.dirname(__file__)
 if filepath:
     gatelfdatapath = os.path.join(filepath, gatelfdatapath)
+    print("DEBUG: ", gatelfdatapath)
 sys.path.append(gatelfdatapath)
+
+from gatelfpytorchjson import utils
+from gatelfpytorchjson import ModelWrapperDefault
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
@@ -30,6 +32,7 @@ def main(sysargs):
     parser.add_argument("--cuda", type=utils.str2bool, default=False, help="True/False to use CUDA or not, default is False")
     parser.add_argument("--metafile", type=str, default=None, help="Meta file, if necessary")
     parser.add_argument("--labeled", action="store_true", help="Pass labeled instances instead just the feature vectors")
+    parser.add_argument("--noret", action="store_true", help="Do not print the return value, only useful with labeled")
     parser.add_argument("modelname", help="Prefix of the model files pathnames (REQUIRED)")
 
     args = parser.parse_args(args=sysargs[1:])
@@ -107,8 +110,9 @@ def main(sysargs):
             logger.debug("Ret=%r" % (ret,))
             retjson = json.dumps(ret)
             # print("DEBUG: returned JSON=", retjson, file=sys.stderr)
-            print(retjson)
-            sys.stdout.flush()
+            if not args.noret:
+                print(retjson)
+                sys.stdout.flush()
             # now if we got labeled data, check if our stuff is correct, but only for single targets now
             if args.labeled and isinstance(target, str):
                 if target == output:

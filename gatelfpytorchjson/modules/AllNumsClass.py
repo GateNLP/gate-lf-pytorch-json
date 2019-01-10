@@ -21,6 +21,7 @@ class AllNumsClass(CustomModule):
         super().__init__()
         self.fflayers = torch.nn.Sequential(
             torch.nn.Linear(34, 34, bias=True),
+            torch.nn.Dropout(p=0.5),
             torch.nn.ELU(),
             torch.nn.Linear(34, 2, bias=True),
             torch.nn.LogSoftmax(dim=1)

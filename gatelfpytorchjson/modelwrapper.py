@@ -39,28 +39,26 @@ class ModelWrapper(object):
     # Useful utility methods below this line
 
     @staticmethod
-    def early_stopping_checker(losses=None, accs=None, patience=2, mindelta=0.0, use_accs=False):
+    def early_stopping_checker(losses=None, accs=None, patience=2, mindelta=0.0, metric="loss"):
         """Takes two lists of numbers, representing the losses and/or accuracies of all validation
         steps.
-        If accs is not None, it is used, otherwise losses is used if not None, otherwise always
-        returns False (do not stop).
-        If accuracies are used, at most patience number of the last validation accuracies can
-        NOT be at least mindelta larger than the best one so far.
-        If losses are used, at most patience number of last validation losses can NOT be
-        at least mindelta smaller then the best one so far.
-        In other words this stops if more that patience of the last metrics are not an improvement
-        of at least mindelta over the current best.
+        Uses either losses or accs, depending on if metric is "loss" or "accuracy".
+        If losses are used value must decrease by at least mindelta, otherwise must increase.
+        Returns true if the chosen metric has not improved by mindelta for more than patience
+        iterations.
         """
 
-        if use_accs == True:
+        if metric == "accuracy":
             values = accs
             if not values:
                 return False
-        else:
+        elif metric == "loss":
             values = losses
             if not values:
                 return False
             values = [-x for x in losses]   # so we can always check for increase
+        else:
+            raise Exception("Metric not loss or accuracy but {}".format(metric))
         if len(values) < patience+2:
             return False
 

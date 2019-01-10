@@ -671,7 +671,7 @@ class ModelWrapperDefault(ModelWrapper):
                     # if we have early stopping, check if we should stop
                     if early_stopping:
                         stop_it_already = early_stopping_function(
-                            losses=validation_losses, accs=validation_accs)
+                            losses=validation_losses, accs=validation_accs, metric=self.config.get("es_metric", "loss"))
                         if stop_it_already:
                             logger.info("Early stopping criterion reached, stopping training, best validation acc: %s" %
                                         (best_acc,))

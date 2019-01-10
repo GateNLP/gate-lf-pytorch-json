@@ -13,15 +13,16 @@ streamhandler.setFormatter(formatter)
 logger.addHandler(streamhandler)
 
 
-class ExampleClFf1(CustomModule):
+class AllNumsClass(CustomModule):
 
     # NOTE: make sure the dataset is not stored and only used to decide on parameters etc so
     # that the dataset data is not getting pickled when the model is saved!
     def __init__(self, dataset, config={}):
         super().__init__()
         self.fflayers = torch.nn.Sequential(
+            torch.nn.Linear(34, 34, bias=True),
+            torch.nn.ELU(),
             torch.nn.Linear(34, 2, bias=True),
-            torch.nn.Sigmoid(),
             torch.nn.LogSoftmax(dim=1)
         )
         self._on_cuda = None

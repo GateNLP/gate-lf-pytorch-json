@@ -9,7 +9,7 @@ gatelfdatapath = os.path.join("..", "gate-lf-python-data")
 filepath = os.path.dirname(__file__)
 if filepath:
     gatelfdatapath = os.path.join(filepath, gatelfdatapath)
-    print("DEBUG: ", gatelfdatapath)
+    print("!!!!DEBUG: ", gatelfdatapath)
 sys.path.append(gatelfdatapath)
 
 from gatelfpytorchjson import utils

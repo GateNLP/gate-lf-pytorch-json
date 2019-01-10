@@ -191,7 +191,8 @@ class ModelWrapperDefault(ModelWrapper):
         # if we have numeric features, create the numeric input layer
         if len(self.float_idxs) > 0:
             n_in = len(self.float_idxs)
-            n_hidden = ModelWrapper.makeless(n_in, p1=0.5)
+            # n_hidden = ModelWrapper.makeless(n_in, p1=0.5)
+            n_hidden = n_in
             lin = torch.nn.Linear(n_in, n_hidden)
             act = torch.nn.ELU()
             # act = torch.nn.Softmax(dim=1)

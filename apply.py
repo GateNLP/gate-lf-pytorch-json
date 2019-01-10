@@ -29,6 +29,7 @@ def main(sysargs):
     parser = argparse.ArgumentParser()
     parser.add_argument("--cuda", type=utils.str2bool, default=False, help="True/False to use CUDA or not, default is False")
     parser.add_argument("--metafile", type=str, default=None, help="Meta file, if necessary")
+    parser.add_argument("--labeled", action="store_true", help="Pass labeled instances instead just the feature vectors")
     parser.add_argument("modelname", help="Prefix of the model files pathnames (REQUIRED)")
 
     args = parser.parse_args(args=sysargs[1:])
@@ -45,6 +46,8 @@ def main(sysargs):
     vocab_target = wrapper.dataset.vocabs.get_vocab("<<TARGET>>")
     labels = vocab_target.itos
 
+    ntotal = 0
+    ncorrect = 0
     with sys.stdin as infile:
         for line in infile:
             logger.debug("Application input=%s" % (line,))
@@ -55,6 +58,10 @@ def main(sysargs):
             # special case where the LF can use the assigned class of the previous instance as a feature.
             # However we need to always apply to a set of instances, so wrap into another array here
             instancedata = json.loads(line)
+            target  = None
+            if args.labeled:
+               target = instancedata[1]
+               instancedata = instancedata[0]
 
             # NOTE: the  LF expects to get a map with the following elements:
             # status: must be "ok", anything else is interpreted as an error
@@ -102,7 +109,14 @@ def main(sysargs):
             # print("DEBUG: returned JSON=", retjson, file=sys.stderr)
             print(retjson)
             sys.stdout.flush()
+            # now if we got labeled data, check if our stuff is correct, but only for single targets now
+            if args.labeled and isinstance(target, str):
+                if target == output:
+                   ncorrect += 1
+                ntotal += 1
     logger.debug("Application program terminating")
+    if ntotal > 0:
+        print("Total {}, correct {}, acc={}".format(ntotal, ncorrect, ncorrect/ntotal), file=sys.stderr)
 
 
 if __name__ == '__main__':

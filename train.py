@@ -16,7 +16,6 @@ from gatelfpytorchjson import utils
 import argparse
 from pathlib import Path
 
-
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
 streamhandler = logging.StreamHandler(stream=sys.stderr)
@@ -55,6 +54,7 @@ def main(sysargs):
     parser.add_argument("--nocreate", action='store_true', help="Do not actually even create module (do nothing)")
     parser.add_argument("--valfile", type=str, default=None, help="Use this file for validation")
     parser.add_argument("--version", action='version', version=gatelfpytorchjson.__version__)
+    parser.add_argument("--debug", action='store_true', help="Set logger to DEBUG and show more information")
     parser.add_argument("metafile", help="Path to metafile (REQUIRED)")
     parser.add_argument("modelname", help="Model path prefix (full path and beginning of model file name) (REQUIRED)")
 
@@ -72,6 +72,9 @@ def main(sysargs):
     datadir = str(Path(metafile).parent)
 
     config = vars(args)
+
+    if config.get("debug"):
+        logger.setLevel(logging.DEBUG)
 
     es_patience = config.get("es_patience")
     es_mindelta = 0.0
@@ -131,6 +134,14 @@ def main(sysargs):
         logger.info("--notrain specified, exiting")
         sys.exit(0)
 
+    if config.get("debug"):
+        glf = getattr(wrapper, "get_logger", None)
+        if  glf and callable(glf):
+            wlogger = wrapper.get_logger()
+            logger.debug("Setting wrapper logging level to DEBUG")
+            wlogger.setLevel(logging.DEBUG)
+        else:
+            logger.debug("Wrapper has not logging, cannot set to DEBUG")
 
     # TODO: the default to use for validation set size should be settable through config in the constructor!
     logger.debug("Preparing the data...")

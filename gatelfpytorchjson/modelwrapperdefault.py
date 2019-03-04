@@ -164,6 +164,11 @@ class ModelWrapperDefault(ModelWrapper):
         self.interrupted = False
         signal.signal(signal.SIGINT, self._signal_handler)
 
+    def get_logger(self):
+        """
+        Expose whatever logger instance this class is using
+        """
+        return logger
 
     # This is mainly used at application time, for training, the same thing happens in init.
     # TODO: this should get moved into a common superclass for all modelwrappers!
@@ -430,8 +435,6 @@ class ModelWrapperDefault(ModelWrapper):
         the label itself can be figured out by the caller by retrieving the target vocab first.
         This may return additional data in the future or the format of what is returned may change.
         """
-        oldlevel = logger.level
-        # logger.setLevel(logging.DEBUG)
         batchsize = len(instancelist)
         if not converted:
             # TODO: check if and when to do instance normalization here!
@@ -479,7 +482,6 @@ class ModelWrapperDefault(ModelWrapper):
             logger.debug("apply, labels=%s" % (labels,))
             logger.debug("apply, probdists=%s" % (probdists,))
             logger.debug("apply, probs=%s" % (probs,))
-            logger.setLevel(oldlevel)
             # NOTE: currently the above code only works for a single instance and the
             # variables labels, probs, probdists are all for a single instance, not the batch.
             # So in order to make the result a batch, enclose each in a list as its single element
@@ -497,7 +499,6 @@ class ModelWrapperDefault(ModelWrapper):
             # for each instance in the batch return a list 
             # probs = [list(x) for x in preds]
             probdists = preds.detach().cpu().tolist()
-            logger.setLevel(oldlevel)
             ret = labels, probs, probdists
         return ret
 
@@ -549,9 +550,7 @@ class ModelWrapperDefault(ModelWrapper):
         # NOTE: the v_preds may or may not be sequences, if sequences we get the wrong shape here
         # so for now we simply put all the items (sequences and batch items) in the first dimension
         valuedim = v_preds.size()[-1]
-        # ORIG: loss = self.lossfunction(v_preds.view(-1, valuedim), v_deps.view(-1))
-        # TODO: the reduction should be configurable!
-        loss_function = torch.nn.NLLLoss(ignore_index=-1, reduction='elementwise_mean')
+        loss_function = self.lossfunction
         v_preds_reshape = v_preds.view(-1, valuedim)
         # !!DEBUG print("Predictions, reshaped, size=", v_preds_reshape.size(), "is", v_preds_reshape, file=sys.stderr)
         v_deps_reshape = v_deps.view(-1)
@@ -576,8 +575,7 @@ class ModelWrapperDefault(ModelWrapper):
               ):
         """Train the model on the dataset. max_epochs is the maximum number of
         epochs to train, but if early_stopping is enabled, it could be fewer.
-        If early_stopping is True, then a default strategy is used where training
-        stops after the validation accuracy did not improve for 2 epochs.
+        If early_stopping is True, then a default strategy is used.
         If set to a function that function (which must accept a standard set of parameters
         and return a boolean) is used.
         TODO: check if config should be used by default for the batch_size etc here!

@@ -76,7 +76,7 @@ class ModelWrapperDefault(ModelWrapper):
         if "stopfile" in config and config["stopfile"] is not None:
             self.stopfile = config["stopfile"]
         self.stopfile = os.path.abspath(self.stopfile)
-        logging.getLogger(__name__).debug("Set the stop file to %s" % self.stopfile)
+        # logging.getLogger(__name__).debug("Set the stop file to %s" % self.stopfile)
         self.override_learningrate = None
         if "learningrate" in config and config["learningrate"]:
             self.override_learningrate = config["learningrate"]
@@ -111,8 +111,8 @@ class ModelWrapperDefault(ModelWrapper):
         # IMPORTANT! the optimizer needs to get created after the module has been moved to a GPU
         # using cuda()!!!
         if "module" in config and config["module"] is not None:
-            logger.debug("Init, modules importable: %s" %
-                         ([x[1] for x in pkgutil.iter_modules(path=".gatelfpytorchjson")],))
+            # logger.debug("Init, modules importable: %s" %
+            #              ([x[1] for x in pkgutil.iter_modules(path=".gatelfpytorchjson")],))
             # TODO: figure out how to do this right!!
             ptclassname = config["module"]
             logger.debug("Init import, trying to use class/file: %s" % (ptclassname,))
@@ -439,12 +439,12 @@ class ModelWrapperDefault(ModelWrapper):
         if not converted:
             # TODO: check if and when to do instance normalization here!
             instancelist = [self.dataset.convert_indep(x) for x in instancelist]
-            logger.debug("apply: instances after conversion: %s" % (instancelist,))
+            # logger.debug("apply: instances after conversion: %s" % (instancelist,))
         if not reshaped:
             instancelist = self.dataset.reshape_batch(instancelist, indep_only=True)
-            logger.debug("apply: instances after reshaping: %s" % (instancelist,))
+            # logger.debug("apply: instances after reshaping: %s" % (instancelist,))
         preds = self._apply_model(instancelist, train_mode=False)
-        logger.debug("apply: predictions result (shape %s): %s" % (preds.size(), preds,))
+        # logger.debug("apply: predictions result (shape %s): %s" % (preds.size(), preds,))
         # for now we only have classification (sequence/non-sequence) so
         # for this, we first use the torch max to find the most likely label index,
         # then convert back to the label itself. We also convert the torch probability vector
@@ -457,9 +457,9 @@ class ModelWrapperDefault(ModelWrapper):
             # TODO: make it work for batchsize > 1!!!!!
             dims = preds.size()[-1]
             reshaped = preds.view(-1, dims).detach()
-            logger.debug("apply, reshaped=%s" % (reshaped,))
+            # logger.debug("apply, reshaped=%s" % (reshaped,))
             reshaped = torch.exp(reshaped)
-            logger.debug("apply, reshaped-exp=%s" % (reshaped,))
+            # logger.debug("apply, reshaped-exp=%s" % (reshaped,))
             _, out_idxs = torch.max(reshaped, 1)
             # NOTE/IMPORTANT: we convert all numpy to list since numpy values (even just floats)
             # cannot get JSON serialized
@@ -467,9 +467,9 @@ class ModelWrapperDefault(ModelWrapper):
             # predictions = out_idxs.cpu().numpy().tolist()
             predictions = out_idxs.tolist()
             probdists = [list(x) for x in reshaped]
-            logger.debug("apply, probdists=%s" % (probdists,))
-            logger.debug("apply, predictions=%s" % (predictions,))
-            logger.debug("apply, predictions type=%s" % (type(predictions),))
+            # logger.debug("apply, probdists=%s" % (probdists,))
+            # logger.debug("apply, predictions=%s" % (predictions,))
+            # logger.debug("apply, predictions type=%s" % (type(predictions),))
             # create the list of corresponding labels
             # TODO: again, this is a shortcut that only works if the batch has only one sequence
             logger.debug("len(predictions) %s" % (len(predictions),))
@@ -479,9 +479,9 @@ class ModelWrapperDefault(ModelWrapper):
             #    logger.debug("probdists[%s][predictions[%s]] %s" % (i, i, probdists[predictions[i]],))
             probs = [probdists[i][predictions[i]] for i in range(len(predictions))]
             labels = [self.dataset.target.idx2label(x) for x in predictions]
-            logger.debug("apply, labels=%s" % (labels,))
-            logger.debug("apply, probdists=%s" % (probdists,))
-            logger.debug("apply, probs=%s" % (probs,))
+            # logger.debug("apply, labels=%s" % (labels,))
+            # logger.debug("apply, probdists=%s" % (probdists,))
+            # logger.debug("apply, probs=%s" % (probs,))
             # NOTE: currently the above code only works for a single instance and the
             # variables labels, probs, probdists are all for a single instance, not the batch.
             # So in order to make the result a batch, enclose each in a list as its single element
@@ -543,8 +543,8 @@ class ModelWrapperDefault(ModelWrapper):
         if self._enable_cuda:
             v_deps = v_deps.cuda()
         v_preds = self._apply_model(validationinstances[0], train_mode=train_mode)
-        logger.debug("Got v_preds of size %s: %s" % (v_preds.size(), v_preds,))
-        logger.debug("Evaluating against targets of size %s: %s" % (v_deps.size(), v_deps))
+        # logger.debug("Got v_preds of size %s: %s" % (v_preds.size(), v_preds,))
+        # logger.debug("Evaluating against targets of size %s: %s" % (v_deps.size(), v_deps))
         # TODO: not sure if and when to zero the grads for the loss function if we use it
         # in between training steps?
         # NOTE: the v_preds may or may not be sequences, if sequences we get the wrong shape here
@@ -558,7 +558,7 @@ class ModelWrapperDefault(ModelWrapper):
         loss = loss_function(v_preds_reshape, v_deps_reshape)
         # calculate the accuracy as well, since we know we have a classification problem
         acc, correct, total = ModelWrapper.accuracy(v_preds, v_deps)
-        logger.debug("got loss %s accuracy %s" % (loss, acc, ))
+        # logger.debug("got loss %s accuracy %s" % (loss, acc, ))
         # print("loss=", loss, "preds=", v_preds, "targets=", v_deps, file=sys.stderr)
         # !!DEBUG sys.exit()
         if not as_pytorch:
@@ -635,7 +635,7 @@ class ModelWrapperDefault(ModelWrapper):
                 # import ipdb
                 # ipdb.set_trace()
                 (loss, acc, correct, total) = self.evaluate(batch, train_mode=True)
-                logger.debug("Epoch=%s, batch=%s: loss=%s acc=%s" %
+                logger.debug("Epoch=%s, batch=%s: TRAINING loss=%s acc=%s" %
                              (epoch, batch_nr, f(loss), f(acc)))
                 loss.backward()
                 report_loss += float(loss)

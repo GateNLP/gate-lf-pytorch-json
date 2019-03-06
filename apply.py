@@ -42,7 +42,7 @@ def main(sysargs):
     # If we need the datadir
     # datadir = str(Path(modelprefix).parent)
 
-    wrapper = ModelWrapperDefault.load(modelprefix, cuda=args.cuda)
+    wrapper = ModelWrapperDefault.load(modelprefix, cuda=args.cuda, metafile=args.metafile)
     logger.info("DEBUG: model loaded:\n{}".format(wrapper.module))
     # get the target vocab
     vocab_target = wrapper.dataset.vocabs.get_vocab("<<TARGET>>")

@@ -26,13 +26,15 @@ class ModelWrapper(object):
 
 
     @classmethod
-    def load(cls, filenameprefix, cuda=None):
+    def load(cls, filenameprefix, cuda=None, metafile=None):
         """Load a saved wrapper instance and return it. The file name is made of the
         filenameprefix with '.wrapper.pickle' appended."""
         with open(filenameprefix+".wrapper.pickle", "rb") as inf:
             w = pickle.load(inf)
         logger.debug("Restored instance keys=%s" % (w.__dict__.keys(),))
         assert hasattr(w, 'metafile')
+        if metafile is not None:
+            w.metafile = metafile
         w.init_after_load(filenameprefix, cuda=cuda)
         return w
 

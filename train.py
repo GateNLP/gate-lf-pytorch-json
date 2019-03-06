@@ -121,7 +121,7 @@ def main(sysargs):
     # TODO: test passing on parameters
     if config.get("resume"):
         logger.info("--resume specified, loading and continuing on existing model")
-        wrapper = wrapper_class.load(modelname)
+        wrapper = wrapper_class.load(modelname, metafile=metafile)
         logger.debug("Modelwrapper loaded")
         logger.debug("Model is %r" % wrapper)
     else:

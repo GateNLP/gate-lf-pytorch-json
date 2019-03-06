@@ -767,6 +767,7 @@ class ModelWrapperDefault(ModelWrapper):
         #     print('DEBUG: variable {} from package {}'.format(k, type(v).__module__))
         #     if type(v).__module__ == "torch":
         #         print("DEBUG: !!! {} is a torch variable!".format(k))
+        print("DEBUG: metafile is {}".format(state['metafile']))
         return state
 
     def __setstate__(self, state):

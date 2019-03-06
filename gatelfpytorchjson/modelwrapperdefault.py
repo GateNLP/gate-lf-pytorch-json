@@ -760,7 +760,13 @@ class ModelWrapperDefault(ModelWrapper):
         del state['dataset']
         del state['module']
         del state['valset']
+        del state['optimizer']
         del state['is_data_prepared']
+        # in case we need to check if any other variable is from package torch:
+        # for k, v in state.items():
+        #     print('DEBUG: variable {} from package {}'.format(k, type(v).__module__))
+        #     if type(v).__module__ == "torch":
+        #         print("DEBUG: !!! {} is a torch variable!".format(k))
         return state
 
     def __setstate__(self, state):

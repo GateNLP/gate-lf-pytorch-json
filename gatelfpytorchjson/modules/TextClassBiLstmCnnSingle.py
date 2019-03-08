@@ -1,4 +1,5 @@
 from gatelfpytorchjson import CustomModule
+from gatelfpytorchjson import EmbeddingsModule
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -16,18 +17,20 @@ logger.addHandler(streamhandler)
 
 
 class TextClassBiLstmCnnSingle(CustomModule):
-    def __init__(self, dataset, config={}, maxSentLen=100, embedding_dim=128, kernel_dim=64, lstm_dim=64, dropout=0.2, bn_momentum=0.2):
+    def __init__(self, dataset, config={}, maxSentLen=100, kernel_dim=64, lstm_dim=64, dropout=0.2, bn_momentum=0.2):
         super().__init__(config=config)
         #super(TextClassBiLstmCnnSingle, self).__init__()
         self.maxSentLen=maxSentLen
         self.n_classes = dataset.get_info()["nClasses"]
 
         feature = dataset.get_indexlist_features()[0]
-        vocab_size = feature.vocab.n
+        vocab = feature.vocab
+        vocab_size = vocab.n
         logger.debug("Initializing module TextClassCNNsingle for classes: %s and vocab %s" %
                      (self.n_classes, vocab_size, ))   
 
-        self.embedding = nn.Embedding(vocab_size, embedding_dim, padding_idx=0)
+        self.embedding = EmbeddingsModule(vocab)
+        embedding_dim = self.embedding.emb_dims
         self.lstm1 = nn.LSTM(embedding_dim, lstm_dim, batch_first=True, bidirectional=True)
 
         self.conv2 = nn.Conv2d(1, kernel_dim, (2,lstm_dim*2))

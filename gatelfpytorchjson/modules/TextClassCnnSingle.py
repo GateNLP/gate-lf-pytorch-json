@@ -64,11 +64,11 @@ class ListModule(torch.nn.Module):
         return [l(x) for l in self.modulelist]
 
 
-class TextClassCNNsingle(CustomModule):
+class TextClassCnnSingle(CustomModule):
 
     def __init__(self, dataset, config={}):
         super().__init__(config=config)
-        logger.debug("Building single feature TextClassCNNsingle network, config=%s" % (config, ))
+        logger.debug("Building single feature TextClassCnnSingle network, config=%s" % (config, ))
 
         # First get the parameters dictated by the data.
         # NOTE/TODO: eventually this should be done outside the module and config parameters!
@@ -76,7 +76,7 @@ class TextClassCNNsingle(CustomModule):
         # For now, this modules always uses one feature, the first one if there are several
         feature = dataset.get_indexlist_features()[0]
         vocab = feature.vocab
-        logger.debug("Initializing module TextClassCNNsingle for classes: %s and vocab %s" %
+        logger.debug("Initializing module TextClassCnnSingle for classes: %s and vocab %s" %
                      (self.n_classes, vocab, ))
 
         # create the layers: input embeddings layer, ngrammodule for the CNN, linear output and logsoftmax

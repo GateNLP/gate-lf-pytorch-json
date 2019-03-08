@@ -14,7 +14,7 @@ streamhandler.setFormatter(formatter)
 logger.addHandler(streamhandler)
 
 
-class SeqTaggerLSTMSimple(CustomModule):
+class SeqTaggerLstmSingle(CustomModule):
 
     def get_init_weights(self, batchsize):
         """A method that returns a tensor that can be used to initialize the hidden states of the LSTM.
@@ -37,13 +37,13 @@ class SeqTaggerLSTMSimple(CustomModule):
         super().__init__(config=config)
         torch.manual_seed(1)
         self.n_classes = dataset.get_info()["nClasses"]
-        logger.debug("Initializing module SeqTaggerLSTMSimple for classes: %s" % (self.n_classes,))
+        logger.debug("Initializing module SeqTaggerLstmSingle for classes: %s" % (self.n_classes,))
         # create a simple LSTM-based network: the input uses an embedding layer created from
         # the vocabulary, then a bidirectional LSTM followed by a simple softmax layer for each element
         # in the sequence
         feature = dataset.get_index_features()[0]
         vocab = feature.vocab
-        logger.debug("Initializing module SeqTaggerLSTMSimple for classes: %s and vocab %s" %
+        logger.debug("Initializing module SeqTaggerLstmSingle for classes: %s and vocab %s" %
                      (self.n_classes, vocab, ))
 
         # create the embedding layer from the vocab

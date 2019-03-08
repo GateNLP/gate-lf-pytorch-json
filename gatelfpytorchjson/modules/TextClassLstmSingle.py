@@ -15,11 +15,11 @@ streamhandler.setFormatter(formatter)
 logger.addHandler(streamhandler)
 
 
-class SentClassLSTM(CustomModule):
+class TextClassLstmSingle(CustomModule):
 
     def __init__(self, dataset, config={}):
         super().__init__(config=config)
-        logger.debug("Building SentClassLSTM network, config=%s" % (config, ))
+        logger.debug("Building TextClassLstmSingle network, config=%s" % (config, ))
         # if we should use packed sequences or not for the LSTM
         self.use_packed = True
 
@@ -27,11 +27,11 @@ class SentClassLSTM(CustomModule):
         # get used instead
         torch.manual_seed(1)
         self.n_classes = dataset.get_info()["nClasses"]
-        logger.debug("Initializing module SentClassLSTM for classes: %s" % (self.n_classes,))
+        logger.debug("Initializing module TextClassLstmSingle for classes: %s" % (self.n_classes,))
 
         feature = dataset.get_indexlist_features()[0]
         vocab = feature.vocab
-        logger.debug("Initializing module SentClassLSTM for classes: %s and vocab %s" %
+        logger.debug("Initializing module TextClassLstmSingle for classes: %s and vocab %s" %
                      (self.n_classes, vocab, ))
         # these layers replace the NgramModule default
         self.layer_emb = EmbeddingsModule(vocab)

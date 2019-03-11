@@ -617,7 +617,11 @@ class ModelWrapperDefault(ModelWrapper):
         # initialize the last epoch number for validation to 1 so we do not validate right away
         last_epoch = 1
         best_acc = 0.0
+        best_loss = 9.999E99
+        best_model_metric = self.config.get("es_metric", "accuracy")
         saved_model_name = None
+        saved_model_acc = None
+        saved_model_loss = None
         for epoch in range(1, max_epochs+1):
             # batch number within an epoch
             batch_nr = 0
@@ -671,18 +675,27 @@ class ModelWrapperDefault(ModelWrapper):
                         stop_it_already = early_stopping_function(
                             losses=validation_losses, accs=validation_accs, metric=self.config.get("es_metric", "loss"))
                         if stop_it_already:
-                            logger.info("Early stopping criterion reached, stopping training, best validation acc: %s" %
-                                        (best_acc,))
+                            if best_model_metric == "accuracy":
+                                logger.info("Early stopping criterion reached, stopping training, best validation accuracy: %s" % (best_acc,))
+                            else:
+                                logger.info("Early stopping criterion reached, stopping training, best validation loss: %s" % (best_loss,))
                     # if the current validation accuracy is better than what we had so far, save
-                    # the model
-                    if acc_val > best_acc:
+                    # the model. If the configuration parameter es_metric is set to loss, instead,
+                    # compare the loss_val with best_val!
+                    if (best_model_metric == "accuracy" and (acc_val > best_acc)):
                         best_acc = acc_val
+                        saved_model_name = self.save_model(filenameprefix)
+                        self.best_model_saved = True
+                    elif (best_model_metric == "loss" and (loss_val < best_loss)):
+                        best_loss = loss_val
                         saved_model_name = self.save_model(filenameprefix)
                         self.best_model_saved = True
 
                 if self.stopfile and os.path.exists(self.stopfile):
-                    logger.info("Stop file found, removing and terminating training, best validation acc: %s" %
-                                (best_acc,))
+                    if best_model_metric == "accuracy":
+                        logger.info("Stop file found, removing and terminating training, best validation accuracy: %s" % (best_acc,))
+                    else:
+                        logger.info("Stop file found, removing and terminating training, best validation loss: %s" % (best_acc,))
                     os.remove(self.stopfile)
                     stop_it_already = True
                 if stop_it_already or self.interrupted:
@@ -690,7 +703,7 @@ class ModelWrapperDefault(ModelWrapper):
             if stop_it_already or self.interrupted:
                 self.interrupted = False
                 break
-        logger.info("Training completed, best validation acc={}, model saved to {}".format(best_acc, saved_model_name))
+        logger.info("Training completed, saved model validation acc={}, loss={}, saved to {}".format(saved_model_acc, saved_model_loss, saved_model_name))
 
     def checkpoint(self, filenameprefix, checkpointnr=None):
         """Save the module, adding a checkpoint number in the name."""

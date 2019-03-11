@@ -36,8 +36,8 @@ logger.addHandler(streamhandler)
 
 
 def f(value):
-    """Format a float value to have 3 digits after the decimal point"""
-    return "{0:.3f}".format(value)
+    """Format a float value to have 4 digits after the decimal point"""
+    return "{0:.4f}".format(value)
 
 
 class ModelWrapperDefault(ModelWrapper):
@@ -617,8 +617,8 @@ class ModelWrapperDefault(ModelWrapper):
         # initialize the last epoch number for validation to 1 so we do not validate right away
         last_epoch = 1
         best_acc = 0.0
-        best_loss = 9.999E99
-        best_model_metric = self.config.get("es_metric", "accuracy")
+        best_loss = 1E38  # must be smaller than maximum value of a numpy float32
+        best_model_metric = self.config["es_metric"]
         saved_model_name = None
         saved_model_acc = None
         saved_model_loss = None
@@ -668,17 +668,19 @@ class ModelWrapperDefault(ModelWrapper):
                     (loss_val, acc_val, correct, total) = self.evaluate(self.valset, train_mode=False)
                     logger.info("Epoch=%s, VALIDATION: loss=%s acc=%s" %
                                 (epoch, f(loss_val), f(acc_val)))
-                    validation_losses.append(float(loss_val))
-                    validation_accs.append(float(acc_val))
+                    loss_val = float(loss_val)
+                    acc_val = float(acc_val)
+                    validation_losses.append(loss_val)
+                    validation_accs.append(acc_val)
                     # if we have early stopping, check if we should stop
                     if early_stopping:
                         stop_it_already = early_stopping_function(
                             losses=validation_losses, accs=validation_accs, metric=self.config.get("es_metric", "loss"))
                         if stop_it_already:
                             if best_model_metric == "accuracy":
-                                logger.info("Early stopping criterion reached, stopping training, best validation accuracy: %s" % (best_acc,))
+                                logger.info("Early stopping criterion reached, best validation accuracy: %s" % (f(best_acc),))
                             else:
-                                logger.info("Early stopping criterion reached, stopping training, best validation loss: %s" % (best_loss,))
+                                logger.info("Early stopping criterion reached, best validation loss: %s" % (f(best_loss),))
                     # if the current validation accuracy is better than what we had so far, save
                     # the model. If the configuration parameter es_metric is set to loss, instead,
                     # compare the loss_val with best_val!
@@ -686,16 +688,20 @@ class ModelWrapperDefault(ModelWrapper):
                         best_acc = acc_val
                         saved_model_name = self.save_model(filenameprefix)
                         self.best_model_saved = True
+                        saved_model_acc = acc_val
+                        saved_model_loss = loss_val
                     elif (best_model_metric == "loss" and (loss_val < best_loss)):
                         best_loss = loss_val
                         saved_model_name = self.save_model(filenameprefix)
                         self.best_model_saved = True
+                        saved_model_acc = acc_val
+                        saved_model_loss = loss_val
 
                 if self.stopfile and os.path.exists(self.stopfile):
                     if best_model_metric == "accuracy":
-                        logger.info("Stop file found, removing and terminating training, best validation accuracy: %s" % (best_acc,))
+                        logger.info("Stop file found, removing and terminating training, best validation accuracy: %s" % (f(best_acc),))
                     else:
-                        logger.info("Stop file found, removing and terminating training, best validation loss: %s" % (best_acc,))
+                        logger.info("Stop file found, removing and terminating training, best validation loss: %s" % (f(best_acc),))
                     os.remove(self.stopfile)
                     stop_it_already = True
                 if stop_it_already or self.interrupted:
@@ -703,7 +709,7 @@ class ModelWrapperDefault(ModelWrapper):
             if stop_it_already or self.interrupted:
                 self.interrupted = False
                 break
-        logger.info("Training completed, saved model validation acc={}, loss={}, saved to {}".format(saved_model_acc, saved_model_loss, saved_model_name))
+        logger.info("Training completed, saved model validation acc={}, loss={}, saved to {}".format(f(saved_model_acc), f(saved_model_loss), saved_model_name))
 
     def checkpoint(self, filenameprefix, checkpointnr=None):
         """Save the module, adding a checkpoint number in the name."""

@@ -48,6 +48,7 @@ def main(sysargs):
     parser.add_argument("--es_metric", type=str, default="loss", help="Which metric to use for early stopping, 'loss' or 'accuracy' (loss)")
     parser.add_argument("--cuda", type=utils.str2bool, help="True/False to use CUDA or not, omit to determine automatically")
     parser.add_argument("--seed", type=int, default=0, help="Random seed to make experiments repeatable/explore randomness (default 0=random random seed)")
+    parser.add_argument("--noshuffle", action="store_true", help="Prevent shuffling of the dataset (False)")
     # NOTE: resume currently does not make sure that the original metafile info is used (but maybe new data):
     # This should work once the metadata is actually stored as part of the model!
     parser.add_argument("--resume", action='store_true', help="Resume training from the specified model")

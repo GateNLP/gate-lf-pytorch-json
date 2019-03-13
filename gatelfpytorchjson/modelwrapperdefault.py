@@ -80,7 +80,7 @@ class ModelWrapperDefault(ModelWrapper):
         self.override_learningrate = None
         if "learningrate" in config and config["learningrate"]:
             self.override_learningrate = config["learningrate"]
-        cuda_is_available = torch.cuda.is_available()
+        cuda_is_available = self.have_usable_cuda()
         if self.cuda is None:
             enable_cuda = cuda_is_available
         else:
@@ -170,11 +170,24 @@ class ModelWrapperDefault(ModelWrapper):
         """
         return logger
 
+    def have_usable_cuda(self):
+        haveit = torch.cuda.is_available()
+        if haveit:
+            # pytorch says it is available on legacy devices where it is not supported any more so make sure
+            try:
+                t1 = torch.randn(3).cuda()
+                nn = torch.nn.Linear(3,3).cuda()
+                nn(t1)
+            except:
+                logger.info("Switchin off CUDA: pytorch reports it is available but it does not seem to be supported")
+                haveit = False
+        return haveit
+
     # This is mainly used at application time, for training, the same thing happens in init.
     # TODO: this should get moved into a common superclass for all modelwrappers!
     def set_cuda(self, flag):
         """Advise to use CUDA if flag is True, or CPU if false. True is ignored if cuda is not available"""
-        if flag and torch.cuda.is_available():
+        if flag and self.have_usable_cuda():
             self.module.cuda()
             self.lossfunction.cuda()
             self._enable_cuda = True

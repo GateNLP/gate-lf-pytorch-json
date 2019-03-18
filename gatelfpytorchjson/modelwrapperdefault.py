@@ -294,24 +294,27 @@ class ModelWrapperDefault(ModelWrapper):
         inputlayers = []
         # keep track of the number of input layer output dimensions
         inlayers_outdims = 0
-        # if we have numeric features, create the numeric input layer
+        # if we have numeric features, create a dummy no-operation layer, since we will
+        ## simply concat the values with the embedding vectors
         if len(self.float_idxs) > 0:
             n_in = len(self.float_idxs)
-            n_hidden = ModelWrapper.makeless(n_in, p1=0.5)
-            lin = torch.nn.Linear(n_in, n_hidden)
-            act = torch.nn.ELU()
-            layer = torch.nn.Sequential(lin, act)
-            inlayers_outdims += n_hidden
+            # This is what we had previously:
+            # n_hidden = ModelWrapper.makeless(n_in, p1=0.5)
+            # lin = torch.nn.Linear(n_in, n_hidden)
+            # act = torch.nn.ELU()
+            # layer = torch.nn.Sequential(lin, act)
+            # inlayers_outdims += n_hidden
+            inlayers_outdims += n_in
+            layer = torch.nn.Sequential()   # an empty sequential layer just passes the input through unchanged
             lname = "input_numeric"
             inputlayers.append((layer, {"type": "numeric", "name": lname}))
-            pass
         # if we have nominal features, create all the layers for those
         # TODO: may need to handle onehot features differently!!
         # remember which layers we already have for an embedding id
         nom_layers = {}
         for i in range(len(self.index_feats)):
             nom_feat = self.index_feats[i]
-            nom_idx = self.index_idxs[i]
+            # nom_idx = self.index_idxs[i]
             vocab = nom_feat.vocab
             emb_id = vocab.emb_id
             if emb_id in nom_layers:
@@ -322,9 +325,10 @@ class ModelWrapperDefault(ModelWrapper):
             lname = "input_emb_%s_%s" % (i, emb_id)
             inputlayers.append((emblayer, {"type": "nominal", "name": lname}))
             inlayers_outdims += emblayer.emb_dims
+        # TODO: the following probably does not work!
         for i in range(len(self.indexlist_feats)):
             ngr_feat = self.indexlist_feats[i]
-            nom_idx = self.indexlist_idxs[i]
+            # nom_idx = self.indexlist_idxs[i]
             vocab = ngr_feat.vocab
             emb_id = vocab.emb_id
             if emb_id in nom_layers:

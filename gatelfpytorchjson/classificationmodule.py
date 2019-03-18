@@ -65,13 +65,25 @@ class ClassificationModule(torch.nn.Module):
         i_ngr = 0
         input_layer_outputs = []
         # TODO: when we use the Concat layer instead of manually concatenating,
-        # we just create all the input variables her and append to the inputs list,
+        # we just create all the input variables here and append to the inputs list,
         # then pass this on to the concat layer.
         for inputlayer, config in self.inputlayersinfo:
             inputtype = config["type"]
             if inputtype == "numeric":
-                vals = [batch[i] for i in self.num_idxs]
-                vals4pt = torch.FloatTensor(vals).t()
+                # NOTE: The layer used for the floats by default will just copy the inputs
+                # in any case we should get something in the output that can be concatenated to
+                # the other outputs.
+                # So if we get something of shape batchsize, sequlen, embdims
+                # we would want to get as output of this layer shape batchsize, sequlen, nrfeatures
+
+                # create a list of tensors for each batch of one feature and add a dimension to the end
+                vals = [torch.FloatTensor(batch[i]) for i in self.num_idxs]
+                for val in vals:
+                    val.unsqueeze_(val.dim())
+                # get the number of dimensions from the first in the list, should be the same for all
+                ndims = vals[0].dim()
+                # concat the values
+                vals4pt = torch.cat(vals, dim=(ndims-1))
                 vals4pt.requires_grad_(True)
                 if self.on_cuda():
                     vals4pt = vals4pt.cuda()

@@ -11,7 +11,7 @@ import sys
 import pickle
 from gatelfdata import Dataset
 import numpy as np
-import pkgutil
+from .misclayers import IdentityModule
 import timeit
 import logging
 import signal
@@ -305,7 +305,7 @@ class ModelWrapperDefault(ModelWrapper):
             # layer = torch.nn.Sequential(lin, act)
             # inlayers_outdims += n_hidden
             inlayers_outdims += n_in
-            layer = torch.nn.Sequential()   # an empty sequential layer just passes the input through unchanged
+            layer = IdentityModule(nfeats=n_in)
             lname = "input_numeric"
             inputlayers.append((layer, {"type": "numeric", "name": lname}))
         # if we have nominal features, create all the layers for those

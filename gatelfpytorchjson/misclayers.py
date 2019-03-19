@@ -60,3 +60,15 @@ class ListModule(torch.nn.Module):
     def forward(self, x):
         return [l(x) for l in self.modulelist]
 
+class IdentityModule(torch.nn.Sequential):
+    """
+    Copy over the input to the output unchanged. This is used to copy over numeric features.
+    The layer can store the number of features it is expected to copy over so this can be shown
+    to the user in the network display, but that number is not actually used in forward().
+    """
+    def __init__(self, nfeats=None):
+        super(IdentityModule, self).__init__()
+        self.nfeats = nfeats
+
+    def __repr__(self):
+        return "IdentityModule(nfeats={})".format(self.nfeats)

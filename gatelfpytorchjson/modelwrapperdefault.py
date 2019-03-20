@@ -325,21 +325,11 @@ class ModelWrapperDefault(ModelWrapper):
             lname = "input_emb_%s_%s" % (i, emb_id)
             inputlayers.append((emblayer, {"type": "nominal", "name": lname}))
             inlayers_outdims += emblayer.emb_dims
-        # TODO: the following probably does not work!
-        for i in range(len(self.indexlist_feats)):
-            ngr_feat = self.indexlist_feats[i]
-            # nom_idx = self.indexlist_idxs[i]
-            vocab = ngr_feat.vocab
-            emb_id = vocab.emb_id
-            if emb_id in nom_layers:
-                emblayer = nom_layers.get(emb_id)
-            else:
-                emblayer = EmbeddingsModule(vocab)
-                nom_layers[emb_id] = emblayer
-            lname = "input_ngram_%s_%s" % (i, emb_id)
-            ngramlayer = NgramModule(emblayer)
-            inputlayers.append((ngramlayer, {"type": "ngram", "name": lname}))
-            inlayers_outdims += ngramlayer.out_dim
+        # NOTE: see issue #44
+        # We will never get ngrams as part of sequences, so for now we just make sure
+        # we really do not get them here!
+        if len(self.indexlist_feats) > 0:
+            raise Exception("ngrams are not supported as features of sequence elements!")
         # Now create the hidden layers
         hiddenlayers = []
 

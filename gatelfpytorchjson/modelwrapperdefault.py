@@ -15,7 +15,8 @@ from .misclayers import IdentityModule
 import timeit
 import logging
 import signal
-
+# TODO: get rid of static dependency and only on-demand import this library!
+from allennlp.modules.elmo import batch_to_ids
 
 # Basic usage:
 # ds = Dataset(metafile)
@@ -58,7 +59,7 @@ class ModelWrapperDefault(ModelWrapper):
         self.info = dataset.get_info()
 
     # This requires an initialized dataset instance
-    def __init__(self, dataset, config={}, cuda=None):
+    def __init__(self, dataset, config=None, cuda=None):
         """This requires a gatelfdata Dataset instance and can optionally take a dictionary with
         configuration/initialization options (NOT SUPPORTED YET).
         If cuda is None, then if cuda is available it will be used. True and False
@@ -67,6 +68,13 @@ class ModelWrapperDefault(ModelWrapper):
         """
         super().__init__(dataset, config=config)
         self.config = config
+        if self.config is None:
+            self.config = {}
+        # make sure we consistently have some default flags set
+        if "elmo" not in self.config:
+            self.config["elmo"] = False
+        if "orig" not in self.config:
+            self.config["orig"] = False
         logger.debug("Init with config=%s" % (config,))
         if "cuda" in config and config["cuda"] is not None:
             cuda = config["cuda"]
@@ -395,14 +403,18 @@ class ModelWrapperDefault(ModelWrapper):
 
     def prepare_data(self, validationsize=None, file=None):
         """If file is not None, use the content of  the file, ignore the size.
-        If validationsize is > 1, it is the absolute size, if < 1 it is the portion e.g. 0.01 to use."""
+        If validationsize is > 1, it is the absolute size, if < 1 it is the portion e.g. 0.01 to use.
+        """
+        # prepare the flag that indicates if we should keep the original file, this is the case if we either
+        # know we use an ELMO model or we have the "orig" flag set in the config.
+        keeporig = self.config["elmo"] or self.config["orig"]
         # get the validation set
         if self.is_data_prepared:
             logger.warning("Called prepare_data after it was already called, doing nothing")
             return
         if file is not None:
             # use the file for validation
-            self.dataset.split(convert=True, validation_file=file)
+            self.dataset.split(convert=True, keep_orig=keeporig, validation_file=file)
         else:
             if validationsize is not None:
                 validationsize = float(validationsize)
@@ -416,8 +428,11 @@ class ModelWrapperDefault(ModelWrapper):
                     valpart = validationsize
             else:
                 valpart = 0.1
-            self.dataset.split(convert=True, validation_part=valpart, validation_size=valsize)
-        self.valset = self.dataset.validation_set_converted(as_batch=True)
+            self.dataset.split(convert=True, keep_orig=keeporig, validation_part=valpart, validation_size=valsize)
+        if keeporig:
+            self.valset = self.dataset.validation_set_orig(as_batch=True)
+        else:
+            self.valset = self.dataset.validation_set_converted(as_batch=True)
         self.is_data_prepared = True
         # TODO if we have a validation set, calculate the class distribution here
         # this should be shown before training starts so the validation accuracy makes more sense
@@ -442,8 +457,9 @@ class ModelWrapperDefault(ModelWrapper):
         the label itself can be figured out by the caller by retrieving the target vocab first.
         This may return additional data in the future or the format of what is returned may change.
         """
+        keeporig = self.config["elmo"] or self.config["orig"]
         batchsize = len(instancelist)
-        if not converted:
+        if not converted and not keeporig:
             # TODO: check if and when to do instance normalization here!
             instancelist = [self.dataset.convert_indep(x) for x in instancelist]
             # logger.debug("apply: instances after conversion: %s" % (instancelist,))
@@ -523,6 +539,12 @@ class ModelWrapperDefault(ModelWrapper):
         elif not train_mode and curmodeistrain:
             self.module.eval()
 
+        if self.config["elmo"]:
+            # TODO: 1905useorig this should get moved to a method in the module!
+            indeps = batch_to_ids(indeps[0])
+        elif self.config["orig"]:
+            # TODO: 1905useorig we should delegate doing this to the module!
+            raise Exception("Not implemented yet")
         output = self.module(indeps)
         # logger.debug("Output of model is of size %s: %s" % (output.size(), output, ))
 
@@ -544,7 +566,15 @@ class ModelWrapperDefault(ModelWrapper):
         # NOTE!!! the targets are what we get minus 1, which shifts the padding index to be -1
         # TODO: IF we use padded targets, we need to subtract 1 here, otherwise we have to leave this
         # as is!!
-        targets = np.array(validationinstances[1])
+        if self.config["elmo"]:
+            # TODO: 1905useorig move this to the module!
+            targets = list(map(int, validationinstances[1]))
+            targets = np.array(targets)
+        elif self.config["orig"]:
+            # TODO: 1905useorig move this to the module!
+            raise Exception("Not implemented yet")
+        else:
+            targets = np.array(validationinstances[1])
         # v_deps = V(torch.LongTensor(targets), requires_grad=False)
         v_deps = torch.LongTensor(targets)
         if self._enable_cuda:
@@ -556,13 +586,16 @@ class ModelWrapperDefault(ModelWrapper):
         # in between training steps?
         # NOTE: the v_preds may or may not be sequences, if sequences we get the wrong shape here
         # so for now we simply put all the items (sequences and batch items) in the first dimension
-        valuedim = v_preds.size()[-1]
-        loss_function = self.lossfunction
-        v_preds_reshape = v_preds.view(-1, valuedim)
-        # !!DEBUG print("Predictions, reshaped, size=", v_preds_reshape.size(), "is", v_preds_reshape, file=sys.stderr)
-        v_deps_reshape = v_deps.view(-1)
-        # !!DEBUG print("Targets, reshaped, size=", v_deps_reshape.size(), "is", v_deps_reshape, file=sys.stderr)
-        loss = loss_function(v_preds_reshape, v_deps_reshape)
+        if train_mode:
+            valuedim = v_preds.size()[-1]
+            loss_function = self.lossfunction
+            v_preds_reshape = v_preds.view(-1, valuedim)
+            # !!DEBUG print("Predictions, reshaped, size=", v_preds_reshape.size(), "is", v_preds_reshape, file=sys.stderr)
+            v_deps_reshape = v_deps.view(-1)
+            # !!DEBUG print("Targets, reshaped, size=", v_deps_reshape.size(), "is", v_deps_reshape, file=sys.stderr)
+            loss = loss_function(v_preds_reshape, v_deps_reshape)
+        else:
+            loss = 0
         # calculate the accuracy as well, since we know we have a classification problem
         acc, correct, total = ModelWrapper.accuracy(v_preds, v_deps)
         # logger.debug("got loss %s accuracy %s" % (loss, acc, ))
@@ -571,6 +604,9 @@ class ModelWrapperDefault(ModelWrapper):
         if not as_pytorch:
             loss = float(loss)
             acc = float(acc)
+        if self.have_usable_cuda():
+            # TODO: 1905useorig ask XS why we want this!
+            torch.cuda.empty_cache()
         return tuple((loss, acc, correct, total))
 
 
@@ -638,7 +674,11 @@ class ModelWrapperDefault(ModelWrapper):
             epoch_correct = 0
             epoch_total = 0
             epoch_loss = 0
-            for batch in self.dataset.batches_converted(train=True, batch_size=batch_size):
+            if self.config["elmo"] or self.config["orig"]:
+                batch_generator = self.dataset.batches_original(train=True, batch_size=batch_size)
+            else:
+                batch_generator = self.dataset.batches_converted(train=True, batch_size=batch_size)
+            for batch in batch_generator:
                 batch_nr += 1
                 totalbatches += 1
                 nr_instances += batch_size  # we should use the actual batch size which could be less
@@ -672,7 +712,27 @@ class ModelWrapperDefault(ModelWrapper):
                         (self.validate_every_instances and ((nr_instances % self.validate_every_instances) == 0)):
                     # evaluate on validation set
                     last_epoch = epoch
-                    (loss_val, acc_val, correct, total) = self.evaluate(self.valset, train_mode=False)
+                    # TODO: check if we could use batch generator from gatelfdata instead of our own code in here
+                    if self.config["elmo"]:
+                        # TODO: factor this method into something more generic.
+                        # TODO: all validation should be possible using batches!
+                        batches, total_size = ModelWrapperDefault.split_batch(self.valset)
+                        loss_val = 0.0
+                        acc_val = 0.0
+                        correct = 0
+                        for val_batch in batches:
+                            (current_loss_val, current_acc_val, current_correct, current_total) = self.evaluate(
+                                val_batch, train_mode=False)
+                            # print(current_loss_val, current_acc_val, current_correct, current_total)
+                            loss_val += current_loss_val / total_size
+                            acc_val += (current_acc_val * current_total) / total_size
+                            correct += current_correct
+                            total += current_total
+                    elif self.config["orig"]:
+                        # TODO: again the evaluation code or part of it should maybe be in the module
+                        raise Exception("Not implemented yet")
+                    else:
+                        (loss_val, acc_val, correct, total) = self.evaluate(self.valset, train_mode=False)
                     logger.info("Epoch=%s, VALIDATION: loss=%s acc=%s" %
                                 (epoch, f(loss_val), f(acc_val)))
                     loss_val = float(loss_val)
@@ -717,6 +777,44 @@ class ModelWrapperDefault(ModelWrapper):
                 self.interrupted = False
                 break
         logger.info("Training completed, saved model validation acc={}, loss={}, saved to {}".format(f(saved_model_acc), f(saved_model_loss), saved_model_name))
+
+    # TODO: factor into gatelfpythondata!
+    @staticmethod
+    def split_batch(dataset, batch_size=32):
+
+        batches = []
+        x = dataset[0]
+        y = dataset[1]
+        total_size = len(x[0])
+        s = 0
+        e = batch_size
+
+        while (s < total_size):
+            all_b_x = []
+            for item in x:
+                b_x = item[s:e]
+                all_b_x.append(b_x)
+            b_y = y[s:e]
+            batches.append([all_b_x, b_y])
+            s += batch_size
+            e += batch_size
+        return batches, total_size
+
+    # TODO: factor into gatelfpythondata
+    @staticmethod
+    def split_batch_x(dataset, batch_size=8):
+        batches = []
+        x = dataset
+        total_size = len(x)
+        s = 0
+        e = batch_size
+
+        while s < total_size:
+            b_x = x[s:e]
+            batches.append(b_x)
+            s += batch_size
+            e += batch_size
+        return batches
 
     def checkpoint(self, filenameprefix, checkpointnr=None):
         """Save the module, adding a checkpoint number in the name."""

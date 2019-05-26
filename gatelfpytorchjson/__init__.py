@@ -20,5 +20,8 @@ from gatelfpytorchjson.modelwrapper import ModelWrapper
 from gatelfpytorchjson.embeddingsmodule import EmbeddingsModule
 from gatelfpytorchjson.takefromtuple import TakeFromTuple
 from gatelfpytorchjson.CustomModule import CustomModule
-from gatelfpytorchjson.ngrammodule import  NgramModule
+from gatelfpytorchjson.ngrammodule import NgramModule
+from gatelfpytorchjson.LayerCNN import LayerCNN
+from gatelfpytorchjson.LayerLSTM import LayerLSTM
+
 

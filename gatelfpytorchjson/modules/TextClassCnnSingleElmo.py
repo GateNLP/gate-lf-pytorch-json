@@ -14,6 +14,8 @@ formatter = logging.Formatter(
 streamhandler.setFormatter(formatter)
 logger.addHandler(streamhandler)
 
+# TODO: !!! Check if and how we can switch the embedded Elmo module to evaluation mode so that
+# we avoid keeping around gradients and maybe avoid other stuff!
 
 class TextClassCnnSingleElmo(CustomModule):
 
@@ -68,7 +70,7 @@ class TextClassCnnSingleElmo(CustomModule):
         sent_len = batch.size()[1]
         # print(sent_len)
         if sent_len > self.maxSentLen:
-            batch = batch[:,:self.maxSentLen,:]
+            batch = batch[:, :self.maxSentLen, :]
         # print(batch.shape)
 
         # logger.debug("forward called with batch of size %s: %s" % (batch.size(), batch,))

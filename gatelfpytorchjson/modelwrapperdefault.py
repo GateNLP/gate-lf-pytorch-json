@@ -15,6 +15,9 @@ from .misclayers import IdentityModule
 import timeit
 import logging
 import signal
+import random
+import numpy as np
+
 # TODO: get rid of static dependency and only on-demand import this library!
 from allennlp.modules.elmo import batch_to_ids
 
@@ -110,10 +113,7 @@ class ModelWrapperDefault(ModelWrapper):
         self.lossfunction = None
         self.module = None  # the init_<TASK> method actually sets this!!
         self.random_seed = config.get("seed", 0)
-        torch.manual_seed(self.random_seed)
-        # make sure it is set on all GPUs as well, we can always do this as torch ignores
-        # this if no CUDA is available
-        torch.cuda.manual_seed_all(self.random_seed)
+        ModelWrapperDefault.set_random_seed(self.random_seed)
         # if the config requires a specific module needs to get used, create it here, otherwise
         # create the module needed for sequences or non-sequences
         # IMPORTANT! the optimizer needs to get created after the module has been moved to a GPU
@@ -171,6 +171,33 @@ class ModelWrapperDefault(ModelWrapper):
             # self.optimizer = torch.optim.SGD(params, lr=0.1, momentum=0.0)
         self.interrupted = False
         signal.signal(signal.SIGINT, self._signal_handler)
+
+
+    @staticmethod
+    def set_random_seed(seed):
+        """
+        Try to set the seed for all relevant random number generators to either a specific seed if parameter seed>0
+        or randomly if seed==0.
+        :param seed: if 0, use random random seed. If > 0, set to specific value. If <0 do nothing.
+        :return: None
+        """
+        if seed > 0:
+            random.seed(seed)
+            torch.manual_seed(seed)
+            np.random.seed(seed)
+            # according to the docs, the cuda random seed is also set by torch.manual_seed
+            # torch.cuda.manual_seed_all(seed)
+            if torch.backends.cudnn.enabled:
+                torch.backends.cudnn.deterministic = True
+                torch.backends.cudnn.benchmark = False
+        elif seed == 0:
+            random.seed()
+            rndseed = random.randint(0, 999999999999)
+            torch.manual_seed((rndseed))
+            np.random.seed(rndseed)
+        else:
+            # seed is < 0, do nothing at all
+            pass
 
     def get_logger(self):
         """
@@ -644,8 +671,10 @@ class ModelWrapperDefault(ModelWrapper):
             self.prepare_data()
         # make sure we are in training mode
         self.module.train(mode=True)
-        # set the random seed, every module must know how to handle this
-        self.module.set_seed(self.random_seed)
+
+
+        ModelWrapperDefault.set_random_seed(self.random_seed)
+
         # the list of all validation losses so far
         validation_losses = []
         # list of all validation accuracies so far

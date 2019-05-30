@@ -46,6 +46,7 @@ def main(sysargs):
     parser.add_argument("--ngram_layer", type=str, default="cnn", help="Architecture to use for ngrams: lstm or cnn (cnn)")
     parser.add_argument("--es_patience", type=int, default=2, help="Early stopping patience iterations (2)")
     parser.add_argument("--es_metric", type=str, default="loss", help="Which metric to use for early stopping, 'loss' or 'accuracy' (loss)")
+    parser.add_argument("--elmo", type=str, default=None, help="Use elmo model for embedding, specify path to elmo model")
     parser.add_argument("--cuda", type=utils.str2bool, help="True/False to use CUDA or not, omit to determine automatically")
     parser.add_argument("--seed", type=int, default=0, help="Random seed to make experiments repeatable/explore randomness (default 0=random random seed)")
     parser.add_argument("--noshuffle", action="store_true", help="Prevent shuffling of the dataset (False)")

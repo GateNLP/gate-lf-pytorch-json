@@ -189,7 +189,7 @@ class ModelWrapperDefault(ModelWrapper):
                 torch.backends.cudnn.benchmark = False
         elif seed == 0:
             random.seed()
-            rndseed = random.randint(0, 999999999999)
+            rndseed = random.randint(0, 4294967295)
             torch.manual_seed((rndseed))
             np.random.seed(rndseed)
         else:

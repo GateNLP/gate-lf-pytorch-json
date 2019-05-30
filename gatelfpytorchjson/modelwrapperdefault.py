@@ -432,13 +432,14 @@ class ModelWrapperDefault(ModelWrapper):
         # prepare the flag that indicates if we should keep the original file, this is the case if we either
         # know we use an ELMO model or we have the "orig" flag set in the config.
         keeporig = self.config["elmo"] or self.config["orig"]
+        convert = not keeporig
         # get the validation set
         if self.is_data_prepared:
             logger.warning("Called prepare_data after it was already called, doing nothing")
             return
         if file is not None:
             # use the file for validation
-            self.dataset.split(convert=True, keep_orig=keeporig, validation_file=file)
+            self.dataset.split(convert=convert, keep_orig=keeporig, validation_file=file)
         else:
             if validationsize is not None:
                 validationsize = float(validationsize)
@@ -452,7 +453,7 @@ class ModelWrapperDefault(ModelWrapper):
                     valpart = validationsize
             else:
                 valpart = 0.1
-            self.dataset.split(convert=True, keep_orig=keeporig, validation_part=valpart, validation_size=valsize)
+            self.dataset.split(convert=convert, keep_orig=keeporig, validation_part=valpart, validation_size=valsize)
         if keeporig:
             self.valset = self.dataset.validation_set_orig(as_batch=True)
         else:

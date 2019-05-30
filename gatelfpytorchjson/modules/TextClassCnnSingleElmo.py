@@ -5,6 +5,7 @@ import sys
 import logging
 import os
 from allennlp.modules.elmo import Elmo
+from allennlp.modules.elmo import batch_to_ids
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
@@ -36,12 +37,21 @@ class TextClassCnnSingleElmo(CustomModule):
 
         # self.layer_emb = EmbeddingsModule(vocab)
         self.maxSentLen = 500
-        elmo_path = config['elmo']
+        elmo_path = config.get('elmo', None)
+        if elmo_path is None or not os.path.exists(elmo_path) or not os.path.isdir(elmo_path):
+            raise Exception("For module TextClassCnnSingleElmo the --elmo option must specify a directory where the ELMO model is stored")
         elmo_option_file = os.path.join(elmo_path, "elmo_2x4096_512_2048cnn_2xhighway_5.5B_options.json")
+        if not os.path.exists(elmo_option_file):
+            raise Exception("File does not exist:", elmo_option_file)
         elmo_weight_file = os.path.join(elmo_path, "elmo_2x4096_512_2048cnn_2xhighway_5.5B_weights.hdf5")
+        if not os.path.exists(elmo_weight_file):
+            raise Exception("File does not exist:", elmo_weight_file)
         # self.elmo = ElmoEmbedder(options_file=elmo_option_file, weight_file=elmo_weight_file)
-        self.elmo = Elmo(elmo_option_file, elmo_weight_file, 2)
-
+        logger.info("Loading elmo model ...")
+        self.elmo = Elmo(elmo_option_file, elmo_weight_file,
+                         num_output_representations=2, dropout=0.5, requires_grad=False, do_layer_norm=False,
+                         vocab_to_cache=None, keep_sentence_boundaries=False, scalar_mix_parameters=None)
+        logger.info("Finished loading elmo model ...")
         config["ngram_layer"] = "cnn"
         config["dropout"] = 0.6
         config["channels_out"] = 100
@@ -61,12 +71,16 @@ class TextClassCnnSingleElmo(CustomModule):
         logger.info("Network created: %s" % (self, ))
 
     def forward(self, batch):
-        # we need only the first feature:
-        # print("DEBUG: batch=", batch, file=sys.stderr)
-        # print(batch)
-        batch = torch.LongTensor(batch)
-        # print(batch.shape)
-        # batchsize = batch.size()[0]
+        """
+        This expects a list of independent features, but we only use the first feature.
+        The first feature is expected to be a batch of lists of tokens (strings).
+        :param batch:
+        :return:
+        """
+        batch = batch[0]
+        batch = batch_to_ids(batch)
+
+        # TODO: truncate before converting to char ids!
         sent_len = batch.size()[1]
         # print(sent_len)
         if sent_len > self.maxSentLen:

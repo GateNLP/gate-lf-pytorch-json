@@ -18,9 +18,6 @@ import signal
 import random
 import numpy as np
 
-# TODO: get rid of static dependency and only on-demand import this library!
-from allennlp.modules.elmo import batch_to_ids
-
 # Basic usage:
 # ds = Dataset(metafile)
 # wrapper = ModelWrapperSimple(ds) # or some other subclass
@@ -566,12 +563,6 @@ class ModelWrapperDefault(ModelWrapper):
         elif not train_mode and curmodeistrain:
             self.module.eval()
 
-        if self.config["elmo"]:
-            # TODO: 1905useorig this should get moved to a method in the module!
-            indeps = batch_to_ids(indeps[0])
-        elif self.config["orig"]:
-            # TODO: 1905useorig we should delegate doing this to the module!
-            raise Exception("Not implemented yet")
         output = self.module(indeps)
         # logger.debug("Output of model is of size %s: %s" % (output.size(), output, ))
 
@@ -593,16 +584,13 @@ class ModelWrapperDefault(ModelWrapper):
         # NOTE!!! the targets are what we get minus 1, which shifts the padding index to be -1
         # TODO: IF we use padded targets, we need to subtract 1 here, otherwise we have to leave this
         # as is!!
-        if self.config["elmo"]:
-            # TODO: 1905useorig move this to the module!
-            targets = list(map(int, validationinstances[1]))
+        targets = np.array(validationinstances[1])
+        # if the we use the original data or have an elmo model, we need to first convert the targets to target indices
+        # TODO: this should eventually get delegated to the model somehow, either by expecting a method for this
+        # or probably better by moving the whole evaluation method into the model
+        if self.config["orig"] or self.config["elmo"]:
+            targets = self.dataset.convert_dep(targets, is_batch=True, as_onehot=False)
             targets = np.array(targets)
-        elif self.config["orig"]:
-            # TODO: 1905useorig move this to the module!
-            raise Exception("Not implemented yet")
-        else:
-            targets = np.array(validationinstances[1])
-        # v_deps = V(torch.LongTensor(targets), requires_grad=False)
         v_deps = torch.LongTensor(targets)
         if self._enable_cuda:
             v_deps = v_deps.cuda()
@@ -613,16 +601,15 @@ class ModelWrapperDefault(ModelWrapper):
         # in between training steps?
         # NOTE: the v_preds may or may not be sequences, if sequences we get the wrong shape here
         # so for now we simply put all the items (sequences and batch items) in the first dimension
-        if train_mode:
-            valuedim = v_preds.size()[-1]
-            loss_function = self.lossfunction
-            v_preds_reshape = v_preds.view(-1, valuedim)
-            # !!DEBUG print("Predictions, reshaped, size=", v_preds_reshape.size(), "is", v_preds_reshape, file=sys.stderr)
-            v_deps_reshape = v_deps.view(-1)
-            # !!DEBUG print("Targets, reshaped, size=", v_deps_reshape.size(), "is", v_deps_reshape, file=sys.stderr)
-            loss = loss_function(v_preds_reshape, v_deps_reshape)
-        else:
-            loss = 0
+        valuedim = v_preds.size()[-1]
+        loss_function = self.lossfunction
+        v_preds_reshape = v_preds.view(-1, valuedim)
+        # !!DEBUG print("Predictions, reshaped, size=", v_preds_reshape.size(), "is", v_preds_reshape, file=sys.stderr)
+        v_deps_reshape = v_deps.view(-1)
+        # !!DEBUG print("Targets, reshaped, size=", v_deps_reshape.size(), "is", v_deps_reshape, file=sys.stderr)
+        loss = loss_function(v_preds_reshape, v_deps_reshape)
+        if not train_mode:
+            loss = float(loss)
         # calculate the accuracy as well, since we know we have a classification problem
         acc, correct, total = ModelWrapper.accuracy(v_preds, v_deps)
         # logger.debug("got loss %s accuracy %s" % (loss, acc, ))

@@ -106,7 +106,6 @@ def main(sysargs):
         logger.info("--nocreate specified, exiting")
         sys.exit(0)
 
-
     logger.debug("Loading metafile...")
     ds = Dataset(metafile, config=config)
     logger.debug("Metafile loaded.")
@@ -116,7 +115,6 @@ def main(sysargs):
     wrapper_class = ModelWrapperDefault
     if config.get("wrapper"):
         wrapperclassname = config["wrapper"]
-        print("!!!!!DEBUG: trying to use wrapper class/file: ", wrapperclassname, file=sys.stderr)
         import importlib
         module = importlib.import_module("gatelfpytorchjson." + wrapperclassname)
         wrapper_class_ = getattr(module, wrapperclassname)

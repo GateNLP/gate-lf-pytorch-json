@@ -42,10 +42,10 @@ SCRIPTDIR=`dirname "$PRG"`
 SCRIPTDIR=`cd "$SCRIPTDIR"; pwd -P`
 GATELFDATA=`cd "$SCRIPTDIR"/../gate-lf-python-data; pwd -P`
 export PYTHONPATH="$GATELFDATA"
-echo DEBUG PYTHON ${wherepython}
-echo DEBUG PYTHONPATH $PYTHONPATH
-echo DEBUG SCRIPTDIR $SCRIPTDIR
-echo DEBUG RUNNING ${wherepython} "${SCRIPTDIR}"/train.py "$metafile" "$modelname" "$@"
+# echo DEBUG PYTHON ${wherepython}
+# echo DEBUG PYTHONPATH $PYTHONPATH
+# echo DEBUG SCRIPTDIR $SCRIPTDIR
+# echo DEBUG RUNNING ${wherepython} "${SCRIPTDIR}"/train.py "$metafile" "$modelname" "$@"
 ${wherepython} "${SCRIPTDIR}"/train.py "$metafile" "$modelname" "$@" 
 
 

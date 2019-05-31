@@ -5,19 +5,30 @@ import sys
 import logging
 import os
 
+# NOTE: allennlp depends on this and versions of this before 0.6.2 emit a message on standard output
+# which will break the LF application step
+# For now, just refuse to do anything unless we have the proper version!
+import pytorch_pretrained_bert
+from distutils.version import LooseVersion as LV
 
-logger = logging.getLogger()
-logger.setLevel(logging.ERROR)
+if LV(pytorch_pretrained_bert.__version__) < LV("0.6.2"):
+    raise Exception("Module TextClassCnnSingleElmo requires package pytorch_pretrained_bert version 0.6.2 or later")
+
+# again, allennlp loads this when we load Elmo, so try to make sure we do not get logger output from there either!
+tmplogger = logging.getLogger("pytorch_pretrained_bert.modeling")
+tmplogger.setLevel(logging.CRITICAL)
+
 from allennlp.modules.elmo import Elmo
 from allennlp.modules.elmo import batch_to_ids
 
 logger = logging.getLogger(__name__)
-logger.setLevel(logging.DEBUG)
+logger.setLevel(logging.INFO)
 streamhandler = logging.StreamHandler(stream=sys.stderr)
 formatter = logging.Formatter(
                 '%(asctime)s %(name)-12s %(levelname)-8s %(message)s')
 streamhandler.setFormatter(formatter)
 logger.addHandler(streamhandler)
+
 
 # TODO: !!! Check if and how we can switch the embedded Elmo module to evaluation mode so that
 # we avoid keeping around gradients and maybe avoid other stuff!
@@ -52,12 +63,10 @@ class TextClassCnnSingleElmo(CustomModule):
             raise Exception("File does not exist:", elmo_weight_file)
         # self.elmo = ElmoEmbedder(options_file=elmo_option_file, weight_file=elmo_weight_file)
         logger.info("Loading elmo model ...")
-        print("!!!DEBUG: loading Elmo", file=sys.stderr)
         self.elmo = Elmo(elmo_option_file, elmo_weight_file,
                          num_output_representations=2, dropout=0.5, requires_grad=False, do_layer_norm=False,
                          vocab_to_cache=None, keep_sentence_boundaries=False, scalar_mix_parameters=None)
         logger.info("Finished loading elmo model ...")
-        print("!!!DEBUG: loading Elmo finished", file=sys.stderr)
         config["ngram_layer"] = "cnn"
         config["dropout"] = 0.6
         config["channels_out"] = 100
@@ -74,7 +83,7 @@ class TextClassCnnSingleElmo(CustomModule):
         self.layers.add_module("logsoftmax", logsoftmax)
 
         # Note: the log-softmax function is used directly in forward, we do not define a layer for that
-        logger.info("Network created: %s" % (self, ))
+        logger.debug("Network created: %s" % (self, ))
 
     def forward(self, batch):
         """

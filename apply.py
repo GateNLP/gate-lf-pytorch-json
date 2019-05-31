@@ -3,6 +3,7 @@ import json
 import logging
 import argparse
 from pathlib import Path
+import torch
 import os
 # make sure we can import the gatelfdata library from the default location
 gatelfdatapath = os.path.join("..", "gate-lf-python-data")
@@ -35,6 +36,7 @@ def main(sysargs):
     parser.add_argument("--metafile", type=str, default=None, help="Meta file, if necessary")
     parser.add_argument("--labeled", action="store_true", help="Pass labeled instances instead just the feature vectors")
     parser.add_argument("--noret", action="store_true", help="Do not print the return value, only useful with labeled")
+    parser.add_argument("--logevery", type=int, default=0, help="Logg progress every k instances, default=0, no logging")
     parser.add_argument("modelname", help="Prefix of the model files pathnames (REQUIRED)")
 
     args = parser.parse_args(args=sysargs[1:])
@@ -46,6 +48,10 @@ def main(sysargs):
     # datadir = str(Path(modelprefix).parent)
 
     wrapper = ModelWrapperDefault.load(modelprefix, cuda=args.cuda, metafile=args.metafile)
+    # make sure we are in eval mode and we do not use autograd (so far all models do not need gradients at
+    # application time!)
+    wrapper.module.eval()
+    torch.no_grad()
     logger.info("Model loaded:\n{}".format(wrapper.module))
     # get the target vocab
     vocab_target = wrapper.dataset.vocabs.get_vocab("<<TARGET>>")
@@ -119,7 +125,9 @@ def main(sysargs):
             if args.labeled and isinstance(target, str):
                 if target == output:
                    ncorrect += 1
-                ntotal += 1
+            ntotal += 1
+            if args.logevery > 0 and ntotal % args.logevery == 0:
+                logger.info("Processed: {}".format(ntotal))
     logger.debug("Application program terminating")
     if ntotal > 0:
         print("Total {}, correct {}, acc={}".format(ntotal, ncorrect, ncorrect/ntotal), file=sys.stderr)

@@ -614,14 +614,13 @@ class ModelWrapperDefault(ModelWrapper):
         # calculate the accuracy as well, since we know we have a classification problem
         acc, correct, total = ModelWrapper.accuracy(v_preds, v_deps)
         # logger.debug("got loss %s accuracy %s" % (loss, acc, ))
-        # print("loss=", loss, "preds=", v_preds, "targets=", v_deps, file=sys.stderr)
-        # !!DEBUG sys.exit()
         if not as_pytorch:
             loss = float(loss)
             acc = float(acc)
-        if self.have_usable_cuda():
-            # TODO: 1905useorig ask XS why we want this!
-            torch.cuda.empty_cache()
+        # NOTE: according to https://discuss.pytorch.org/t/about-torch-cuda-empty-cache/34232/6 this should never be
+        # used by the end user:
+        # if self.have_usable_cuda():
+        #     torch.cuda.empty_cache()
         return tuple((loss, acc, correct, total))
 
 
@@ -738,9 +737,9 @@ class ModelWrapperDefault(ModelWrapper):
                         acc_val = 0.0
                         correct = 0
                         for val_batch in batches:
-                            (current_loss_val, current_acc_val, current_correct, current_total) = self.evaluate(
-                                val_batch, train_mode=False)
-                            # print(current_loss_val, current_acc_val, current_correct, current_total)
+                            with torch.no_grad():
+                                (current_loss_val, current_acc_val, current_correct, current_total) = self.evaluate(
+                                    val_batch, train_mode=False)
                             loss_val += current_loss_val / total_size
                             acc_val += (current_acc_val * current_total) / total_size
                             correct += current_correct
@@ -911,7 +910,6 @@ class ModelWrapperDefault(ModelWrapper):
         #     print('DEBUG: variable {} from package {}'.format(k, type(v).__module__))
         #     if type(v).__module__ == "torch":
         #         print("DEBUG: !!! {} is a torch variable!".format(k))
-        print("DEBUG: metafile is {}".format(state['metafile']))
         return state
 
     def __setstate__(self, state):

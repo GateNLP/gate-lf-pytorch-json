@@ -4,6 +4,10 @@ from gatelfpytorchjson import LayerCNN
 import sys
 import logging
 import os
+
+
+logger = logging.getLogger()
+logger.setLevel(logging.ERROR)
 from allennlp.modules.elmo import Elmo
 from allennlp.modules.elmo import batch_to_ids
 
@@ -48,10 +52,12 @@ class TextClassCnnSingleElmo(CustomModule):
             raise Exception("File does not exist:", elmo_weight_file)
         # self.elmo = ElmoEmbedder(options_file=elmo_option_file, weight_file=elmo_weight_file)
         logger.info("Loading elmo model ...")
+        print("!!!DEBUG: loading Elmo", file=sys.stderr)
         self.elmo = Elmo(elmo_option_file, elmo_weight_file,
                          num_output_representations=2, dropout=0.5, requires_grad=False, do_layer_norm=False,
                          vocab_to_cache=None, keep_sentence_boundaries=False, scalar_mix_parameters=None)
         logger.info("Finished loading elmo model ...")
+        print("!!!DEBUG: loading Elmo finished", file=sys.stderr)
         config["ngram_layer"] = "cnn"
         config["dropout"] = 0.6
         config["channels_out"] = 100

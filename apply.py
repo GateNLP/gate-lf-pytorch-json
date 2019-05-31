@@ -11,6 +11,9 @@ if filepath:
     gatelfdatapath = os.path.join(filepath, gatelfdatapath)
 sys.path.append(gatelfdatapath)
 
+logger = logging.getLogger()
+logger.setLevel(logging.ERROR)
+
 from gatelfpytorchjson import utils
 from gatelfpytorchjson import ModelWrapperDefault
 
@@ -43,7 +46,7 @@ def main(sysargs):
     # datadir = str(Path(modelprefix).parent)
 
     wrapper = ModelWrapperDefault.load(modelprefix, cuda=args.cuda, metafile=args.metafile)
-    logger.info("DEBUG: model loaded:\n{}".format(wrapper.module))
+    logger.info("Model loaded:\n{}".format(wrapper.module))
     # get the target vocab
     vocab_target = wrapper.dataset.vocabs.get_vocab("<<TARGET>>")
     labels = vocab_target.itos

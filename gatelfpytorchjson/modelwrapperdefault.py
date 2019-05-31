@@ -872,6 +872,9 @@ class ModelWrapperDefault(ModelWrapper):
         If cuda is not None, try to load the module directly to cpu or cuda, as requested.
         If cuda is None, let pytorch decide what to do.
         """
+        logging.captureWarnings(True)
+        logger = logging.getLogger()
+        logger.setLevel(logging.CRITICAL)
         self.dataset = Dataset(self.metafile)
         self.init_from_dataset()
         if cuda is None:

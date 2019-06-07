@@ -1,22 +1,24 @@
-from gatelfpytorchjson.modelwrapper import ModelWrapper
-from gatelfpytorchjson.embeddingsmodule import EmbeddingsModule
-from gatelfpytorchjson.ngrammodule import NgramModule
 import os
 import torch
 import torch.nn
 import torch.optim
-from .classificationmodule import ClassificationModule
-from .takefromtuple import TakeFromTuple
 import sys
 import pickle
-from gatelfdata import Dataset
-import numpy as np
-from .misclayers import IdentityModule
 import timeit
 import logging
 import signal
 import random
 import numpy as np
+from configsimple import topconfig, flag
+
+from gatelfdata import Dataset
+from gatelfpytorchjson.misclayers import IdentityModule
+from gatelfpytorchjson.modelwrapper import ModelWrapper
+from gatelfpytorchjson.embeddingsmodule import EmbeddingsModule
+from gatelfpytorchjson.ngrammodule import NgramModule
+from gatelfpytorchjson.classificationmodule import ClassificationModule
+from gatelfpytorchjson.takefromtuple import TakeFromTuple
+from gatelfpytorchjson import __version__ as our_version
 
 # Basic usage:
 # ds = Dataset(metafile)
@@ -42,6 +44,47 @@ def f(value):
 
 
 class ModelWrapperDefault(ModelWrapper):
+
+    @staticmethod
+    def configsimple(cfg=None, component="mwd"):
+        """
+        Update the given config or return a new one to contain all the settings.
+        Does not add the config or parse arguments.
+        :return: a config initialised for parsing arguments
+        """
+        myconfig = cfg or ConfigSimple(component=component)
+        myconfig.add_argument("--embs", type=str, help="Override embedding settings, specify as embid:embdims:embtrain:embminfreq:embfile,embid:embdims ..")
+        myconfig.add_argument("--maxlens", type=str, help="Override maxlen/shorten, specify as attrnr:maxlen:shorten,attrnr:maxlen:shorten (empty attrnr: all)")
+        myconfig.add_argument("--valsize", type=float, help="Set the validation set size (>1) or proportion (<1)")
+        myconfig.add_argument("--valeverybatches", type=int, default=None, help="Evaluate on validation set and log every that many batches (None)")
+        myconfig.add_argument("--valeveryepochs", type=int, default=1, help="Evaluate on validation set and log every that many epochs (1)")
+        myconfig.add_argument("--valeveryinstances", type=int, default=None, help="Evaluate on validation set and log every that many instances (None)")
+        myconfig.add_argument("--repeveryinstances", type=int, default=500, help="Report on training set and log every that many instances (500)")
+        myconfig.add_argument("--repeverybatches", type=int, default=None, help="Report on training set and log every that many batches (None)")
+        myconfig.add_argument("--batchsize", type=int, default=32, help="Batch size")
+        myconfig.add_argument("--maxepochs", type=int, default=50, help="Maximum number of epochs")
+        myconfig.add_argument("--stopfile", type=str, help="If that file exists, training is stopped")
+        myconfig.add_argument("--module", type=str, help="The class/file name to use for the pytorch module (within modelzoo)")
+        myconfig.add_argument("--wrapper", type=str, help="The class/file name to use as the model wrapper")
+        myconfig.add_argument("--learningrate", type=float, help="Override default learning rate for the optimizer")
+        myconfig.add_argument("--ngram_layer", type=str, default="cnn", help="Architecture to use for ngrams: lstm or cnn (cnn)")
+        myconfig.add_argument("--es_patience", type=int, default=2, help="Early stopping patience iterations (2)")
+        myconfig.add_argument("--es_metric", type=str, default="loss", help="Which metric to use for early stopping, 'loss' or 'accuracy' (loss)")
+        myconfig.add_argument("--elmo", type=str, default=None, help="Use elmo model for embedding, specify path to elmo model")
+        myconfig.add_argument("--cuda", type=flag, help="True/False to use CUDA or not, omit to determine automatically")
+        myconfig.add_argument("--seed", type=int, default=0, help="Random seed to make experiments repeatable/explore randomness (default 0=random random seed)")
+        myconfig.add_argument("--noshuffle", action="store_true", help="Prevent shuffling of the dataset (False)")
+        # NOTE: resume currently does not make sure that the original metafile info is used (but maybe new data):
+        # This should work once the metadata is actually stored as part of the model!
+        myconfig.add_argument("--resume", action='store_true', help="Resume training from the specified model")
+        myconfig.add_argument("--notrain", action='store_true', help="Do not actually run training, but show generated model")
+        myconfig.add_argument("--nocreate", action='store_true', help="Do not actually even create module (do nothing)")
+        myconfig.add_argument("--valfile", type=str, default=None, help="Use this file for validation")
+        #myconfig.add_argument("--version", action='version', version=our_version)
+        myconfig.add_argument("--debug", action='store_true', help="Set logger to DEBUG and show more information")
+        myconfig.add_argument("metafile", help="Path to metafile (REQUIRED)")
+        myconfig.add_argument("modelname", help="Model path prefix (full path and beginning of model file name) (REQUIRED)")
+        return myconfig
 
     def init_from_dataset(self):
         """Set the convenience attributes which we get from the dataset instance"""

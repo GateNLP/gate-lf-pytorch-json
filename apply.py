@@ -15,7 +15,8 @@ sys.path.append(gatelfdatapath)
 logger = logging.getLogger()
 logger.setLevel(logging.ERROR)
 
-from gatelfpytorchjson import utils
+from configsimple import flag, topconfig
+
 from gatelfpytorchjson import ModelWrapperDefault
 
 logger = logging.getLogger(__name__)
@@ -31,15 +32,14 @@ def main(sysargs):
 
     logger.debug("PYTHON APPLICATION SCRIPT, args=%s" % (sys.argv,))
 
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--cuda", type=utils.str2bool, default=False, help="True/False to use CUDA or not, default is False")
-    parser.add_argument("--metafile", type=str, default=None, help="Meta file, if necessary")
-    parser.add_argument("--labeled", action="store_true", help="Pass labeled instances instead just the feature vectors")
-    parser.add_argument("--noret", action="store_true", help="Do not print the return value, only useful with labeled")
-    parser.add_argument("--logevery", type=int, default=0, help="Logg progress every k instances, default=0, no logging")
-    parser.add_argument("modelname", help="Prefix of the model files pathnames (REQUIRED)")
+    topconfig.add_argument("--cuda", type=flag, default=False, help="True/False to use CUDA or not, default is False")
+    topconfig.add_argument("--metafile", type=str, default=None, help="Meta file, if necessary")
+    topconfig.add_argument("--labeled", action="store_true", help="Pass labeled instances instead just the feature vectors")
+    topconfig.add_argument("--noret", action="store_true", help="Do not print the return value, only useful with labeled")
+    topconfig.add_argument("--logevery", type=int, default=0, help="Logg progress every k instances, default=0, no logging")
+    topconfig.add_argument("modelname", help="Prefix of the model files pathnames (REQUIRED)")
 
-    args = parser.parse_args(args=sysargs[1:])
+    args = topconfig.parse_args(args=sysargs[1:])
     # not needed for now
     # metafile = args.metafile
     modelprefix = args.modelname

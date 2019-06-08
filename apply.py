@@ -1,7 +1,7 @@
 import sys
 import json
 import logging
-import argparse
+from configsimple import topconfig, flag
 from pathlib import Path
 import torch
 import os
